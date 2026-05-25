@@ -103,7 +103,7 @@ export class NumUtil {
 		try { r1 = n1.toString().split(".")[1].length; } catch (e) { r1 = 0; }
 		try { r2 = n2.toString().split(".")[1].length; } catch (e) { r2 = 0; }
 		let m = Math.pow(10, Math.max(r1, r2));
-		var value = (n1 * m + n2 * m) / m;
+		const value = (n1 * m + n2 * m) / m;
 		//let mStr = value.toString();
 		//var tmpNum = mStr.split(".");
 		//if (tmpNum.length > 1) { var l = tmpNum[1]; if (l.length < 2) { mStr = mStr + "0"; } }
@@ -242,8 +242,8 @@ export class StrUtil {
 		if (arguments.length == 1 && typeof (args) == "object") {
 			data = args;
 		}
-		for (var key in data) {
-			var value = data[key];
+		for (let key in data) {
+			const value = data[key];
 			if (undefined !== value) { result = result.replace("{" + key + "}", value); }
 		}
 		return result;
@@ -432,10 +432,10 @@ export class StrUtil {
  */
 export class TimeUtil {
 
-	static readonly UNIT_SEC: number = 1000;
-	static readonly UNIT_MIN: number = 1000 * 60;
-	static readonly UNIT_HUR: number = 1000 * 60 * 60;
-	static readonly UNIT_DAY: number = 1000 * 60 * 60 * 24;
+	static readonly UNIT_SEC : number = 1000;
+	static readonly UNIT_MIN : number = 1000 * 60;
+	static readonly UNIT_HOUR: number = 1000 * 60 * 60;
+	static readonly UNIT_DAY : number = 1000 * 60 * 60 * 24;
 
 	static async sleep(milSecs: number): Promise<void> {
 		return new Promise((resolve: (parm: any) => void) => {setTimeout(() => { resolve(null);/* do nothing */}, milSecs);})
@@ -493,7 +493,7 @@ export class TimeUtil {
 	 * @returns {Date}
 	 */
 	static addSeconds(d: Date, secs: number): Date {
-		var date = new Date(d);
+		const date = new Date(d);
 		date.setSeconds(date.getSeconds() + secs);
 		return date;
 	}
@@ -508,7 +508,7 @@ export class TimeUtil {
 	 * @returns  加上天数以后的日期
 	 */
 	static addDays(d: Date, days: number): Date {
-		var date = new Date(d);
+		const date = new Date(d);
 		date.setDate(date.getDate() + days);
 		return date;
 	}
@@ -522,7 +522,7 @@ export class TimeUtil {
 	 * @returns 
 	 */
 	static addMonths(d: Date, months: number): Date {
-		var date = new Date(d);
+		const date = new Date(d);
 		date.setMonth(date.getMonth() + months);
 		return date;
 	}
@@ -537,7 +537,7 @@ export class TimeUtil {
 	 * @returns 
 	 */
 	static addYears(d: Date, years: number): Date {
-		var date = new Date(d);
+		const date = new Date(d);
 		date.setFullYear(date.getFullYear() + years);
 		return date;
 	}
@@ -548,8 +548,7 @@ export class TimeUtil {
 	 * @returns 
 	 */
 	static cleanDay(date: Date): Date {
-		var newDate = new Date();
-		newDate.setTime(date.getTime());
+		const newDate = new Date(date.getTime());
 		newDate.setHours(0, 0, 0, 0);
 		return newDate;
 	}
@@ -562,8 +561,8 @@ export class TimeUtil {
 	 * @returns 
 	 */
 	static getTimeArea(date: Date, days: number): { floor: Date, ceil: Date } {
-		var d1 = TimeUtil.cleanDay(date);
-		var d2 = TimeUtil.cleanDay(TimeUtil.addDays(d1, days));
+		const d1 = TimeUtil.cleanDay(date);
+		const d2 = TimeUtil.cleanDay(TimeUtil.addDays(d1, days));
 		if (d1 < d2) {
 			return { floor: d1, ceil: d2 };
 		} else {
@@ -579,8 +578,8 @@ export class TimeUtil {
 	 * @returns 
 	 */
 	static getDateArea(date: Date, ms: number): { floor: Date, ceil: Date } {
-		var d1 = date;
-		var d2 = TimeUtil.cleanDay(TimeUtil.addMilliseconds(d1, ms));
+		const d1 = date;
+		const d2 = TimeUtil.cleanDay(TimeUtil.addMilliseconds(d1, ms));
 		if (d1 < d2) {
 			return { floor: d1, ceil: d2 };
 		} else {
@@ -594,7 +593,7 @@ export class TimeUtil {
 	 * @returns 
 	 */
 	static getLocalTimeZone(): string {
-		var d = new Date();
+		const d = new Date();
 		return (`GMT${d.getTimezoneOffset() / 60}`);
 	}
 
@@ -603,10 +602,10 @@ export class TimeUtil {
 	 * @returns 
 	 */
 	static getLocalTimeZoneName(): string {
-		var tmSummer = new Date(Date.UTC(2005, 6, 30, 0, 0, 0, 0));
-		var so = -1 * tmSummer.getTimezoneOffset();
-		var tmWinter = new Date(Date.UTC(2005, 12, 30, 0, 0, 0, 0));
-		var wo = -1 * tmWinter.getTimezoneOffset();
+		const tmSummer = new Date(Date.UTC(2005, 6, 30, 0, 0, 0, 0));
+		const so = -1 * tmSummer.getTimezoneOffset();
+		const tmWinter = new Date(Date.UTC(2005, 12, 30, 0, 0, 0, 0));
+		const wo = -1 * tmWinter.getTimezoneOffset();
 		if (-660 == so && -660 == wo) return 'Pacific/Midway';
 		if (-600 == so && -600 == wo) return 'Pacific/Tahiti';
 		if (-570 == so && -570 == wo) return 'Pacific/Marquesas';
