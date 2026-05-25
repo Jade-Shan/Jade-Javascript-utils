@@ -1,0 +1,70 @@
+.desktop {
+	overflow: hidden;
+}
+
+div.desktop>div.window>div.window-body {
+	user-select: auto;
+}
+
+.cannot-select {
+	user-select: none;
+}
+
+.title-bar-icon-text {
+	display: flex;
+}
+
+.title-bar-icon {
+	font-weight: bold;
+	color: white;
+	letter-spacing: 0;
+	margin-right: 5px;
+}
+
+.title-bar-controls>button {
+	cursor: pointer;
+}
+
+.dock-content {
+	width: 100%;
+	height: 100%;
+	justify-content: center;
+	align-items: end;
+	display: flex;
+}
+
+.dock-bar {
+	margin-bottom: 0px;
+	padding: 6px 15px;
+	height: 24px;
+	display: flex;
+	justify-content: center;
+	align-items: end;
+	border-radius: 12px;
+	backdrop-filter: blur(20px);
+	--webkit-backdrop-filter: blur(20px);
+	opacity: 55;
+}
+
+.dock-bar:hover {
+	height: 56px;
+	opacity: 75%;
+}
+
+.dock-bar>.menu-item {
+	--i: 1;
+	border-radius: 10px;
+	width: calc(40px * var(--i));
+	height: calc(40px * var(--i));
+	margin-bottom: calc(var(--i) * 15px - 15px);
+	opacity: 55%;
+}
+
+.dock-bar>.menu-item:hover {
+	opacity: 75%;
+}
+
+.dock-bar>.gap {
+	--i: 1;
+	width: calc(15px * var(--i));
+}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>test-win-98</title>
+		<link rel="icon" type="image/x-icon" href="../themes/window-ui/images/favicon.ico">
+
+		<!--
+			<script type="text/javascript"            src="http://www.jade-dungeon.cn:8081/3rd/jquery/3.5.1/jquery.min.js"                ></script>
+			<link title="hobbit" type="text/css" rel="stylesheet" href="../themes/window-ui/styles/all.min.css" />
+			-->
+		<link rel="stylesheet" href="/3rd/98.css/0.1.18/style.css" >
+		<link title="hobbit" type="text/css" rel="stylesheet" href="../themes/window-ui/styles/all.min.css" />
+		<style>
+.desktop-out { width:800px; height:800px; }
+		</style>
+	</head>
+	<body>
+		<h1>test-destop-00</h1><div class="desktop-out"><div id="test-desktop-00" class="desktop"></div></div>
+		<h1>test-destop-01</h1><div class="desktop-out"><div id="test-desktop-01" class="desktop dock-content"></div></div>
+		<h1>test-destop-02</h1><div class="desktop-out"><div id="test-desktop-02" class="desktop dock-content"></div></div>
+	</body>
+	<script type="module">
+		import { TestJadeUI } from '../scripts/ts/testJadeUI.js';
+		// $(window).load(function() { TestJadeUtils.testJadeWindowUI(); });
+		window.onload = function() { TestJadeUI.testWindowUI(); TestJadeUI.testCanvasWindow(); }
+	</script> 
+
+
+</html>
+
