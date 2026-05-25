@@ -645,7 +645,7 @@ export interface UIObj {
 /**
  * 窗口的部分实现
  */
-export abstract class UIWindowAdpt implements UIObj {
+export abstract class UIWindowAdapter implements UIObj {
 	readonly desktop: UIDesktop;
 	readonly ui: WinUIElement;
 	readonly status: WinStatus = { 

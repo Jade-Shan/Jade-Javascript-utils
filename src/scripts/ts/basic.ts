@@ -776,7 +776,7 @@ export class ColorRGB implements IColorRGB {
 		}
 	}
 
-	oppColor(): { color: ColorRGB, name: string } {
+	oppositeColor(): { color: ColorRGB, name: string } {
 		// 互补色的查询
 		// https://htmlcolorcodes.com/zh/yanse-xuanze-qi/
 		// https://zh.planetcalc.com/7661/

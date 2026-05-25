@@ -150,7 +150,7 @@ class TestBasicUtil {
 			let c1 = aa.color;
 			let n1 = StrUtil.leftPad(aa.name, 20, ' ');
 
-			let bb = c1.oppColor();
+			let bb = c1.oppositeColor();
 			let c2 = bb.color;
 			let n2 = StrUtil.rightPad(bb.name, 20, ' ');
 			console.log(`%c${n1} ${c1.toStrHex()}%c${c2.toStrHex()} ${n2}`, //

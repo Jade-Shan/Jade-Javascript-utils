@@ -2,7 +2,7 @@
 
 ## 概述
 
-对 `src/scripts/ts/` 下所有源文件的类型定义和代码质量进行了全面审查。发现的问题按严重程度分为：**运行时 Bug / 逻辑错误**、**类型标注问题**、**命名/拼写问题** 三类。
+对 `src/scripts/ts/` 下所有源文件的类型定义和代码质量进行了全面审查。已修复的问题：data URI 空格、HTML href 多余引号、`String`→`string`、`Promise<any>`→`Promise<void>`、冗余 `extends any`、`any`→`BlobPart`。
 
 ---
 
@@ -38,63 +38,11 @@ return (line.a.y - line.b.y) * p.x +
 
 使用标准 2D 叉积公式 `(B-A) × (P-A)`，常数项应为 `A.x*B.y - A.y*B.x`，而非代码中的 `A.x*A.y - B.x*A.y`。该函数用于 `segmentsIntr` 和 `revolveRay`，可能导致相交检测和旋转角度计算错误。
 
-### 4. `web.ts:198` / `resource.ts:331-337` — Data URI 格式多余空格
-
-```typescript
-// web.ts transBase64ImgSrc
-return `${base64Img.format}, ${base64Img.data}`;  // 逗号后多了空格
-// resource.ts getDefaultIconBase64
-result = `${grp.x12.format}, ${grp.x12.data}`;    // 同样
-```
-
-正确的 data URI 格式应为 `data:image/png;base64,iVBOR...`（逗号后无空格）。虽然多数浏览器可容错，但不符合 RFC 2397 标准。
-
-### 5. `webHtmlPage.ts:242,252,260,270,271` — `renderPagination` 生成的 HTML 中 href 多了单引号
-
-```typescript
-html = html + `<li><a href="${genPageHref(i)}'">${i}</a></li>`; // '">  —— 多了引号
-```
-
-多处生成的 `<a href="...'">` 多了一个单引号，导致 href 属性值末尾包含多余字符。
-
 ---
 
 ## 二、类型标注问题（中优先级）
 
-### 6. `basic.ts:255` — 参数类型 `String` 应为 `string`
-
-```typescript
-static replaceAll(s: String, exp: string, newStr: string): string
-```
-
-`String` 是 JavaScript 对象包装类型，应使用原始类型 `string`。在严格模式下这可能导致意外的类型行为。
-
-### 7. `basic.ts:437` — `sleep()` 返回类型 `Promise<void>` 更准确
-
-```typescript
-static async sleep(milSecs: number): Promise<any>  // → Promise<void>
-```
-
-方法只 `resolve(null)`，不传递有意义的值，`Promise<void>` 更精确。
-
-### 8. `web.ts:62,129` — `<T extends any, R extends any>` 冗余
-
-```typescript
-async function doHttp<T extends any, R extends any>  // extends any 无意义
-static async requestHttp<T extends any, R extends any>
-```
-
-`extends any` 等于没有约束，可直接写 `<T, R>`。
-
-### 9. `web.ts:440` — `downloadBlobContent` 参数类型 `any`
-
-```typescript
-static downloadBlobContent(content: any, ...)
-```
-
-`content` 最终传给 `new Blob([content], opts)`，应为 `BlobPart` 类型。
-
-### 10. `basic.ts:48` — 变量名与语义不符
+### 4. `basic.ts:48` — 变量名与语义不符
 
 ```typescript
 let sign = num == n;  // true 表示非负（正数/零），false 表示负数
@@ -118,27 +66,18 @@ let sign = num == n;  // true 表示非负（正数/零），false 表示负数
 
 ## 四、接口/类型定义优化建议（低优先级）
 
-### 11. `basic.ts:687` — 接口声明多余的 `;`
+### 5. `basic.ts:687` — 接口声明多余的 `;`
 
 ```typescript
 export interface IColorRGB { readonly r: number, readonly g: number, readonly b: number };
 ```
 
-末尾的分号不是必要的（TypeScript/ESLint 通常不建议）。
+末尾的分号不是必要的。
 
-### 12. `UIWindow.ts` — 大量使用 `type` 定义对象结构
+### 6. `UIWindow.ts` — 大量使用 `type` 定义对象结构
 
 如 `IDesktopConfig`、`WinCfg`、`WinStatus`、`DockBarCfg` 等均用 `type` 定义。对于对象形状，`interface` 更符合项目其他部分的惯例（项目中 `IXxx` 模式均用 interface），且 `interface` 有更好的错误提示和可扩展性。
 
-### 13. `web.ts:89-93` — `doHttp` 函数处理器绑定逻辑不完整
+### 7. `web.ts:89-93` — `doHttp` 函数处理器绑定逻辑不完整
 
 如果 `hdl` 参数传入但未提供 `onLoad`，Promise 永远不 resolve（也不会 reject，除非超时）。建议对核心的 `onLoad` 至少提供一个默认处理器，或者在缺少必要处理器时抛出错误。
-
----
-
-## 验证方法
-
-1. 运行 `npx gulp process-typescript` 确保编译通过
-2. 在浏览器中打开 `src/html/` 下的测试页面，验证沙盘视野渲染（修复 #1 后颜色应正确显示）
-3. 验证窗口拖动/缩放功能（修复 #2 后窗口位置计算正确）
-4. 修复 data URI 空格后检查图标显示是否正常

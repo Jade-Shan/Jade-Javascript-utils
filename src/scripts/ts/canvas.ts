@@ -254,12 +254,12 @@ export namespace CanvasUtils {
 		}, style);
 	}
 
-	export function genShapeTengentLine(x: number, y: number, shape: CanvasShape2D, // 
+	export function genShapeTangentLine(x: number, y: number, shape: CanvasShape2D, //
 		length: number, lineWidth: number, strokeStyle: string): Array<CanvasRay2D> //
 	{
 		let result: Array<CanvasRay2D> = [];
-		// TODO: 
-		//let rays: Array<Ray2D> = Geo2DUtils.genTengentRays(x, y, shape, length);
+		// TODO:
+		//let rays: Array<Ray2D> = Geo2DUtils.genTangentRays(x, y, shape, length);
 		//if (rays && rays.length > 0) {
 		//	for (let i = 0; i < rays.length; i++) {
 		//		let ray = rays[i];
@@ -269,10 +269,10 @@ export namespace CanvasUtils {
 		return result;
 	}
 
-	export function drawShapeTengentRays(cvsCtx: CanvasRenderingContext2D, x: number, y: number, // 
-		shape: CanvasShape2D, length: number, lineWidth: number, strokeStyle: string) // 
+	export function drawShapeTangentRays(cvsCtx: CanvasRenderingContext2D, x: number, y: number, //
+		shape: CanvasShape2D, length: number, lineWidth: number, strokeStyle: string) //
 	{
-		let rays: Array<CanvasRay2D> = genShapeTengentLine(x, y, shape, length, lineWidth, strokeStyle);
+		let rays: Array<CanvasRay2D> = genShapeTangentLine(x, y, shape, length, lineWidth, strokeStyle);
 		drawRays(cvsCtx, rays);
 	}
 }

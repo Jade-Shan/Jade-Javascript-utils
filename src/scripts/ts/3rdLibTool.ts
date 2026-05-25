@@ -228,11 +228,11 @@ declare namespace showdown {
 
 }
 
-let showdownConveter: showdown.Converter | null = null; // new showdown.Converter();
+let showdownConverter: showdown.Converter | null = null; // new showdown.Converter();
 export class ShowdownUtils {
 
 	static makeHtml(markdown: string): string {
-		showdownConveter = showdownConveter != null ? showdownConveter : new showdown.Converter();
-		return showdownConveter.makeHtml(markdown);
+		showdownConverter = showdownConverter != null ? showdownConverter : new showdown.Converter();
+		return showdownConverter.makeHtml(markdown);
 	}
 }

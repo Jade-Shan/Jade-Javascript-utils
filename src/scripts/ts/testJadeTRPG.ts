@@ -2,7 +2,7 @@ import { TimeUtil } from "./basic.js";
 import { CanvasUtils, ImageClip } from "./canvas.js";
 import { JadeUIResource, DefaultIconGroup } from "./resource.js";
 import { CircleToken, ICanvasFrame, ImageResource, LineToken, RectangleToken, SandTable, SandTableUtils, ScenceDataResp } from "./sandtable.js";
-import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdpt, WinParam } from "./UIWindow.js";
+import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "./UIWindow.js";
 
 export namespace TestJadeTRPG {
 
@@ -354,7 +354,7 @@ export namespace TestJadeTRPG {
 
 	}
 
-	class TestCanvasWindow extends UIWindowAdpt {
+	class TestCanvasWindow extends UIWindowAdapter {
 
 		bufferCanvas: HTMLCanvasElement = document.createElement("canvas");
 		finalCanvas : HTMLCanvasElement = document.createElement("canvas");

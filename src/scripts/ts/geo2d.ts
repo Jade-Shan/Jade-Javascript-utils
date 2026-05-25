@@ -645,7 +645,7 @@ export namespace Geo2DUtils {
 	// * @param rays 多条射线
 	// * @returns 返回两条切线的线段
 	// */
-	//export function genTengentRays(x: number, y: number, geo2D: GeoShape2D, length: number): Array<Ray2D> {
+	//export function genTangentRays(x: number, y: number, geo2D: GeoShape2D, length: number): Array<Ray2D> {
 	//	// 注意三角函数使用时的坐标
 	//	// 数学上的坐标轴第一象限的原点在左下角
 	//	// 在Canvas画布上，原点在左上角

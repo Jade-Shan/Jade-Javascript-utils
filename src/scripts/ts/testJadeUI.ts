@@ -1,12 +1,12 @@
 import { CanvasCircle2D, CanvasRectangle2D, CanvasUtils } from "./canvas.js";
 import { JadeUIResource, DefaultIconGroup } from "./resource.js";
-import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdpt, WinParam } from "./UIWindow.js";
+import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "./UIWindow.js";
 
 export namespace TestJadeUI {
 
 
 
-	class TestWindow01 extends UIWindowAdpt {
+	class TestWindow01 extends UIWindowAdapter {
 
 		renderIn(): void {
 			let renderWindowBody = (): HTMLDivElement => {
@@ -90,7 +90,7 @@ export namespace TestJadeUI {
 		//
 	}
 
-	class TestCanvasWindow extends UIWindowAdpt {
+	class TestCanvasWindow extends UIWindowAdapter {
 
 		canvas: HTMLCanvasElement = document.createElement("canvas");
 
