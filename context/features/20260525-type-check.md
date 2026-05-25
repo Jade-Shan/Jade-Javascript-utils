@@ -2,7 +2,7 @@
 
 ## 概述
 
-对 `src/scripts/ts/` 下所有源文件的类型定义和代码质量进行了全面审查。已修复的问题：data URI 空格、HTML href 多余引号、`String`→`string`、`Promise<any>`→`Promise<void>`、冗余 `extends any`、`any`→`BlobPart`。
+对 `src/scripts/ts/` 下所有源文件的类型定义和代码质量进行了全面审查。已修复的问题：data URI 空格、HTML href 多余引号、`String`→`string`、`Promise<any>`→`Promise<void>`、冗余 `extends any`、`any`→`BlobPart`、5 处拼写问题（Tengent→Tangent、Conveter→Converter、Adpt→Adapter、oppColor→oppositeColor）。
 
 ---
 
@@ -52,19 +52,7 @@ let sign = num == n;  // true 表示非负（正数/零），false 表示负数
 
 ---
 
-## 三、命名/拼写问题（低优先级）
-
-| 文件 | 行号 | 当前名称 | 建议 |
-|------|------|----------|------|
-| `canvas.ts` | 257 | `genShapeTengentLine` | `genShapeTangentLine` |
-| `canvas.ts` | 272 | `drawShapeTengentRays` | `drawShapeTangentRays` |
-| `3rdLibTool.ts` | 231 | `showdownConveter` | `showdownConverter` |
-| `UIWindow.ts` | 648 | `UIWindowAdpt` | `UIWindowAdapter` |
-| `basic.ts` | 779 | `oppColor()` | `oppositeColor()` 或 `oppoColor()` |
-
----
-
-## 四、接口/类型定义优化建议（低优先级）
+## 三、接口/类型定义优化建议（低优先级）
 
 ### 5. `basic.ts:687` — 接口声明多余的 `;`
 
