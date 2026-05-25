@@ -54,18 +54,3 @@ let sign = num == n;  // true 表示非负（正数/零），false 表示负数
 
 ## 三、接口/类型定义优化建议（低优先级）
 
-### 5. `basic.ts:687` — 接口声明多余的 `;`
-
-```typescript
-export interface IColorRGB { readonly r: number, readonly g: number, readonly b: number };
-```
-
-末尾的分号不是必要的。
-
-### 6. `UIWindow.ts` — 大量使用 `type` 定义对象结构
-
-如 `IDesktopConfig`、`WinCfg`、`WinStatus`、`DockBarCfg` 等均用 `type` 定义。对于对象形状，`interface` 更符合项目其他部分的惯例（项目中 `IXxx` 模式均用 interface），且 `interface` 有更好的错误提示和可扩展性。
-
-### 7. `web.ts:89-93` — `doHttp` 函数处理器绑定逻辑不完整
-
-如果 `hdl` 参数传入但未提供 `onLoad`，Promise 永远不 resolve（也不会 reject，除非超时）。建议对核心的 `onLoad` 至少提供一个默认处理器，或者在缺少必要处理器时抛出错误。

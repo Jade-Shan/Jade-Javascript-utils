@@ -8,25 +8,25 @@ const WIN_Z_IDX_MIN = 2000;
 /**
  * 桌面环境的参数配置
  */
-type IDesktopConfig = {
+interface IDesktopConfig {
 	desktop?: { backgroundImage?: string, width: string, height: string },
 	dockBar?: DockBarParam
 }
 
-type DraggingWindow = {
+interface DraggingWindow {
 	win?: UIObj,
 	moveStart?: { x: number, y: number },
 	winStart?: { left: number, top: number }
-};
+}
 
-type ScalingWindow = {
+interface ScalingWindow {
 	win?: UIObj,
 	direction?: 1|2|3|4|5|6|7|8|9,
 	moveStart?: { x: number, y: number },
 	winStart?: { left: number, top: number, width: number, height: number }
-};
+}
 
-type CurrentWindow = {
+interface CurrentWindow {
 	top?: UIObj,
 	dragging: DraggingWindow,
 	scaling: ScalingWindow,
@@ -216,7 +216,7 @@ export class UIDesktop {
 /**
  * 绑定窗口操作
  */
-export type IBindWinOpt = {
+export interface IBindWinOpt {
 
 	/**
 	 * 绑定窗口的关闭操作
@@ -226,25 +226,25 @@ export type IBindWinOpt = {
 
 	/**
 	 * 绑定窗口的关闭操作
-	 * 
+	 *
 	 * @param win 窗口
-	 * @param btn 绑定的按键 
+	 * @param btn 绑定的按键
 	 */
 	bindWinOptClose: (win: UIObj, btn: HTMLElement) => any;
 
 	/**
 	 * 绑定窗口的最大化操作
-	 * 
+	 *
 	 * @param win 窗口
-	 * @param btn 绑定的按键 
+	 * @param btn 绑定的按键
 	 */
 	bindWinOptMax: (win: UIObj, btn: HTMLElement) => any;
 
 	/**
 	 * 绑定窗口的最小化操作
-	 * 
+	 *
 	 * @param win 窗口
-	 * @param btn 绑定的按键 
+	 * @param btn 绑定的按键
 	 */
 	bindWinOptMin: (win: UIObj, btn: HTMLElement) => any;
 
@@ -569,41 +569,41 @@ export let defaultWinOption = {
 /**
  * 窗口配置
  */
-type WinCfg = {
+interface WinCfg {
 	icons: IconGroup, // 窗口的图标
 	bindWinOpt: IBindWinOpt, // 绑定窗口的操作
 	scalable: boolean, // 是否可以调整大小
-	body: { 
+	body: {
 		initSize: {width: number, height: number},
-		overflow: string 
+		overflow: string
 	},
-};
+}
 
-export type WinParam = {
+export interface WinParam {
 	icons?: IconGroup, // 窗口的图标
 	bindWinOpt?: IBindWinOpt, // 绑定窗口的操作
 	scalable?: boolean, // 是否可以调整大小
-	body?: { 
+	body?: {
 		initSize?: {width: number, height: number},
-		overflow?: string 
+		overflow?: string
 	},
-};
+}
 /**
  * 窗口状态
  */
-type WinStatus = {
+interface WinStatus {
 	isTop: boolean; // 是否是当前窗口
 	isMax: boolean; // 是否最大化
 	isMin: boolean; // 是否最小化
 	isDragging: boolean; // 是否在拖动状态
 	readonly lastPos : {x: number, y: number, zIdx: number}; // 正常状态时最后状态
 	readonly lastSize: {width: number, height: number}; // 正常状态时最后的大小
-};
+}
 
 /**
  * 窗口要用的HTML元素
  */
-type WinUIElement = {
+interface WinUIElement {
 	readonly win: HTMLDivElement;        // 窗口
 	readonly titleBar: HTMLDivElement;   // 标题栏
 	readonly windowBody: HTMLDivElement; // 窗口主体
@@ -742,21 +742,21 @@ export abstract class UIWindowAdapter implements UIObj {
 //}
 
 
-type DockBarCfg = {
-	dockColor: string, 
+interface DockBarCfg {
+	dockColor: string,
 	iconColor: string,
 	opacity: {normal: number, hover: number},
-	range: number, 
+	range: number,
 	maxScale: number,
-};
+}
 
-type DockBarParam = {
-	dockColor?: string, 
+interface DockBarParam {
+	dockColor?: string,
 	iconColor?: string,
 	opacity?: {normal: number, hover: number},
-	range?: number, 
+	range?: number,
 	maxScale?: number,
-};
+}
 
 export class DockBar {
 

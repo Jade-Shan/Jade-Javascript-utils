@@ -45,7 +45,7 @@ export class NumUtil {
 		let numStr: string = n.toString();
 		try {
 			let num: number = Math.abs(n);
-			let sign = num == n;
+			let isPositive: boolean = num == n;
 			let sArr = this.toFixed(num, m).toString().split(".");
 			let s1 = sArr[0] ? sArr[0] : ""; // 整数字符串
 			let s2 = sArr[1] ? sArr[1] : ""; // 小数字符串
@@ -70,7 +70,7 @@ export class NumUtil {
 					part2 = part2 + ",";
 				}
 			}
-			return (((sign) ? '' : '-') + part1 + '.' + part2);
+			return (((isPositive) ? '' : '-') + part1 + '.' + part2);
 		} catch (e) {
 			console.error(e);
 			numStr = "NaN";
@@ -684,7 +684,7 @@ export class TimeUtil {
 
 }
 
-export interface IColorRGB { readonly r: number, readonly g: number, readonly b: number };
+export interface IColorRGB { readonly r: number, readonly g: number, readonly b: number }
 export class ColorRGB implements IColorRGB {
 	readonly r: number;
 	readonly g: number;

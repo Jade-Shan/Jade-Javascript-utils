@@ -50,9 +50,9 @@
 # ========================================
 # compile javascript
 # ========================================
-#  echo '--- start : compile javascript ---'
-#  npx gulp compress-typescript
-#  echo '--- finish : compile javascript ---'
+echo '--- start : compile javascript ---'
+npx gulp compress-typescript
+echo '--- finish : compile javascript ---'
 
 # echo '--- start : compile typescript ---'
 # rm -rf webroot/scripts/ts/*
@@ -69,15 +69,15 @@
 # ========================================
 # html
 # ========================================
-echo '--- start : copy html ---'
-mkdir -p webroot/html/
-cp -r  src/html/* webroot/html/
-echo '--- finish: copy html ---'
+#  echo '--- start : copy html ---'
+#  mkdir -p webroot/html/
+#  cp -r  src/html/* webroot/html/
+#  echo '--- finish: copy html ---'
 
 # ========================================
 # docs
 # ========================================
-echo '--- start : copy doc ---'
-mkdir -p webroot/docs/
-cp -r  docs/* webroot/docs/
-echo '--- finish: copy doc ---'
+#  echo '--- start : copy doc ---'
+#  mkdir -p webroot/docs/
+#  cp -r  docs/* webroot/docs/
+#  echo '--- finish: copy doc ---'
