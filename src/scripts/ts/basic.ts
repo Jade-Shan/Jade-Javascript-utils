@@ -571,11 +571,11 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 取得两天之间的时间范围
-	 * 
-	 * @param date 
-	 * @param days 
-	 * @returns 
+	 * 取得日期与偏移毫秒数之间的时间范围
+	 *
+	 * @param date
+	 * @param ms
+	 * @returns
 	 */
 	static getDateArea(date: Date, ms: number): { floor: Date, ceil: Date } {
 		const d1 = date;
@@ -611,23 +611,23 @@ export class TimeUtil {
 		if (-570 == so && -570 == wo) return 'Pacific/Marquesas';
 		if (-540 == so && -600 == wo) return 'America/Adak';
 		if (-540 == so && -540 == wo) return 'Pacific/Gambier';
-		if (-480 == so && -540 == wo) return 'US/Alaska';
+		if (-480 == so && -540 == wo) return 'America/Anchorage';
 		if (-480 == so && -480 == wo) return 'Pacific/Pitcairn';
-		if (-420 == so && -480 == wo) return 'US/Pacific';
-		if (-420 == so && -420 == wo) return 'US/Arizona';
-		if (-360 == so && -420 == wo) return 'US/Mountain';
+		if (-420 == so && -480 == wo) return 'America/Los_Angeles';
+		if (-420 == so && -420 == wo) return 'America/Phoenix';
+		if (-360 == so && -420 == wo) return 'America/Denver';
 		if (-360 == so && -360 == wo) return 'America/Guatemala';
 		if (-360 == so && -300 == wo) return 'Pacific/Easter';
-		if (-300 == so && -360 == wo) return 'US/Central';
+		if (-300 == so && -360 == wo) return 'America/Chicago';
 		if (-300 == so && -300 == wo) return 'America/Bogota';
-		if (-240 == so && -300 == wo) return 'US/Eastern';
+		if (-240 == so && -300 == wo) return 'America/New_York';
 		if (-240 == so && -240 == wo) return 'America/Caracas';
 		if (-240 == so && -180 == wo) return 'America/Santiago';
-		if (-180 == so && -240 == wo) return 'Canada/Atlantic';
+		if (-180 == so && -240 == wo) return 'America/Halifax';
 		if (-180 == so && -180 == wo) return 'America/Montevideo';
 		if (-180 == so && -120 == wo) return 'America/Sao_Paulo';
 		if (-150 == so && -210 == wo) return 'America/St_Johns';
-		if (-120 == so && -180 == wo) return 'America/Godthab';
+		if (-120 == so && -180 == wo) return 'America/Nuuk';
 		if (-120 == so && -120 == wo) return 'America/Noronha';
 		if ( -60 == so &&  -60 == wo) return 'Atlantic/Cape_Verde';
 		if (   0 == so &&  -60 == wo) return 'Atlantic/Azores';
@@ -645,11 +645,11 @@ export class TimeUtil {
 		if ( 270 == so &&  270 == wo) return 'Asia/Kabul';
 		if ( 300 == so &&  240 == wo) return 'Asia/Baku';
 		if ( 300 == so &&  300 == wo) return 'Asia/Karachi';
-		if ( 330 == so &&  330 == wo) return 'Asia/Calcutta';
-		if ( 345 == so &&  345 == wo) return 'Asia/Katmandu';
+		if ( 330 == so &&  330 == wo) return 'Asia/Kolkata';
+		if ( 345 == so &&  345 == wo) return 'Asia/Kathmandu';
 		if ( 360 == so &&  300 == wo) return 'Asia/Yekaterinburg';
 		if ( 360 == so &&  360 == wo) return 'Asia/Colombo';
-		if ( 390 == so &&  390 == wo) return 'Asia/Rangoon';
+		if ( 390 == so &&  390 == wo) return 'Asia/Yangon';
 		if ( 420 == so &&  360 == wo) return 'Asia/Almaty';
 		if ( 420 == so &&  420 == wo) return 'Asia/Bangkok';
 		if ( 480 == so &&  420 == wo) return 'Asia/Krasnoyarsk';
@@ -669,9 +669,9 @@ export class TimeUtil {
 		if ( 720 == so &&  720 == wo) return 'Pacific/Fiji';
 		if ( 720 == so &&  780 == wo) return 'Pacific/Auckland';
 		if ( 765 == so &&  825 == wo) return 'Pacific/Chatham';
-		if ( 780 == so &&  780 == wo) return 'Pacific/Enderbury';
+		if ( 780 == so &&  780 == wo) return 'Pacific/Kanton';
 		if ( 840 == so &&  840 == wo) return 'Pacific/Kiritimati';
-		return 'Not in US';
+		return 'Unknown';
 	}
 
 	/**
