@@ -329,11 +329,11 @@ export namespace JadeUIResource {
 	export let getDefaultIconBase64 = (name: DefaultIconGroup, size: IconSize): string => {
 		let result = "";
 		let grp = getDefaultIcon(name);
-		if (size == IconSize.x12) { result = `${grp.x12.format}, ${grp.x12.data}`; }
-		if (size == IconSize.x16) { result = `${grp.x16.format}, ${grp.x16.data}`; }
-		if (size == IconSize.x24) { result = `${grp.x24.format}, ${grp.x24.data}`; }
-		if (size == IconSize.x32) { result = `${grp.x32.format}, ${grp.x32.data}`; }
-		if (size == IconSize.x48) { result = `${grp.x48.format}, ${grp.x48.data}`; }
+		if (size == IconSize.x12) { result = `${grp.x12.format},${grp.x12.data}`; }
+		if (size == IconSize.x16) { result = `${grp.x16.format},${grp.x16.data}`; }
+		if (size == IconSize.x24) { result = `${grp.x24.format},${grp.x24.data}`; }
+		if (size == IconSize.x32) { result = `${grp.x32.format},${grp.x32.data}`; }
+		if (size == IconSize.x48) { result = `${grp.x48.format},${grp.x48.data}`; }
 		return result;
 	}
 

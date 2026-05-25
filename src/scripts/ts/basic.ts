@@ -252,7 +252,7 @@ export class StrUtil {
 	 * @param exp 被替换部分的正则
 	 * @param newStr 替换成的字符串
 	 */
-	static replaceAll(s: String, exp: string, newStr: string): string {
+	static replaceAll(s: string, exp: string, newStr: string): string {
 		return s.replace(new RegExp(exp, "gm"), newStr);
 	}
 
@@ -434,7 +434,7 @@ export class TimeUtil {
 	static readonly UNIT_HUR: number = 1000 * 60 * 60;
 	static readonly UNIT_DAY: number = 1000 * 60 * 60 * 24;
 
-	static async sleep(milSecs: number): Promise<any> {
+	static async sleep(milSecs: number): Promise<void> {
 		return new Promise((resolve: (parm: any) => void) => {setTimeout(() => { resolve(null);/* do nothing */}, milSecs);})
 	}
 

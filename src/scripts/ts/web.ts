@@ -59,7 +59,7 @@ export interface HttpRequestHandler<T, R> {
 }
 
 
-async function doHttp<T extends any, R extends any>(req: HttpRequest<T>, //
+async function doHttp<T, R>(req: HttpRequest<T>, //
 	hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
 {
 	return new Promise<HttpResponse<R>>((resolve, reject) => {
@@ -126,7 +126,7 @@ export class WebUtil {
 	 * @param hdl 
 	 * @returns 
 	 */
-	static async requestHttp<T extends any, R extends any>(req: HttpRequest<T>, //
+	static async requestHttp<T, R>(req: HttpRequest<T>, //
 		hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
 	{
 		return await doHttp<T, R>(req, hdl).then(resp => resp).catch(resp => resp);
@@ -195,7 +195,7 @@ export class WebUtil {
 	 * @param base64Img 图像的Base64
 	 * @returns src格式
 	 */
-	static transBase64ImgSrc(base64Img: IBase64Img): string { return `${base64Img.format}, ${base64Img.data}` }
+	static transBase64ImgSrc(base64Img: IBase64Img): string { return `${base64Img.format},${base64Img.data}` }
 
 	/**
 	 * 图像Base64转为html 的URL
@@ -284,9 +284,10 @@ export class WebUtil {
 	 * 
 	 * @param name 
 	 */
-	static deleteCooke(name: string): void {
+	static deleteCookie(name: string): void {
 		let d = new Date();
 		d.setTime(d.getTime() + ((-1 * TimeUtil.UNIT_DAY)));
+		document.cookie = `${name}=;expires=${d.toUTCString()};path=/`;
 	}
 
 	/**
@@ -436,7 +437,7 @@ export class WebUtil {
 	 * @param blobOption blob文件配置
 	 * @param filename 文件名
 	 */
-	static downloadBlobContent(content: any, blobOption?: BlobPropertyBag, filename?: string) {
+	static downloadBlobContent(content: BlobPart, blobOption?: BlobPropertyBag, filename?: string) {
 		const fileName = filename ? filename : `default-${(new Date()).getTime()}.download`;
 		const opts = blobOption ? blobOption : { type: "application/octet-stream" };
 		const blob = new Blob([content], opts);

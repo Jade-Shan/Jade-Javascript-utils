@@ -239,7 +239,7 @@ export class WebHtmlPage {
 			html = html + '<li><a class="disable" href="javascript:void(0);">&laquo;</a></li>';
 		} else {
 			html = html + `<li><a href="${genPageHref(pageNo - 1)}">&laquo;</a></li>`;
-			html = html + `<li><a href="${genPageHref(i)}'">${i}</a></li>`;
+			html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
 		}
 		i = i + 1;
 		// elps
@@ -249,7 +249,7 @@ export class WebHtmlPage {
 		}
 		// pre no
 		while (pageNo > i) {
-			html = html + `<li><a href="${genPageHref(i)}'">${i}</a></li>`;
+			html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
 			i = i + 1;
 		}
 		// curr page
@@ -257,7 +257,7 @@ export class WebHtmlPage {
 		// post no
 		i = pageNo + 1;
 		while (i < count && i <= (pageNo + size)) {
-			html = html + `<li><a href="${genPageHref(i)}'">${i}</a></li>`;
+			html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
 			i = i + 1;
 		}
 		// elps

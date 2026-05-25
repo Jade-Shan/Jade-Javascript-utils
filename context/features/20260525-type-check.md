@@ -1,155 +1,144 @@
-# TypeScript 类型检查报告
+# TypeScript 类型错误与可优化类型定义 — 检查报告
 
-> 检查日期: 2026-05-25
-> 编译器配置: `target: es6`, `module: es6`, `noImplicitAny: true`, `strict: true`
-> 检查结果: 编译通过（无编译错误），以下是代码审查中发现的类型问题与优化建议
+## 概述
 
----
-
-## 一、类型错误（Type Errors）
-
-### 1. `StrUtil.format` 参数类型与实现不一致
-
-**文件:** [src/scripts/ts/basic.ts#L232](src/scripts/ts/basic.ts#L232)
-
-```typescript
-static format(s: string, args: string): string {
-```
-
-`args` 参数声明为 `string`，但函数体内把它当对象/数组使用：
-
-```typescript
-if (arguments.length == 1 && typeof (args) == "object") {
-    data = args;
-}
-for (var key in data) { ... }
-```
-
-应该改为 `args: any` 或者做函数重载。
+对 `src/scripts/ts/` 下所有源文件的类型定义和代码质量进行了全面审查。发现的问题按严重程度分为：**运行时 Bug / 逻辑错误**、**类型标注问题**、**命名/拼写问题** 三类。
 
 ---
 
-### 2. `Boolean` 包装类型误用（应使用 `boolean` 原始类型）
+## 一、运行时 Bug / 逻辑错误（高优先级）
 
-**文件:** [src/scripts/ts/UIWindow.ts#L575](src/scripts/ts/UIWindow.ts#L575)
+### 1. `sandtable.ts:264-265` — `oppColor().toString()` 返回 `[object Object]`
 
 ```typescript
-type WinCfg = {
-    scalable: Boolean,  // ❌ 这是 Boolean 对象类型，不是 boolean 原始类型
-    ...
-};
+let color = ColorRGB.fromHexTo140(this.color);
+cvsCtx.strokeStyle = color.color.oppColor.toString();  // BUG
+cvsCtx.strokeStyle = color.color.oppColor.toString();  // 下一行同样 BUG
 ```
 
-同样问题在 [WinParam](src/scripts/ts/UIWindow.ts#L588): `scalable?: Boolean`。应该改为小写的 `boolean`。`Boolean` 是对象包装器类型，几乎不应该在类型注解中使用。
+`oppColor()` 返回 `{ color: ColorRGB, name: string }`，该对象没有自定义 `toString()`，在 Canvas strokeStyle 赋值时会得到字符串 `"[object Object]"`，而不是有效的 CSS 颜色。
+
+**应改为:** `color.color.oppColor().color.toStrHex()` （`.color` 才是 `ColorRGB` 实例）。
+
+### 2. `UIWindow.ts:1028` — 用 `offsetHeight` 计算 x 坐标
+
+```typescript
+win.status.lastPos.x = parent.offsetHeight - width; // BUG: 应该是 offsetWidth
+```
+
+计算窗口水平位置时错误地使用了 `offsetHeight`，应使用 `offsetWidth`。
+
+### 3. `geo2d.ts:407-409` — `pointOfLineSide` 函数公式错误
+
+```typescript
+return (line.a.y - line.b.y) * p.x +
+    (line.b.x - line.a.x) * p.y + line.a.x * line.a.y -
+    line.b.x * line.a.y;  // BUG: 应该为 line.a.x * line.b.y - line.a.y * line.b.x
+```
+
+使用标准 2D 叉积公式 `(B-A) × (P-A)`，常数项应为 `A.x*B.y - A.y*B.x`，而非代码中的 `A.x*A.y - B.x*A.y`。该函数用于 `segmentsIntr` 和 `revolveRay`，可能导致相交检测和旋转角度计算错误。
+
+### 4. `web.ts:198` / `resource.ts:331-337` — Data URI 格式多余空格
+
+```typescript
+// web.ts transBase64ImgSrc
+return `${base64Img.format}, ${base64Img.data}`;  // 逗号后多了空格
+// resource.ts getDefaultIconBase64
+result = `${grp.x12.format}, ${grp.x12.data}`;    // 同样
+```
+
+正确的 data URI 格式应为 `data:image/png;base64,iVBOR...`（逗号后无空格）。虽然多数浏览器可容错，但不符合 RFC 2397 标准。
+
+### 5. `webHtmlPage.ts:242,252,260,270,271` — `renderPagination` 生成的 HTML 中 href 多了单引号
+
+```typescript
+html = html + `<li><a href="${genPageHref(i)}'">${i}</a></li>`; // '">  —— 多了引号
+```
+
+多处生成的 `<a href="...'">` 多了一个单引号，导致 href 属性值末尾包含多余字符。
 
 ---
 
-### 3. `setProperty` 传入了 `number` 而非 `string`
+## 二、类型标注问题（中优先级）
 
-**文件:** [src/scripts/ts/UIWindow.ts#L839](src/scripts/ts/UIWindow.ts#L839)
+### 6. `basic.ts:255` — 参数类型 `String` 应为 `string`
 
 ```typescript
-let scale = sizeCurve(x);  // 返回 number
-elm.style.setProperty('--i', scale);  // ❌ setProperty 的 value 参数需要 string
+static replaceAll(s: String, exp: string, newStr: string): string
 ```
 
-应该改为 `String(scale)` 或 \`${scale}\`。
+`String` 是 JavaScript 对象包装类型，应使用原始类型 `string`。在严格模式下这可能导致意外的类型行为。
+
+### 7. `basic.ts:437` — `sleep()` 返回类型 `Promise<void>` 更准确
+
+```typescript
+static async sleep(milSecs: number): Promise<any>  // → Promise<void>
+```
+
+方法只 `resolve(null)`，不传递有意义的值，`Promise<void>` 更精确。
+
+### 8. `web.ts:62,129` — `<T extends any, R extends any>` 冗余
+
+```typescript
+async function doHttp<T extends any, R extends any>  // extends any 无意义
+static async requestHttp<T extends any, R extends any>
+```
+
+`extends any` 等于没有约束，可直接写 `<T, R>`。
+
+### 9. `web.ts:440` — `downloadBlobContent` 参数类型 `any`
+
+```typescript
+static downloadBlobContent(content: any, ...)
+```
+
+`content` 最终传给 `new Blob([content], opts)`，应为 `BlobPart` 类型。
+
+### 10. `basic.ts:48` — 变量名与语义不符
+
+```typescript
+let sign = num == n;  // true 表示非负（正数/零），false 表示负数
+```
+
+`sign` 变量名暗示"符号"，但 `true` 表示正号（无减号前缀），`false` 表示负号，命名容易混淆。建议改为 `nonNegative` 或 `isPositive`。
 
 ---
 
-## 二、可优化的类型（Optimizable Types）
+## 三、命名/拼写问题（低优先级）
 
-### 4. 泛型 `T extends any` 多余
-
-**文件:** [src/scripts/ts/web.ts#L39-L59](src/scripts/ts/web.ts#L39-L59)
-
-```typescript
-export interface HttpRequest<T extends any> { ... }
-export interface HttpResponse<T extends any> { ... }
-export interface HttpRequestHandler<T extends any, R extends any> { ... }
-```
-
-`T extends any` 等同于不加约束，直接写 `HttpRequest<T>` 即可，更简洁。
+| 文件 | 行号 | 当前名称 | 建议 |
+|------|------|----------|------|
+| `canvas.ts` | 257 | `genShapeTengentLine` | `genShapeTangentLine` |
+| `canvas.ts` | 272 | `drawShapeTengentRays` | `drawShapeTangentRays` |
+| `3rdLibTool.ts` | 231 | `showdownConveter` | `showdownConverter` |
+| `UIWindow.ts` | 648 | `UIWindowAdpt` | `UIWindowAdapter` |
+| `basic.ts` | 779 | `oppColor()` | `oppositeColor()` 或 `oppoColor()` |
 
 ---
 
-### 5. `any | null` 可精确化为具体类型
+## 四、接口/类型定义优化建议（低优先级）
 
-**文件:** [src/scripts/ts/3rdLibTool.ts#L231](src/scripts/ts/3rdLibTool.ts#L231)
+### 11. `basic.ts:687` — 接口声明多余的 `;`
 
 ```typescript
-let showdownConveter: any | null = null;
+export interface IColorRGB { readonly r: number, readonly g: number, readonly b: number };
 ```
 
-可以改为 `showdown.Converter | null`，利用文件顶部已有的 `declare namespace showdown` 声明。
+末尾的分号不是必要的（TypeScript/ESLint 通常不建议）。
+
+### 12. `UIWindow.ts` — 大量使用 `type` 定义对象结构
+
+如 `IDesktopConfig`、`WinCfg`、`WinStatus`、`DockBarCfg` 等均用 `type` 定义。对于对象形状，`interface` 更符合项目其他部分的惯例（项目中 `IXxx` 模式均用 interface），且 `interface` 有更好的错误提示和可扩展性。
+
+### 13. `web.ts:89-93` — `doHttp` 函数处理器绑定逻辑不完整
+
+如果 `hdl` 参数传入但未提供 `onLoad`，Promise 永远不 resolve（也不会 reject，除非超时）。建议对核心的 `onLoad` 至少提供一个默认处理器，或者在缺少必要处理器时抛出错误。
 
 ---
 
-### 6. `direction` 类型可收窄为联合类型
+## 验证方法
 
-**文件:** [src/scripts/ts/UIWindow.ts#L22-L27](src/scripts/ts/UIWindow.ts#L22-L27)
-
-```typescript
-type ScalingWindow = {
-    direction?: number,  // 实际值是 1-9 的特定常量
-    ...
-};
-```
-
-可以用更精确的类型如 `direction?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9`，让类型系统帮助防错。
-
----
-
-## 三、逻辑/健壮性问题（与类型相关）
-
-### 7. `NumUtil.format` 中 `sign` 计算逻辑错误
-
-**文件:** [src/scripts/ts/basic.ts#L48](src/scripts/ts/basic.ts#L48)
-
-```typescript
-let num: number = Math.abs(n);
-let sign = num == n;  // sign 永远为 true，因为 num === Math.abs(n)
-```
-
-应为 `let sign = n >= 0;`。
-
----
-
-### 8. `pop()` 方法对 falsy 值处理不当
-
-**文件:** [src/scripts/ts/dataStructure.ts#L169-L175](src/scripts/ts/dataStructure.ts#L169-L175)
-
-```typescript
-pop(): (T | null) {
-    let c = this.recs.pop();
-    return c ? c : null;  // ❌ 如果 T 是 0、""、false，会错误返回 null
-}
-```
-
-应改为 `return c !== undefined ? c : null;`。`SimpleQueue.pop()`（同文件 L258-265）有同样的问题。
-
----
-
-### 9. `deleteCooke` 函数名拼写错误且功能未完成
-
-**文件:** [src/scripts/ts/web.ts#L287-L290](src/scripts/ts/web.ts#L287-L290)
-
-```typescript
-static deleteCooke(name: string): void {
-    let d = new Date();
-    d.setTime(d.getTime() + ((-1 * TimeUtil.UNIT_DAY)));
-}
-```
-
-- 函数名拼写错误：`deleteCooke` → 应为 `deleteCookie`
-- 函数体计算了过期时间但没有写入 `document.cookie`，无法真正删除 cookie
-
----
-
-## 总结
-
-| 严重程度 | 数量 | 说明 |
-|---------|------|------|
-| 类型错误 | 3 | `StrUtil.format` 参数类型、`Boolean` 包装类型误用、`setProperty` 参数类型 |
-| 可优化类型 | 3 | 多余泛型约束 `T extends any`、`any` 可精确化、`number` 可收窄为联合类型 |
-| 逻辑/健壮性 | 3 | `sign` 逻辑错误、`pop()` falsy 值处理、`deleteCooke` 未完成实现 |
+1. 运行 `npx gulp process-typescript` 确保编译通过
+2. 在浏览器中打开 `src/html/` 下的测试页面，验证沙盘视野渲染（修复 #1 后颜色应正确显示）
+3. 验证窗口拖动/缩放功能（修复 #2 后窗口位置计算正确）
+4. 修复 data URI 空格后检查图标显示是否正常

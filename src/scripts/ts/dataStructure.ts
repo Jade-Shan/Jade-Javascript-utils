@@ -171,13 +171,13 @@ export class SimpleStack<T> {
 			return null;
 		} else {
 			let c = this.recs.pop();
-			return c ? c : null;
+			return c !== undefined ? c : null;
 		}
 	}
 
 	/**
-	 * 
-	 * @returns 
+	 *
+	 * @returns
 	 */
 	size(): number {
 		return this.recs ? this.recs.length : 0;
@@ -189,8 +189,8 @@ export class SimpleStack<T> {
 
 	/**
 		 * 返回栈顶元素值 若堆栈为空则返回null
-	 * 
-	 * @returns 
+	 *
+	 * @returns
 	 */
 	getTop(): (T | null) {
 		if (!this.recs || this.recs.length < 1) {
@@ -201,15 +201,15 @@ export class SimpleStack<T> {
 	}
 
 	/**
-	 * 
+	 *
 	 */
 	removeAll(): void {
 		this.recs = new Array();
 	}
 
 	/**
-	 * 
-	 * @returns 
+	 *
+	 * @returns
 	 */
 	toString(): string {
 		let arr: Array<T> = new Array();
@@ -234,9 +234,9 @@ export class SimpleQueue<T> {
 	}
 
 	/**
-	 * 
-	 * @param elems 
-	 * @returns 
+	 *
+	 * @param elems
+	 * @returns
 	 */
 	push(...elems: Array<T>): void {
 		if (!elems || elems.length < 1) {
@@ -252,15 +252,15 @@ export class SimpleQueue<T> {
 
 	/**
 	 * 元素出 当堆栈元素为空时,返回null
-	 * 
-	 * @returns 
+	 *
+	 * @returns
 	 */
 	pop(): (T | null) {
 		if (!this.recs || this.recs.length < 1) {
 			return null;
 		} else {
 			let c = this.recs.shift();
-			return c ? c : null;
+			return c !== undefined ? c : null;
 		}
 	}
 

@@ -156,3 +156,7 @@ declare namespace MathJax { ... }
 ### 主题切换
 
 `WebHtmlPage.changeTheme(themeName)` 通过启用/禁用 `<link rel="alternate stylesheet">` 标签实现主题切换。当前主题持久化到 cookie（`ui.theme`），`initUITheme()` 在页面加载时读取 cookie 恢复主题。
+
+## 当前进度
+
+当前进度记录在文件 `context/features/20260525-type-check.md` 中。
