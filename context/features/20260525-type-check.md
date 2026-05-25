@@ -8,18 +8,6 @@
 
 ## 一、运行时 Bug / 逻辑错误（高优先级）
 
-### 1. `sandtable.ts:264-265` — `oppColor().toString()` 返回 `[object Object]`
-
-```typescript
-let color = ColorRGB.fromHexTo140(this.color);
-cvsCtx.strokeStyle = color.color.oppColor.toString();  // BUG
-cvsCtx.strokeStyle = color.color.oppColor.toString();  // 下一行同样 BUG
-```
-
-`oppColor()` 返回 `{ color: ColorRGB, name: string }`，该对象没有自定义 `toString()`，在 Canvas strokeStyle 赋值时会得到字符串 `"[object Object]"`，而不是有效的 CSS 颜色。
-
-**应改为:** `color.color.oppColor().color.toStrHex()` （`.color` 才是 `ColorRGB` 实例）。
-
 ### 2. `UIWindow.ts:1028` — 用 `offsetHeight` 计算 x 坐标
 
 ```typescript
@@ -42,15 +30,6 @@ return (line.a.y - line.b.y) * p.x +
 
 ## 二、类型标注问题（中优先级）
 
-### 4. `basic.ts:48` — 变量名与语义不符
-
-```typescript
-let sign = num == n;  // true 表示非负（正数/零），false 表示负数
-```
-
-`sign` 变量名暗示"符号"，但 `true` 表示正号（无减号前缀），`false` 表示负号，命名容易混淆。建议改为 `nonNegative` 或 `isPositive`。
-
----
 
 ## 三、接口/类型定义优化建议（低优先级）
 
