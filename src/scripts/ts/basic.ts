@@ -251,11 +251,11 @@ export class StrUtil {
 
 
 	/**
-	 * 替换所有匹配exp的字符串为指定字符串
-	 * @param exp 被替换部分的正则
+	 * 使用正则表达式替换所有匹配项
+	 * @param exp 正则表达式模式
 	 * @param newStr 替换成的字符串
 	 */
-	static replaceAll(s: string, exp: string, newStr: string): string {
+	static replaceByRegex(s: string, exp: string, newStr: string): string {
 		return s.replace(new RegExp(exp, "gm"), newStr);
 	}
 
@@ -287,12 +287,23 @@ export class StrUtil {
 		let len = str.length;
 		for (let i = 0; i < len; i++) {
 			let c = str.charCodeAt(i);
-			if ((c >= 0x0001) && (c <= 0x007F)) {
+			if (c >= 0xD800 && c <= 0xDBFF) {
+				let low = str.charCodeAt(++i);
+				c = ((c - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
+			}
+			if (c >= 0x0001 && c <= 0x007F) {
 				out += str.charAt(i);
 			} else if (c > 0x07FF) {
-				out += String.fromCharCode(0xE0 | ((c >> 12) & 0x0F));
-				out += String.fromCharCode(0x80 | ((c >> 6) & 0x3F));
-				out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
+				if (c > 0xFFFF) {
+					out += String.fromCharCode(0xF0 | ((c >> 18) & 0x07));
+					out += String.fromCharCode(0x80 | ((c >> 12) & 0x3F));
+					out += String.fromCharCode(0x80 | ((c >> 6) & 0x3F));
+					out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
+				} else {
+					out += String.fromCharCode(0xE0 | ((c >> 12) & 0x0F));
+					out += String.fromCharCode(0x80 | ((c >> 6) & 0x3F));
+					out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
+				}
 			} else {
 				out += String.fromCharCode(0xC0 | ((c >> 6) & 0x1F));
 				out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
@@ -310,7 +321,7 @@ export class StrUtil {
 		let out = "";
 		let len = str.length;
 		let i = 0;
-		let char2: number, char3: number;
+		let char2: number, char3: number, char4: number;
 		while (i < len) {
 			let c = str.charCodeAt(i++);
 			switch (c >> 4) {
@@ -329,6 +340,16 @@ export class StrUtil {
 					char3 = str.charCodeAt(i++);
 					out += String.fromCharCode(((c & 0x0F) << 12) |
 						((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
+					break;
+				case 15:
+					// 1111 0xxx  10xx xxxx  10xx xxxx  10xx xxxx
+					char2 = str.charCodeAt(i++);
+					char3 = str.charCodeAt(i++);
+					char4 = str.charCodeAt(i++);
+					let code = ((c & 0x07) << 18) | ((char2 & 0x3F) << 12) |
+						((char3 & 0x3F) << 6) | (char4 & 0x3F);
+					out += String.fromCharCode(0xD800 + ((code - 0x10000) >> 10));
+					out += String.fromCharCode(0xDC00 + ((code - 0x10000) & 0x3FF));
 					break;
 			}
 		}

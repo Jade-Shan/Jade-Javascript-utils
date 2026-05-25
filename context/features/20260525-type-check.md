@@ -103,19 +103,12 @@ resolve: (parm: any) => void  // parm → param
 
 当 `args` 为数组时，`for...in` 遍历的是索引字符串，虽然能工作，但不符合最佳实践，也会遍历到原型上的可枚举属性。
 
-**6. `StrUtil.replaceAll` 命名误导 ([basic.ts:255-257](src/scripts/ts/basic.ts#L255-L257))**
-
-方法名叫 `replaceAll`，暗示替换字面量字符串。但 `exp` 参数被直接传给 `new RegExp(exp, "gm")`，意味着它是正则表达式模式，其中的特殊字符（`.`、`*`、`+` 等）会被当作正则元字符处理。
-
-**7. UTF 转换函数不支持代理对 / 四字节字符 ([basic.ts:282-333](src/scripts/ts/basic.ts#L282-L333))**
-
-`utf16to8` 和 `utf8to16` 只处理 BMP 字符（U+0000~U+FFFF）。Emoji 等补充平面字符使用 UTF-16 代理对，编码/解码会出错。`utf8to16` 的 switch 语句缺少 `case 15`（4 字节 UTF-8 序列 `11110xxx`），这类字符会静默丢失。
 
 ### 总结
 
 | 类别 | 数量 |
 |------|------|
 | 潜在逻辑 Bug | 0 |
-| 代码质量问题 | 7 |
+| 代码质量问题 | 6 |
 
-最值得优先修复的是：**#7**（UTF 转换不支持 emoji）、**#5**（`StrUtil.format` 用 `for...in` 遍历）、**#4**（`TimeUtil.format` 使用废弃的 `RegExp.$1`）。
+最值得优先修复的是：**#5**（`StrUtil.format` 用 `for...in` 遍历）、**#4**（`TimeUtil.format` 使用废弃的 `RegExp.$1`）。
