@@ -404,9 +404,15 @@ export namespace Geo2DUtils {
 	 * @returns  result > 0为左， < 0为右， =0为线上
 	 */
 	export function pointOfLineSide(line: ILine2D, p: IPoint2D): number {
-		return (line.a.y - line.b.y) * p.x + // 
-			(line.b.x - line.a.x) * p.y + line.a.x * line.a.y - //
-			line.b.x * line.a.y;
+		/* 这个算法和标准的不一样，但是跑出来的结果一样。为了安全还是用标准的算法吧。
+		 return (line.a.y - line.b.y) * p.x + 
+			 (line.b.x - line.a.x) * p.y + line.a.x * line.a.y - 
+			 line.b.x * line.a.y;
+			 */
+		// 标准的算法
+		return (line.a.y - line.b.y) * p.x + //
+			(line.b.x - line.a.x) * p.y + line.a.x * line.b.y - //
+			line.a.y * line.b.x;
 	}
 
 	/*  */

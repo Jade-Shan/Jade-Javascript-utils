@@ -1026,7 +1026,7 @@ export namespace JadeWindowUI {
 			winDiv.style.left = `0px`;
 			winDiv.style.width = `${width}px`;
 		} else if ((width + win.status.lastPos.x) > parent.offsetWidth) {
-			win.status.lastPos.x = parent.offsetHeight - width;
+			win.status.lastPos.x = parent.offsetWidth - width;
 			winDiv.style.left = `${win.status.lastPos.x}px`;
 		}
 		let height = winDiv.offsetHeight;

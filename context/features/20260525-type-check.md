@@ -8,28 +8,4 @@
 
 ## 一、运行时 Bug / 逻辑错误（高优先级）
 
-### 2. `UIWindow.ts:1028` — 用 `offsetHeight` 计算 x 坐标
-
-```typescript
-win.status.lastPos.x = parent.offsetHeight - width; // BUG: 应该是 offsetWidth
-```
-
-计算窗口水平位置时错误地使用了 `offsetHeight`，应使用 `offsetWidth`。
-
-### 3. `geo2d.ts:407-409` — `pointOfLineSide` 函数公式错误
-
-```typescript
-return (line.a.y - line.b.y) * p.x +
-    (line.b.x - line.a.x) * p.y + line.a.x * line.a.y -
-    line.b.x * line.a.y;  // BUG: 应该为 line.a.x * line.b.y - line.a.y * line.b.x
-```
-
-使用标准 2D 叉积公式 `(B-A) × (P-A)`，常数项应为 `A.x*B.y - A.y*B.x`，而非代码中的 `A.x*A.y - B.x*A.y`。该函数用于 `segmentsIntr` 和 `revolveRay`，可能导致相交检测和旋转角度计算错误。
-
----
-
-## 二、类型标注问题（中优先级）
-
-
-## 三、接口/类型定义优化建议（低优先级）
 
