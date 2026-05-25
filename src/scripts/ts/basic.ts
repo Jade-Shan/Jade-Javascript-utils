@@ -88,7 +88,7 @@ export class NumUtil {
 	 */
 	static unformat(s: string): number {
 		let ns = s.replace(/[^\d\.-]/g, "");
-		return ns.includes(".") ? parseFloat(ns) : parseInt(ns);
+		return ns.includes(".") ? parseFloat(ns) : parseInt(ns, 10);
 	}
 
 	/**
@@ -122,10 +122,7 @@ export class NumUtil {
 		try { r1 = n1.toString().split(".")[1].length; } catch (e) { r1 = 0; }
 		try { r2 = n2.toString().split(".")[1].length; } catch (e) { r2 = 0; }
 		let m = Math.pow(10, Math.max(r1, r2));
-		let value = (n1 * m - n2 * m) / m;
-		let mStr = value.toString();
-		//var tmpNum = mStr.split(".");
-		//if (tmpNum.length > 1) { var l = tmpNum[1]; if (l.length < 2) { mStr = mStr + "0"; } }
+		const value = (n1 * m - n2 * m) / m;
 		return value;
 	}
 
@@ -237,12 +234,12 @@ export class StrUtil {
 		if (arguments.length < 1) {
 			return result;
 		}
-		let data = arguments; // 如果模板参数是数组
+		let data: any = arguments;
 		// 如果模板参数是对象
 		if (arguments.length == 1 && typeof (args) == "object") {
 			data = args;
 		}
-		for (let key in data) {
+		for (const key of Object.keys(data)) {
 			const value = data[key];
 			if (undefined !== value) { result = result.replace("{" + key + "}", value); }
 		}
@@ -459,7 +456,7 @@ export class TimeUtil {
 	static readonly UNIT_DAY : number = 1000 * 60 * 60 * 24;
 
 	static async sleep(milSecs: number): Promise<void> {
-		return new Promise((resolve: (parm: any) => void) => {setTimeout(() => { resolve(null);/* do nothing */}, milSecs);})
+		return new Promise((resolve: (param: any) => void) => {setTimeout(() => { resolve(null);/* do nothing */}, milSecs);})
 	}
 
 	/**
@@ -473,9 +470,10 @@ export class TimeUtil {
 	static format(d: Date, f?: string): string {
 		let result = f ? f : "yyyy-MM-dd HH:mm:ss.SSS";
 		let processPart = (part: string, num: number) => {
-			if (new RegExp(`(${part})`).test(result)) {
-				let mark = RegExp.$1;
-				let text = `${num}`;
+			const match = result.match(new RegExp(`(${part})`));
+			if (match) {
+				const mark = match[1];
+				const text = `${num}`;
 				result = result.replace(mark, StrUtil.leftPad(text, mark.length, '0'));
 			}
 		}
