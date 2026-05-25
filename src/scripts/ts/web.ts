@@ -36,21 +36,21 @@ export interface HttpRequestOption {
 	withCredentials?: boolean;
 }
 
-export interface HttpRequest<T extends any> {
+export interface HttpRequest<T> {
 	method ?: ("GET" | "POST");
 	url     : string;
 	opt    ?: HttpRequestOption;
 	body   ?: T;
 }
 
-export interface HttpResponse<T extends any> {
+export interface HttpResponse<T> {
 	statusCode: number;
 	statusMsg : string;
 	headers  ?: SimpleMap<string, string>;
 	body      : T | null;
 }
 
-export interface HttpRequestHandler<T extends any, R extends any> {
+export interface HttpRequestHandler<T, R> {
 	onLoad    ?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;
 	onProgress?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;
 	onTimeout ?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;

@@ -21,7 +21,7 @@ type DraggingWindow = {
 
 type ScalingWindow = {
 	win?: UIObj,
-	direction?: number,
+	direction?: 1|2|3|4|5|6|7|8|9,
 	moveStart?: { x: number, y: number },
 	winStart?: { left: number, top: number, width: number, height: number }
 };
@@ -393,7 +393,7 @@ export let defaultWinOption = {
 	bindWindowScaleSelect: (win: UIObj): any=> {
 		let desktop = win.desktop;
 		let winDiv = win.ui.win;
-		let checkScaleStart = (winDiv: HTMLElement, e: MouseEvent): number => {
+		let checkScaleStart = (winDiv: HTMLElement, e: MouseEvent): 1|2|3|4|5|6|7|8|9 => {
 			let effSize = 7; // 会触发的范围是5个像素
 			let width  = winDiv.offsetWidth ;
 			let height = winDiv.offsetHeight;
@@ -404,7 +404,7 @@ export let defaultWinOption = {
 			};
 			// 
 			let distance = { x: width - cPoint.x, y: height - cPoint.y };
-			let direction = 5;
+			let direction: 1|2|3|4|5|6|7|8|9 = 5;
 			if (distance.x < 0) {
 				return 5;
 			} else if (distance.y < 0) {
@@ -572,7 +572,7 @@ export let defaultWinOption = {
 type WinCfg = {
 	icons: IconGroup, // 窗口的图标
 	bindWinOpt: IBindWinOpt, // 绑定窗口的操作
-	scalable: Boolean, // 是否可以调整大小
+	scalable: boolean, // 是否可以调整大小
 	body: { 
 		initSize: {width: number, height: number},
 		overflow: string 
@@ -582,7 +582,7 @@ type WinCfg = {
 export type WinParam = {
 	icons?: IconGroup, // 窗口的图标
 	bindWinOpt?: IBindWinOpt, // 绑定窗口的操作
-	scalable?: Boolean, // 是否可以调整大小
+	scalable?: boolean, // 是否可以调整大小
 	body?: { 
 		initSize?: {width: number, height: number},
 		overflow?: string 
@@ -834,7 +834,7 @@ export class DockBar {
 				let x = rect.left + rect.width / 2;
 				// 图标的大小
 				let scale = sizeCurve(x);
-				elm.style.setProperty('--i', scale);
+				elm.style.setProperty('--i', `${scale}`);
 				// 图标的透明度
 				let opacity = opacityCurve(x)
 				elm.style.opacity = `${opacity}%`;

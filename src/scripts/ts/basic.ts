@@ -229,7 +229,7 @@ export class StrUtil {
 	 * 字符串格式化工具，用名称来替换
 	 * 例： "我是{name}，今年{age}了".format({name:"loogn",age:22});
 	 */
-	static format(s: string, args: string): string {
+	static format(s: string, args: any): string {
 		let result = s;
 		if (arguments.length < 1) {
 			return result;
