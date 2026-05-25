@@ -73,42 +73,32 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 
 ---
 
-## basic.ts 检查报告
+## basic.ts 代码审查结果
 
-### 代码质量问题
+### 可优化（性能/代码简洁）
 
-**1. `NumUtil.sub` 声明了未使用的变量 ([basic.ts:123](src/scripts/ts/basic.ts#L123))**
+1. **`StrUtil.trim/trimLeft/trimRight`** ([basic.ts:213-233](src/scripts/ts/basic.ts#L213-L233))
+   项目编译目标为 ES6，`String.prototype.trim/trimStart/trimEnd` 内置可用，无需手写正则。
 
-```typescript
-let mStr = value.toString();  // 从未使用
-```
+2. **`StrUtil.base64encode/base64decode`** ([basic.ts:403-485](src/scripts/ts/basic.ts#L403-L485))
+   浏览器原生支持 `btoa()` / `atob()`，可替代 80+ 行手写实现。
 
-**2. `NumUtil.unformat` 中 `parseInt` 缺少进制参数 ([basic.ts:88](src/scripts/ts/basic.ts#L88))**
+3. **UTF-8/16 转换 — 字符串拼接性能** ([basic.ts:325-395](src/scripts/ts/basic.ts#L325-L395))
+   循环内 `out += ...` 每轮创建新字符串，长字符串下 O(n²)。用数组 `push` + 最后 `join('')` 更优。
 
-```typescript
-return ns.includes(".") ? parseFloat(ns) : parseInt(ns);  // 应为 parseInt(ns, 10)
-```
+4. **`NumUtil.add/sub/mul/div` — try/catch 获取小数位数不优雅** ([basic.ts:107-108](src/scripts/ts/basic.ts#L107-L108))
+    `(n.toString().split('.')[1] || '').length` 比 try/catch 更清晰且无异常抛出。
 
-**3. `TimeUtil.sleep` 参数名拼写错误 ([basic.ts:438](src/scripts/ts/basic.ts#L438))**
+5. **`NumUtil.createCurve()` — `this.baseCurve` 上下文风险** ([basic.ts:194](src/scripts/ts/basic.ts#L194))
+    箭头函数内用 `this.baseCurve`，若 `curve` 被提取单独调用则 `this` 变为 `undefined`。用 `NumUtil.baseCurve` 更安全。
 
-```typescript
-resolve: (parm: any) => void  // parm → param
-```
+6. **`color140` + `color140Arr` — 数据双写** ([basic.ts:913-1195](src/scripts/ts/basic.ts#L913-L1195))
+    140 色在 `color140`（属性名索引）和 `color140Arr`（数组 + reverse 映射）各存一份约 280 条记录，新增颜色需两处同步。可从 `color140Arr` 动态生成 `color140`。
 
-**4. `TimeUtil.format` 使用了已废弃的 `RegExp.$1` ([basic.ts:453](src/scripts/ts/basic.ts#L453))**
+7. **注释掉的死代码** ([basic.ts:111-113](src/scripts/ts/basic.ts#L111-L113), [143-148](src/scripts/ts/basic.ts#L143-L148), [302-317](src/scripts/ts/basic.ts#L302-L317))
+    三处被注释的代码块可以清理。
 
-`RegExp.$1` 是非标准属性，在严格模式下行为不确定。建议改用 `String.prototype.replace` 回调或 `match()`。
+8. **`TimeUtil.sleep()` — 可简化** ([basic.ts:510](src/scripts/ts/basic.ts#L510))
+    `new Promise((resolve: (param: any) => void) => {setTimeout(() => { resolve(null);}, milSecs);})` 可简化为 `new Promise(resolve => setTimeout(resolve, milSecs))`。
 
-**5. `StrUtil.format` 用 `for...in` 遍历数组 ([basic.ts:242](src/scripts/ts/basic.ts#L242))**
-
-当 `args` 为数组时，`for...in` 遍历的是索引字符串，虽然能工作，但不符合最佳实践，也会遍历到原型上的可枚举属性。
-
-
-### 总结
-
-| 类别 | 数量 |
-|------|------|
-| 潜在逻辑 Bug | 0 |
-| 代码质量问题 | 6 |
-
-最值得优先修复的是：**#5**（`StrUtil.format` 用 `for...in` 遍历）、**#4**（`TimeUtil.format` 使用废弃的 `RegExp.$1`）。
+---

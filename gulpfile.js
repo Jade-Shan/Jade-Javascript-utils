@@ -176,9 +176,8 @@ gulp.task('process-typescript', gulp.series('clean-typescript', () => {
 		module: "es6",
 		noImplicitAny: true,
 		strict: true,
-		declaration: true
-		// sourcemap: true
-		// lib: ["ES2021.String"]
+		declaration: true,
+		lib: ["ES6", "DOM", "ES2019.String"]
 	})).pipe(sourcemaps.write('.'))
 		//.pipe(concat('all.js'))
 		.pipe(gulp.dest(scriptTsTag))
