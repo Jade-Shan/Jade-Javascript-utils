@@ -32,8 +32,8 @@ echo '--- finish : build uml ---'
 # build css
 # ========================================
 echo '--- start : build css ---'
-node ./node_modules/gulp-cli/bin/gulp.js 'process-style-window-ui' 
-node ./node_modules/gulp-cli/bin/gulp.js 'process-style-trpg' 
+npx gulp 'process-style-window-ui' 
+npx gulp 'process-style-trpg' 
 echo '--- finish : build css ---'
 
 
@@ -41,7 +41,7 @@ echo '--- finish : build css ---'
 # compile javascript
 # ========================================
 echo '--- start : compile javascript ---'
-node ./node_modules/gulp-cli/bin/gulp.js compress-typescript
+npx gulp compress-typescript
 echo '--- finish : compile javascript ---'
 
 # echo '--- start : compile typescript ---'

@@ -171,7 +171,7 @@ gulp.task('process-typescript', gulp.series('clean-typescript', () => {
 		scriptTsSrc + 'testJadeTRPG.ts',
 		scriptTsSrc + 'testJadeUtils.ts',
 		scriptTsSrc + 'testJadeUI.ts',
-	]).pipe(ts({
+	]).pipe(sourcemaps.init()).pipe(ts({
 		target: "es6",
 		module: "es6",
 		noImplicitAny: true,
@@ -179,9 +179,8 @@ gulp.task('process-typescript', gulp.series('clean-typescript', () => {
 		declaration: true,
 		// sourcemap: true,
 		// lib: ["ES2021.String"]
-    })).pipe(gulp.dest(scriptTsTag))
+    }))
 		//.pipe(concat('all.js'))
-		//.pipe(gulp.dest(scriptTsTag))
 		.pipe(sourcemaps.write())
 		.pipe(gulp.dest(scriptTsTag))
 }));
