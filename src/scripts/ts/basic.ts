@@ -103,14 +103,10 @@ export class NumUtil {
 	 * @returns 精确的加法结果
 	 */
 	static add(n1: number, n2: number): number {
-		let r1: number, r2: number;
-		try { r1 = n1.toString().split(".")[1].length; } catch (e) { r1 = 0; }
-		try { r2 = n2.toString().split(".")[1].length; } catch (e) { r2 = 0; }
+		let r1 = (n1.toString().split(".")[1] || "").length;
+		let r2 = (n2.toString().split(".")[1] || "").length;
 		let m = Math.pow(10, Math.max(r1, r2));
-		const value = (n1 * m + n2 * m) / m;
-		//let mStr = value.toString();
-		//var tmpNum = mStr.split(".");
-		//if (tmpNum.length > 1) { var l = tmpNum[1]; if (l.length < 2) { mStr = mStr + "0"; } }
+		let value = (n1 * m + n2 * m) / m;
 		return value;
 	}
 
@@ -121,9 +117,8 @@ export class NumUtil {
 	 * @returns 精确的减法结果
 	 */
 	static sub(n1: number, n2: number): number {
-		let r1: number, r2: number;
-		try { r1 = n1.toString().split(".")[1].length; } catch (e) { r1 = 0; }
-		try { r2 = n2.toString().split(".")[1].length; } catch (e) { r2 = 0; }
+		let r1 = (n1.toString().split(".")[1] || "").length;
+		let r2 = (n2.toString().split(".")[1] || "").length;
 		let m = Math.pow(10, Math.max(r1, r2));
 		const value = (n1 * m - n2 * m) / m;
 		return value;
@@ -137,15 +132,9 @@ export class NumUtil {
 	 */
 	static mul(n1: number, n2: number): number {
 		let m = 0, s1 = n1.toString(), s2 = n2.toString();
-		try { m += s1.split(".")[1].length; } catch (e) { }
-		try { m += s2.split(".")[1].length; } catch (e) { }
+		m += (s1.split(".")[1] || "").length;
+		m += (s2.split(".")[1] || "").length;
 		let value = Number(s1.replace(".", "")) * Number(s2.replace(".", "")) / Math.pow(10, m);
-		//let mStr = value.toString();
-		//var tmpNum = mStr.split(".");
-		//if (tmpNum.length > 1) {
-		//	var l = tmpNum[1];
-		//	if (l.length < 2) { mStr = mStr + "0"; }
-		//}
 		return value;
 	}
 
@@ -156,9 +145,8 @@ export class NumUtil {
 	 * @returns 精确的除法结果
 	 */
 	static div(n1: number, n2: number): number {
-		let t1 = 0, t2 = 0;
-		try { t1 = n1.toString().split(".")[1].length; } catch (e) { }
-		try { t2 = n2.toString().split(".")[1].length; } catch (e) { }
+		let t1 = (n1.toString().split(".")[1] || "").length;
+		let t2 = (n2.toString().split(".")[1] || "").length;
 		let m = t2 - t1;
 		let r1 = Number(n1.toString().replace(".", ""));
 		let r2 = Number(n2.toString().replace(".", ""));
@@ -191,7 +179,7 @@ export class NumUtil {
 				return minY;
 			} else {
 				const yDis = maxY - minY;
-				return this.baseCurve((x - beginX) / totalXDis) * yDis + minY;
+				return NumUtil.baseCurve((x - beginX) / totalXDis) * yDis + minY;
 			}
 		}
 		return curve;
@@ -211,7 +199,7 @@ export class StrUtil {
 	 * @returns 去除两端空白后的字符串
 	 */
 	static trim(s: string): string {
-		return s.replace(/(^\s*)|(\s*$)/g, "");
+		return s.trim();
 	}
 
 	/**
@@ -220,7 +208,7 @@ export class StrUtil {
 	 * @returns 去除左侧空白后的字符串
 	 */
 	static trimLeft(s: string): string {
-		return s.replace(/(^\s*)/g, "");
+		return s.trimLeft();
 	}
 
 	/**
@@ -229,7 +217,7 @@ export class StrUtil {
 	 * @returns 去除右侧空白后的字符串
 	 */
 	static trimRight(s: string): string {
-		return s.replace(/(\s*$)/g, "");
+		return s.trimRight();
 	}
 
 	/**
@@ -298,31 +286,13 @@ export class StrUtil {
 		return s.replace(new RegExp(exp, "gm"), newStr);
 	}
 
-
-	// 	/**
-	// 	 * 
-	// 	 * @param num 
-	// 	 * @param scale 
-	// 	 * @returns 
-	// 	 */
-	// 	static formatNumber(num: number, scale: number) {
-	// 		scale = scale > 0 && scale <= 20 ? scale : 2;
-	// 		let numStr = num.toFixed(scale) + "";
-	// 		let l = numStr.split(".")[0].split("").reverse(), r = numStr.split(".")[1];
-	// 		let t = "";
-	// 		for (var i = 0; i < l.length; i++) {
-	// 			t += l[i] + ((i + 1) % 3 === 0 && (i + 1) != l.length ? "," : "");
-	// 		}
-	// 		return t.split("").reverse().join("") + "." + r;
-	// 	}
-
 	/**
 	 * 将 UTF-16 字符串转换为 UTF-8 编码字符串。
 	 * @param str UTF-16 编码的字符串
 	 * @returns UTF-8 编码的字符串
 	 */
 	static utf16to8(str: string): string {
-		let out = "";
+		let out: string[] = [];
 		let len = str.length;
 		for (let i = 0; i < len; i++) {
 			let c = str.charCodeAt(i);
@@ -331,24 +301,24 @@ export class StrUtil {
 				c = ((c - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
 			}
 			if (c >= 0x0001 && c <= 0x007F) {
-				out += str.charAt(i);
+				out.push(str.charAt(i));
 			} else if (c > 0x07FF) {
 				if (c > 0xFFFF) {
-					out += String.fromCharCode(0xF0 | ((c >> 18) & 0x07));
-					out += String.fromCharCode(0x80 | ((c >> 12) & 0x3F));
-					out += String.fromCharCode(0x80 | ((c >> 6) & 0x3F));
-					out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
+					out.push(String.fromCharCode(0xF0 | ((c >> 18) & 0x07)));
+					out.push(String.fromCharCode(0x80 | ((c >> 12) & 0x3F)));
+					out.push(String.fromCharCode(0x80 | ((c >> 6) & 0x3F)));
+					out.push(String.fromCharCode(0x80 | ((c >> 0) & 0x3F)));
 				} else {
-					out += String.fromCharCode(0xE0 | ((c >> 12) & 0x0F));
-					out += String.fromCharCode(0x80 | ((c >> 6) & 0x3F));
-					out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
+					out.push(String.fromCharCode(0xE0 | ((c >> 12) & 0x0F)));
+					out.push(String.fromCharCode(0x80 | ((c >> 6) & 0x3F)));
+					out.push(String.fromCharCode(0x80 | ((c >> 0) & 0x3F)));
 				}
 			} else {
-				out += String.fromCharCode(0xC0 | ((c >> 6) & 0x1F));
-				out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
+				out.push(String.fromCharCode(0xC0 | ((c >> 6) & 0x1F)));
+				out.push(String.fromCharCode(0x80 | ((c >> 0) & 0x3F)));
 			}
 		}
-		return out;
+		return out.join("");
 	}
 
 	/**
@@ -357,7 +327,7 @@ export class StrUtil {
 	 * @returns UTF-16 字符串
 	 */
 	static utf8to16(str: string): string {
-		let out = "";
+		let out: string[] = [];
 		let len = str.length;
 		let i = 0;
 		let char2: number, char3: number, char4: number;
@@ -365,34 +335,30 @@ export class StrUtil {
 			let c = str.charCodeAt(i++);
 			switch (c >> 4) {
 				case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
-					// 0xxxxxxx
-					out += str.charAt(i - 1);
+					out.push(str.charAt(i - 1));
 					break;
 				case 12: case 13:
-					// 110x xxxx   10xx xxxx
 					char2 = str.charCodeAt(i++);
-					out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
+					out.push(String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F)));
 					break;
 				case 14:
-					// 1110 xxxx  10xx xxxx  10xx xxxx
 					char2 = str.charCodeAt(i++);
 					char3 = str.charCodeAt(i++);
-					out += String.fromCharCode(((c & 0x0F) << 12) |
-						((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
+					out.push(String.fromCharCode(((c & 0x0F) << 12) |
+						((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0)));
 					break;
 				case 15:
-					// 1111 0xxx  10xx xxxx  10xx xxxx  10xx xxxx
 					char2 = str.charCodeAt(i++);
 					char3 = str.charCodeAt(i++);
 					char4 = str.charCodeAt(i++);
 					let code = ((c & 0x07) << 18) | ((char2 & 0x3F) << 12) |
 						((char3 & 0x3F) << 6) | (char4 & 0x3F);
-					out += String.fromCharCode(0xD800 + ((code - 0x10000) >> 10));
-					out += String.fromCharCode(0xDC00 + ((code - 0x10000) & 0x3FF));
+					out.push(String.fromCharCode(0xD800 + ((code - 0x10000) >> 10)));
+					out.push(String.fromCharCode(0xDC00 + ((code - 0x10000) & 0x3FF)));
 					break;
 			}
 		}
-		return out;
+		return out.join("");
 	}
 
 	/**
@@ -401,35 +367,7 @@ export class StrUtil {
 	 * @returns Base64 编码后的字符串
 	 */
 	static base64encode(str: string): string {
-		let base64EncodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-			"abcdefghijklmnopqrstuvwxyz0123456789+/";
-		let len = str.length;
-		let out = "";
-		let c1, c2, c3;
-		let i = 0;
-		while (i < len) {
-			c1 = str.charCodeAt(i++) & 0xff;
-			if (i == len) {
-				out += base64EncodeChars.charAt(c1 >> 2);
-				out += base64EncodeChars.charAt((c1 & 0x3) << 4);
-				out += "==";
-				break;
-			}
-			c2 = str.charCodeAt(i++);
-			if (i == len) {
-				out += base64EncodeChars.charAt(c1 >> 2);
-				out += base64EncodeChars.charAt(((c1 & 0x3) << 4) | ((c2 & 0xF0) >> 4));
-				out += base64EncodeChars.charAt((c2 & 0xF) << 2);
-				out += "=";
-				break;
-			}
-			c3 = str.charCodeAt(i++);
-			out += base64EncodeChars.charAt(c1 >> 2);
-			out += base64EncodeChars.charAt(((c1 & 0x3) << 4) | ((c2 & 0xF0) >> 4));
-			out += base64EncodeChars.charAt(((c2 & 0xF) << 2) | ((c3 & 0xC0) >> 6));
-			out += base64EncodeChars.charAt(c3 & 0x3F);
-		}
-		return out;
+		return btoa(str);
 	}
 
 	/**
@@ -438,50 +376,7 @@ export class StrUtil {
 	 * @returns 解码后的原始字符串
 	 */
 	static base64decode(str: string): string {
-		let base64DecodeChars = new Array(
-			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63,
-			52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1,
-			-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-			15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1,
-			-1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-			41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1);
-		let len = str.length;
-		let out = "";
-		let i = 0, c1, c2, c3, c4;
-		while (i < len) {
-			/* c1 */
-			do {
-				c1 = base64DecodeChars[str.charCodeAt(i++) & 0xff];
-			} while (i < len && c1 == -1);
-			if (c1 == -1) break;
-			/* c2 */
-			do {
-				c2 = base64DecodeChars[str.charCodeAt(i++) & 0xff];
-			} while (i < len && c2 == -1);
-			if (c2 == -1) break;
-			out += String.fromCharCode((c1 << 2) | ((c2 & 0x30) >> 4));
-			/* c3 */
-			do {
-				c3 = str.charCodeAt(i++) & 0xff;
-				if (c3 == 61)
-					return out;
-				c3 = base64DecodeChars[c3];
-			} while (i < len && c3 == -1);
-			if (c3 == -1) break;
-			out += String.fromCharCode(((c2 & 0XF) << 4) | ((c3 & 0x3C) >> 2));
-			/* c4 */
-			do {
-				c4 = str.charCodeAt(i++) & 0xff;
-				if (c4 == 61)
-					return out;
-				c4 = base64DecodeChars[c4];
-			} while (i < len && c4 == -1);
-			if (c4 == -1) break;
-			out += String.fromCharCode(((c3 & 0x03) << 6) | c4);
-		}
-		return out;
+		return atob(str);
 	}
 
 }
@@ -507,7 +402,7 @@ export class TimeUtil {
 	 * @returns Promise，在指定时间后 resolve
 	 */
 	static async sleep(milSecs: number): Promise<void> {
-		return new Promise((resolve: (param: any) => void) => {setTimeout(() => { resolve(null);/* do nothing */}, milSecs);})
+		return new Promise(resolve => setTimeout(resolve, milSecs));
 	}
 
 	/**
@@ -1052,145 +947,152 @@ let color140 = {
 	Ivory                : {color: ColorRGB.fromStrHex('#FFFFF0'), name: "Ivory"               },
 	White                : {color: ColorRGB.fromStrHex('#FFFFFF'), name: "White"               }};
 
-let color140Arr = [
-	{name: "Black"                , color: color140.Black                , rev: color140.White          },
-	{name: "Navy"                 , color: color140.Navy                 , rev: color140.Khaki          },
-	{name: "DarkBlue"             , color: color140.DarkBlue             , rev: color140.Khaki          },
-	{name: "MediumBlue"           , color: color140.MediumBlue           , rev: color140.Yellow         },
-	{name: "Blue"                 , color: color140.Blue                 , rev: color140.Yellow         },
-	{name: "DarkGreen"            , color: color140.DarkGreen            , rev: color140.Violet         },
-	{name: "Green"                , color: color140.Green                , rev: color140.Violet         },
-	{name: "Teal"                 , color: color140.Teal                 , rev: color140.LightCoral     },
-	{name: "DarkCyan"             , color: color140.DarkCyan             , rev: color140.Salmon         },
-	{name: "DeepSkyBlue"          , color: color140.DeepSkyBlue          , rev: color140.OrangeRed      },
-	{name: "DarkTurquoise"        , color: color140.DarkTurquoise        , rev: color140.OrangeRed      },
-	{name: "MediumSpringGreen"    , color: color140.MediumSpringGreen    , rev: color140.DeepPink       },
-	{name: "Lime"                 , color: color140.Lime                 , rev: color140.Fuchsia        },
-	{name: "SpringGreen"          , color: color140.SpringGreen          , rev: color140.DeepPink       },
-	{name: "Aqua"                 , color: color140.Aqua                 , rev: color140.Red            },
-	{name: "Cyan"                 , color: color140.Cyan                 , rev: color140.Red            },
-	{name: "MidnightBlue"         , color: color140.MidnightBlue         , rev: color140.Khaki          },
-	{name: "DodgerBlue"           , color: color140.DodgerBlue           , rev: color140.Maroon         },
-	{name: "LightSeaGreen"        , color: color140.LightSeaGreen        , rev: color140.Maroon         },
-	{name: "ForestGreen"          , color: color140.ForestGreen          , rev: color140.Orchid         },
-	{name: "SeaGreen"             , color: color140.SeaGreen             , rev: color140.PaleVioletRed  },
-	{name: "DarkSlateGray"        , color: color140.DarkSlateGray        , rev: color140.Tan            },
-	{name: "LimeGreen"            , color: color140.LimeGreen            , rev: color140.DarkOrchid     },
-	{name: "MediumSeaGreen"       , color: color140.MediumSeaGreen       , rev: color140.Maroon         },
-	{name: "Turquoise"            , color: color140.Turquoise            , rev: color140.FireBrick      },
-	{name: "RoyalBlue"            , color: color140.RoyalBlue            , rev: color140.DarkGoldenRod  },
-	{name: "SteelBlue"            , color: color140.SteelBlue            , rev: color140.Peru           },
-	{name: "DarkSlateBlue"        , color: color140.DarkSlateBlue        , rev: color140.DarkKhaki      },
-	{name: "MediumTurquoise"      , color: color140.MediumTurquoise      , rev: color140.Brown          },
-	{name: "Indigo"               , color: color140.Indigo               , rev: color140.PaleGreen      },
-	{name: "DarkOliveGreen"       , color: color140.DarkOliveGreen       , rev: color140.DarkGray       },
-	{name: "CadetBlue"            , color: color140.CadetBlue            , rev: color140.Brown          },
-	{name: "CornflowerBlue"       , color: color140.CornflowerBlue       , rev: color140.SaddleBrown    },
-	{name: "MediumAquaMarine"     , color: color140.MediumAquaMarine     , rev: color140.Brown          },
-	{name: "DimGray"              , color: color140.DimGray              , rev: color140.LightSlateGray },
-	{name: "SlateBlue"            , color: color140.SlateBlue            , rev: color140.YellowGreen    },
-	{name: "OliveDrab"            , color: color140.OliveDrab            , rev: color140.DarkSlateBlue  },
-	{name: "SlateGray"            , color: color140.SlateGray            , rev: color140.DarkViolet     },
-	{name: "LightSlateGray"       , color: color140.LightSlateGray       , rev: color140.DarkViolet     },
-	{name: "MediumSlateBlue"      , color: color140.MediumSlateBlue      , rev: color140.Khaki          },
-	{name: "LawnGreen"            , color: color140.LawnGreen            , rev: color140.DarkViolet     },
-	{name: "Chartreuse"           , color: color140.Chartreuse           , rev: color140.DarkViolet     },
-	{name: "Aquamarine"           , color: color140.Aquamarine           , rev: color140.Maroon         },
-	{name: "Maroon"               , color: color140.Maroon               , rev: color140.Aquamarine     },
-	{name: "Purple"               , color: color140.Purple               , rev: color140.LightGreen     },
-	{name: "Olive"                , color: color140.Olive                , rev: color140.DarkGreen      },
-	{name: "Gray"                 , color: color140.Gray                 , rev: color140.DarkKhaki      },
-	{name: "SkyBlue"              , color: color140.SkyBlue              , rev: color140.SaddleBrown    },
-	{name: "LightSkyBlue"         , color: color140.LightSkyBlue         , rev: color140.SaddleBrown    },
-	{name: "BlueViolet"           , color: color140.BlueViolet           , rev: color140.YellowGreen    },
-	{name: "DarkRed"              , color: color140.DarkRed              , rev: color140.Aquamarine     },
-	{name: "DarkMagenta"          , color: color140.DarkMagenta          , rev: color140.LightGreen     },
-	{name: "SaddleBrown"          , color: color140.SaddleBrown          , rev: color140.SkyBlue        },
-	{name: "DarkSeaGreen"         , color: color140.DarkSeaGreen         , rev: color140.DimGray        },
-	{name: "LightGreen"           , color: color140.LightGreen           , rev: color140.Purple         },
-	{name: "MediumPurple"         , color: color140.MediumPurple         , rev: color140.DarkKhaki      },
-	{name: "DarkViolet"           , color: color140.DarkViolet           , rev: color140.LawnGreen      },
-	{name: "PaleGreen"            , color: color140.PaleGreen            , rev: color140.Purple         },
-	{name: "DarkOrchid"           , color: color140.DarkOrchid           , rev: color140.LimeGreen      },
-	{name: "YellowGreen"          , color: color140.YellowGreen          , rev: color140.SlateBlue      },
-	{name: "Sienna"               , color: color140.Sienna               , rev: color140.CornflowerBlue },
-	{name: "Brown"                , color: color140.Brown                , rev: color140.MediumTurquoise},
-	{name: "DarkGray"             , color: color140.DarkGray             , rev: color140.DarkSlateGray  },
-	{name: "LightBlue"            , color: color140.LightBlue            , rev: color140.DarkOliveGreen },
-	{name: "GreenYellow"          , color: color140.GreenYellow          , rev: color140.DarkViolet     },
-	{name: "PaleTurquoise"        , color: color140.PaleTurquoise        , rev: color140.Maroon         },
-	{name: "LightSteelBlue"       , color: color140.LightSteelBlue       , rev: color140.DarkOliveGreen },
-	{name: "PowderBlue"           , color: color140.PowderBlue           , rev: color140.DarkOliveGreen },
-	{name: "FireBrick"            , color: color140.FireBrick            , rev: color140.Turquoise      },
-	{name: "DarkGoldenRod"        , color: color140.DarkGoldenRod        , rev: color140.RoyalBlue      },
-	{name: "MediumOrchid"         , color: color140.MediumOrchid         , rev: color140.LimeGreen      },
-	{name: "RosyBrown"            , color: color140.RosyBrown            , rev: color140.DimGray        },
-	{name: "DarkKhaki"            , color: color140.DarkKhaki            , rev: color140.DarkSlateBlue  },
-	{name: "Silver"               , color: color140.Silver               , rev: color140.DarkSlateGray  },
-	{name: "MediumVioletRed"      , color: color140.MediumVioletRed      , rev: color140.MediumSeaGreen },
-	{name: "IndianRed"            , color: color140.IndianRed            , rev: color140.Navy           },
-	{name: "Peru"                 , color: color140.Peru                 , rev: color140.SteelBlue      },
-	{name: "Chocolate"            , color: color140.Chocolate            , rev: color140.MediumBlue     },
-	{name: "Tan"                  , color: color140.Tan                  , rev: color140.DarkSlateGray  },
-	{name: "LightGray"            , color: color140.LightGray            , rev: color140.DarkSlateGray  },
-	{name: "Thistle"              , color: color140.Thistle              , rev: color140.DarkSlateGray  },
-	{name: "Orchid"               , color: color140.Orchid               , rev: color140.DarkSlateGray  },
-	{name: "GoldenRod"            , color: color140.GoldenRod            , rev: color140.RoyalBlue      },
-	{name: "PaleVioletRed"        , color: color140.PaleVioletRed        , rev: color140.DarkSlateGray  },
-	{name: "Crimson"              , color: color140.Crimson              , rev: color140.Turquoise      },
-	{name: "Gainsboro"            , color: color140.Gainsboro            , rev: color140.MidnightBlue   },
-	{name: "Plum"                 , color: color140.Plum                 , rev: color140.ForestGreen    },
-	{name: "BurlyWood"            , color: color140.BurlyWood            , rev: color140.MidnightBlue   },
-	{name: "LightCyan"            , color: color140.LightCyan            , rev: color140.Black          },
-	{name: "Lavender"             , color: color140.Lavender             , rev: color140.Black          },
-	{name: "DarkSalmon"           , color: color140.DarkSalmon           , rev: color140.Teal           },
-	{name: "Violet"               , color: color140.Violet               , rev: color140.Green          },
-	{name: "PaleGoldenRod"        , color: color140.PaleGoldenRod        , rev: color140.MidnightBlue   },
-	{name: "LightCoral"           , color: color140.LightCoral           , rev: color140.Teal           },
-	{name: "Khaki"                , color: color140.Khaki                , rev: color140.MidnightBlue   },
-	{name: "AliceBlue"            , color: color140.AliceBlue            , rev: color140.Black          },
-	{name: "HoneyDew"             , color: color140.HoneyDew             , rev: color140.Black          },
-	{name: "Azure"                , color: color140.Azure                , rev: color140.Black          },
-	{name: "SandyBrown"           , color: color140.SandyBrown           , rev: color140.Teal           },
-	{name: "Wheat"                , color: color140.Wheat                , rev: color140.MidnightBlue   },
-	{name: "Beige"                , color: color140.Beige                , rev: color140.Black          },
-	{name: "WhiteSmoke"           , color: color140.WhiteSmoke           , rev: color140.Black          },
-	{name: "MintCream"            , color: color140.MintCream            , rev: color140.Black          },
-	{name: "GhostWhite"           , color: color140.GhostWhite           , rev: color140.Black          },
-	{name: "Salmon"               , color: color140.Salmon               , rev: color140.Teal           },
-	{name: "AntiqueWhite"         , color: color140.AntiqueWhite         , rev: color140.Black          },
-	{name: "Linen"                , color: color140.Linen                , rev: color140.Black          },
-	{name: "LightGoldenRodYellow" , color: color140.LightGoldenRodYellow , rev: color140.Black          },
-	{name: "OldLace"              , color: color140.OldLace              , rev: color140.Black          },
-	{name: "Red"                  , color: color140.Red                  , rev: color140.Aqua           },
-	{name: "Fuchsia"              , color: color140.Fuchsia              , rev: color140.Lime           },
-	{name: "Magenta"              , color: color140.Magenta              , rev: color140.Lime           },
-	{name: "DeepPink"             , color: color140.DeepPink             , rev: color140.SpringGreen    },
-	{name: "OrangeRed"            , color: color140.OrangeRed            , rev: color140.DarkBlue       },
-	{name: "Tomato"               , color: color140.Tomato               , rev: color140.DarkBlue       },
-	{name: "HotPink"              , color: color140.HotPink              , rev: color140.SeaGreen       },
-	{name: "Coral"                , color: color140.Coral                , rev: color140.Teal           },
-	{name: "DarkOrange"           , color: color140.DarkOrange           , rev: color140.DodgerBlue     },
-	{name: "LightSalmon"          , color: color140.LightSalmon          , rev: color140.Teal           },
-	{name: "Orange"               , color: color140.Orange               , rev: color140.DodgerBlue     },
-	{name: "LightPink"            , color: color140.LightPink            , rev: color140.DarkSlateGray  },
-	{name: "Pink"                 , color: color140.Pink                 , rev: color140.DarkGreen      },
-	{name: "Gold"                 , color: color140.Gold                 , rev: color140.Blue           },
-	{name: "PeachPuff"            , color: color140.PeachPuff            , rev: color140.MidnightBlue   },
-	{name: "NavajoWhite"          , color: color140.NavajoWhite          , rev: color140.MidnightBlue   },
-	{name: "Moccasin"             , color: color140.Moccasin             , rev: color140.MidnightBlue   },
-	{name: "Bisque"               , color: color140.Bisque               , rev: color140.MidnightBlue   },
-	{name: "MistyRose"            , color: color140.MistyRose            , rev: color140.Black          },
-	{name: "BlanchedAlmond"       , color: color140.BlanchedAlmond       , rev: color140.Black          },
-	{name: "PapayaWhip"           , color: color140.PapayaWhip           , rev: color140.Black          },
-	{name: "LavenderBlush"        , color: color140.LavenderBlush        , rev: color140.Black          },
-	{name: "SeaShell"             , color: color140.SeaShell             , rev: color140.Black          },
-	{name: "Cornsilk"             , color: color140.Cornsilk             , rev: color140.Black          },
-	{name: "LemonChiffon"         , color: color140.LemonChiffon         , rev: color140.Black          },
-	{name: "FloralWhite"          , color: color140.FloralWhite          , rev: color140.Black          },
-	{name: "Snow"                 , color: color140.Snow                 , rev: color140.Black          },
-	{name: "Yellow"               , color: color140.Yellow               , rev: color140.Blue           },
-	{name: "LightYellow"          , color: color140.LightYellow          , rev: color140.Black          },
-	{name: "Ivory"                , color: color140.Ivory                , rev: color140.Black          },
-	{name: "White"                , color: color140.White                , rev: color140.Black          }];
+let colorRevMap: Record<string, string> = {
+    "Black": "White",
+    "Navy": "Khaki",
+    "DarkBlue": "Khaki",
+    "MediumBlue": "Yellow",
+    "Blue": "Yellow",
+    "DarkGreen": "Violet",
+    "Green": "Violet",
+    "Teal": "LightCoral",
+    "DarkCyan": "Salmon",
+    "DeepSkyBlue": "OrangeRed",
+    "DarkTurquoise": "OrangeRed",
+    "MediumSpringGreen": "DeepPink",
+    "Lime": "Fuchsia",
+    "SpringGreen": "DeepPink",
+    "Aqua": "Red",
+    "Cyan": "Red",
+    "MidnightBlue": "Khaki",
+    "DodgerBlue": "Maroon",
+    "LightSeaGreen": "Maroon",
+    "ForestGreen": "Orchid",
+    "SeaGreen": "PaleVioletRed",
+    "DarkSlateGray": "Tan",
+    "LimeGreen": "DarkOrchid",
+    "MediumSeaGreen": "Maroon",
+    "Turquoise": "FireBrick",
+    "RoyalBlue": "DarkGoldenRod",
+    "SteelBlue": "Peru",
+    "DarkSlateBlue": "DarkKhaki",
+    "MediumTurquoise": "Brown",
+    "Indigo": "PaleGreen",
+    "DarkOliveGreen": "DarkGray",
+    "CadetBlue": "Brown",
+    "CornflowerBlue": "SaddleBrown",
+    "MediumAquaMarine": "Brown",
+    "DimGray": "LightSlateGray",
+    "SlateBlue": "YellowGreen",
+    "OliveDrab": "DarkSlateBlue",
+    "SlateGray": "DarkViolet",
+    "LightSlateGray": "DarkViolet",
+    "MediumSlateBlue": "Khaki",
+    "LawnGreen": "DarkViolet",
+    "Chartreuse": "DarkViolet",
+    "Aquamarine": "Maroon",
+    "Maroon": "Aquamarine",
+    "Purple": "LightGreen",
+    "Olive": "DarkGreen",
+    "Gray": "DarkKhaki",
+    "SkyBlue": "SaddleBrown",
+    "LightSkyBlue": "SaddleBrown",
+    "BlueViolet": "YellowGreen",
+    "DarkRed": "Aquamarine",
+    "DarkMagenta": "LightGreen",
+    "SaddleBrown": "SkyBlue",
+    "DarkSeaGreen": "DimGray",
+    "LightGreen": "Purple",
+    "MediumPurple": "DarkKhaki",
+    "DarkViolet": "LawnGreen",
+    "PaleGreen": "Purple",
+    "DarkOrchid": "LimeGreen",
+    "YellowGreen": "SlateBlue",
+    "Sienna": "CornflowerBlue",
+    "Brown": "MediumTurquoise",
+    "DarkGray": "DarkSlateGray",
+    "LightBlue": "DarkOliveGreen",
+    "GreenYellow": "DarkViolet",
+    "PaleTurquoise": "Maroon",
+    "LightSteelBlue": "DarkOliveGreen",
+    "PowderBlue": "DarkOliveGreen",
+    "FireBrick": "Turquoise",
+    "DarkGoldenRod": "RoyalBlue",
+    "MediumOrchid": "LimeGreen",
+    "RosyBrown": "DimGray",
+    "DarkKhaki": "DarkSlateBlue",
+    "Silver": "DarkSlateGray",
+    "MediumVioletRed": "MediumSeaGreen",
+    "IndianRed": "Navy",
+    "Peru": "SteelBlue",
+    "Chocolate": "MediumBlue",
+    "Tan": "DarkSlateGray",
+    "LightGray": "DarkSlateGray",
+    "Thistle": "DarkSlateGray",
+    "Orchid": "DarkSlateGray",
+    "GoldenRod": "RoyalBlue",
+    "PaleVioletRed": "DarkSlateGray",
+    "Crimson": "Turquoise",
+    "Gainsboro": "MidnightBlue",
+    "Plum": "ForestGreen",
+    "BurlyWood": "MidnightBlue",
+    "LightCyan": "Black",
+    "Lavender": "Black",
+    "DarkSalmon": "Teal",
+    "Violet": "Green",
+    "PaleGoldenRod": "MidnightBlue",
+    "LightCoral": "Teal",
+    "Khaki": "MidnightBlue",
+    "AliceBlue": "Black",
+    "HoneyDew": "Black",
+    "Azure": "Black",
+    "SandyBrown": "Teal",
+    "Wheat": "MidnightBlue",
+    "Beige": "Black",
+    "WhiteSmoke": "Black",
+    "MintCream": "Black",
+    "GhostWhite": "Black",
+    "Salmon": "Teal",
+    "AntiqueWhite": "Black",
+    "Linen": "Black",
+    "LightGoldenRodYellow": "Black",
+    "OldLace": "Black",
+    "Red": "Aqua",
+    "Fuchsia": "Lime",
+    "Magenta": "Lime",
+    "DeepPink": "SpringGreen",
+    "OrangeRed": "DarkBlue",
+    "Tomato": "DarkBlue",
+    "HotPink": "SeaGreen",
+    "Coral": "Teal",
+    "DarkOrange": "DodgerBlue",
+    "LightSalmon": "Teal",
+    "Orange": "DodgerBlue",
+    "LightPink": "DarkSlateGray",
+    "Pink": "DarkGreen",
+    "Gold": "Blue",
+    "PeachPuff": "MidnightBlue",
+    "NavajoWhite": "MidnightBlue",
+    "Moccasin": "MidnightBlue",
+    "Bisque": "MidnightBlue",
+    "MistyRose": "Black",
+    "BlanchedAlmond": "Black",
+    "PapayaWhip": "Black",
+    "LavenderBlush": "Black",
+    "SeaShell": "Black",
+    "Cornsilk": "Black",
+    "LemonChiffon": "Black",
+    "FloralWhite": "Black",
+    "Snow": "Black",
+    "Yellow": "Blue",
+    "LightYellow": "Black",
+    "Ivory": "Black",
+    "White": "Black"
+};
+
+let color140Arr = Object.keys(color140).map(name => ({
+    name,
+    color: color140[name as keyof typeof color140],
+    rev: color140[colorRevMap[name] as keyof typeof color140],
+}));
 
