@@ -55,10 +55,10 @@ themes.forEach((theme) => {
 		() => {
 			return gulp.src([styleThemesSrc + '**/*.less', styleSrc + 'comm.less'])
 				.pipe(concat('all.less'))
- 				.pipe(less({compress: false})).on('error', (e) => {console.log(e)})
- 				.pipe(gulp.dest(styleDst))
- 				.pipe(minifycss()).pipe(rename({suffix: '.min'}))
- 				.pipe(gulp.dest(styleDst))
+				.pipe(less({compress: false})).on('error', (e) => {console.log(e)})
+				.pipe(gulp.dest(styleDst))
+				.pipe(minifycss()).pipe(rename({suffix: '.min'}))
+				.pipe(gulp.dest(styleDst))
 		}
 	));
 	themeTasks.push(styleTsk)
@@ -85,10 +85,10 @@ gulp.task("process-style-window-ui", gulp.series(
 	() => {
 			return gulp.src(['src/themes/window-ui/styles/**/*.less'])
 				.pipe(concat('all.less'))
- 				.pipe(less({compress: false})).on('error', (e) => {console.log(e)})
- 				.pipe(gulp.dest("webroot/themes/window-ui/styles/"))
- 				.pipe(minifycss()).pipe(rename({suffix: '.min'}))
- 				.pipe(gulp.dest("webroot/themes/window-ui/styles/"))
+				.pipe(less({compress: false})).on('error', (e) => {console.log(e)})
+				.pipe(gulp.dest("webroot/themes/window-ui/styles/"))
+				.pipe(minifycss()).pipe(rename({suffix: '.min'}))
+				.pipe(gulp.dest("webroot/themes/window-ui/styles/"))
 	},
 ));
 themeTasks.push("process-style-window-ui");
@@ -176,12 +176,11 @@ gulp.task('process-typescript', gulp.series('clean-typescript', () => {
 		module: "es6",
 		noImplicitAny: true,
 		strict: true,
-		declaration: true,
-		// sourcemap: true,
+		declaration: true
+		// sourcemap: true
 		// lib: ["ES2021.String"]
-    }))
+	})).pipe(sourcemaps.write('.'))
 		//.pipe(concat('all.js'))
-		.pipe(sourcemaps.write())
 		.pipe(gulp.dest(scriptTsTag))
 }));
 themeTasks.push('process-typescript');
