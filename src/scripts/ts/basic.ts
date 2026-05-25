@@ -1,23 +1,28 @@
 /**
- * 
+ * 数字工具类，提供数值格式化、精度计算、曲线函数等静态方法。
  */
 export class NumUtil {
 
-	/** 四舍五入：  Number(num).toFixed(size); */
+	/**
+	 * 四舍五入到指定小数位数。
+	 * @param n 要处理的数字
+	 * @param size 保留的小数位数
+	 * @returns 四舍五入后的数字
+	 */
 	static toFixed(n: number, size: number): number {
 		let m = Math.pow(10, size);
 		return Math.floor(n * m + 0.50000000001) / m;
 	}
 
 	/**
-	 * 以可读的形式格式化数字
+	 * 以可读的形式格式化数字，按分隔符分组整数和小数部分。
 	 *
 	 * 注意：小数部分也会按分隔符分组（如 123456.789012 → 123,456.789,012），
 	 * 这不符合常规数字格式化习惯，暂不修复。
 	 *
-	 * @param n:
-	 * @param formatExp: 格式表达式（代码还没有写，默认`##,###.##`的形式）
-	 * @returns: 人类可读性的字符串
+	 * @param n 要格式化的数字
+	 * @param formatExp 格式表达式（如 `##,###.##`），未实现完整解析，默认每3位加逗号并保留2位小数
+	 * @returns 格式化后的可读字符串
 	 */
 	static format(n: number, formatExp?: string): string {
 		// let numStr: string = n.toString().replace(/\$|\,/g, '');
@@ -82,9 +87,9 @@ export class NumUtil {
 	}
 
 	/**
-	 * 
-	 * @param s 
-	 * @returns 
+	 * 将格式化后的数字字符串还原为数字，去除逗号等分隔符。
+	 * @param s 格式化后的数字字符串
+	 * @returns 解析出的数字
 	 */
 	static unformat(s: string): number {
 		let ns = s.replace(/[^\d\.-]/g, "");
@@ -92,11 +97,10 @@ export class NumUtil {
 	}
 
 	/**
-	 * 加法得到金额数据（保留精度问题）
-	 * 调用例子：var total = Number(0.09999999).add(0.09999999);
-	 * @param n1
-	 * @param n2
-	 * @returns 
+	 * 精确加法，避免浮点数精度丢失（如 0.1 + 0.2 ≠ 0.3 的问题）。
+	 * @param n1 加数
+	 * @param n2 被加数
+	 * @returns 精确的加法结果
 	 */
 	static add(n1: number, n2: number): number {
 		let r1: number, r2: number;
@@ -111,11 +115,10 @@ export class NumUtil {
 	}
 
 	/**
-	 * 减法得到金额数据（保留精度问题）
-	 * 调用例子：var total = Number(-0.09999999).sub(0.00000001);
-	 * @param n1
-	 * @param n2
-	 * @returns
+	 * 精确减法，避免浮点数精度丢失。
+	 * @param n1 被减数
+	 * @param n2 减数
+	 * @returns 精确的减法结果
 	 */
 	static sub(n1: number, n2: number): number {
 		let r1: number, r2: number;
@@ -127,11 +130,10 @@ export class NumUtil {
 	}
 
 	/**
-	 * 乘法得到金额数据（保留精度问题）
-	 * 调用例子：var total = Number(parseInt(num)).mul(parseFloat(dj));
-	 * @param n1
-	 * @param n2
-	 * @returns 
+	 * 精确乘法，避免浮点数精度丢失。
+	 * @param n1 乘数
+	 * @param n2 乘数
+	 * @returns 精确的乘法结果
 	 */
 	static mul(n1: number, n2: number): number {
 		let m = 0, s1 = n1.toString(), s2 = n2.toString();
@@ -148,11 +150,10 @@ export class NumUtil {
 	}
 
 	/**
-	 * 除法得到金额数据（保留精度问题）
-	 * 调用例子：var total = Number(0.000001).div(0.00000001);
-	 * @param n1
-	 * @param n2
-	 * @returns {String}
+	 * 精确除法，避免浮点数精度丢失。
+	 * @param n1 被除数
+	 * @param n2 除数
+	 * @returns 精确的除法结果
 	 */
 	static div(n1: number, n2: number): number {
 		let t1 = 0, t2 = 0;
@@ -166,14 +167,22 @@ export class NumUtil {
 	}
 
 	/**
-	 * 曲线函数，x在0到1之间，Y向上凸出的曲线。
-	 * @param x 
-	 * @returns 
+	 * 基础曲线函数，x 在 [0, 1] 之间时为正弦半波（向上凸出），超出范围返回 0。
+	 * @param x 横坐标，应在 [0, 1] 之间
+	 * @returns 纵坐标值
 	 */
 	static baseCurve(x: number): number {
 		return (x < 0) || (x > 1) ? 0 : Math.sin(x * Math.PI);
 	}
 
+	/**
+	 * 创建一个钟形曲线函数。以 topX 为中心，在 totalXDis 范围内从 minY 上升到 maxY 再回落。
+	 * @param totalXDis 曲线的总 X 跨度
+	 * @param topX 曲线顶点所在的 X 坐标
+	 * @param minY 曲线底部的 Y 值（最小值）
+	 * @param maxY 曲线顶点的 Y 值（最大值）
+	 * @returns 一个接受 x 并返回 y 的曲线函数
+	 */
 	static createCurve(totalXDis: number, topX: number, minY: number, maxY: number): (x: number) => number {
 		let curve = (x: number): number => {
 			const beginX = topX - totalXDis / 2;
@@ -192,22 +201,44 @@ export class NumUtil {
 
 
 /**
- * 
+ * 字符串工具类，提供字符串处理、格式化、编码转换等静态方法。
  */
 export class StrUtil {
 
+	/**
+	 * 去除字符串两端的空白字符。
+	 * @param s 输入字符串
+	 * @returns 去除两端空白后的字符串
+	 */
 	static trim(s: string): string {
 		return s.replace(/(^\s*)|(\s*$)/g, "");
 	}
 
+	/**
+	 * 去除字符串左侧的空白字符。
+	 * @param s 输入字符串
+	 * @returns 去除左侧空白后的字符串
+	 */
 	static trimLeft(s: string): string {
 		return s.replace(/(^\s*)/g, "");
 	}
 
+	/**
+	 * 去除字符串右侧的空白字符。
+	 * @param s 输入字符串
+	 * @returns 去除右侧空白后的字符串
+	 */
 	static trimRight(s: string): string {
 		return s.replace(/(\s*$)/g, "");
 	}
 
+	/**
+	 * 在字符串左侧填充字符直到达到指定长度。
+	 * @param str 原始字符串
+	 * @param max 目标长度
+	 * @param place 填充字符，默认为空格
+	 * @returns 填充后的字符串
+	 */
 	static leftPad(str: string, max: number, place?: string): string {
 		place = place ? place : " ";
 		while (str.length < max) {
@@ -216,6 +247,13 @@ export class StrUtil {
 		return str;
 	}
 
+	/**
+	 * 在字符串右侧填充字符直到达到指定长度。
+	 * @param str 原始字符串
+	 * @param max 目标长度
+	 * @param place 填充字符，默认为空格
+	 * @returns 填充后的字符串
+	 */
 	static rightPad(str: string, max: number, place?: string): string {
 		place = place ? place : " ";
 		while (str.length < max) {
@@ -224,10 +262,12 @@ export class StrUtil {
 		return str;
 	}
 
-
 	/**
-	 * 字符串格式化工具，用名称来替换
-	 * 例： "我是{name}，今年{age}了".format({name:"loogn",age:22});
+	 * 字符串模板替换，用对象属性值替换 `{key}` 占位符。
+	 * 例：`"我是{name}，今年{age}了".format({name:"loogn",age:22})`
+	 * @param s 包含 `{key}` 占位符的模板字符串
+	 * @param args 键值对对象（或数组），用于替换占位符
+	 * @returns 替换后的字符串
 	 */
 	static format(s: string, args: any): string {
 		let result = s;
@@ -248,9 +288,11 @@ export class StrUtil {
 
 
 	/**
-	 * 使用正则表达式替换所有匹配项
-	 * @param exp 正则表达式模式
+	 * 使用正则表达式替换字符串中所有匹配项。
+	 * @param s 原始字符串
+	 * @param exp 正则表达式模式（字符串形式）
 	 * @param newStr 替换成的字符串
+	 * @returns 替换后的字符串
 	 */
 	static replaceByRegex(s: string, exp: string, newStr: string): string {
 		return s.replace(new RegExp(exp, "gm"), newStr);
@@ -275,9 +317,9 @@ export class StrUtil {
 	// 	}
 
 	/**
-	 * 
-	 * @param str 
-	 * @returns 
+	 * 将 UTF-16 字符串转换为 UTF-8 编码字符串。
+	 * @param str UTF-16 编码的字符串
+	 * @returns UTF-8 编码的字符串
 	 */
 	static utf16to8(str: string): string {
 		let out = "";
@@ -310,9 +352,9 @@ export class StrUtil {
 	}
 
 	/**
-	 * 
-	 * @param str 
-	 * @returns 
+	 * 将 UTF-8 编码字符串转换为 UTF-16 字符串。
+	 * @param str UTF-8 编码的字符串
+	 * @returns UTF-16 字符串
 	 */
 	static utf8to16(str: string): string {
 		let out = "";
@@ -354,9 +396,9 @@ export class StrUtil {
 	}
 
 	/**
-	 * 
-	 * @param str 
-	 * @returns 
+	 * 将字符串编码为 Base64 格式。
+	 * @param str 原始字符串
+	 * @returns Base64 编码后的字符串
 	 */
 	static base64encode(str: string): string {
 		let base64EncodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
@@ -391,9 +433,9 @@ export class StrUtil {
 	}
 
 	/**
-	 * 
-	 * @param str 
-	 * @returns 
+	 * 将 Base64 编码字符串解码为原始字符串。
+	 * @param str Base64 编码的字符串
+	 * @returns 解码后的原始字符串
 	 */
 	static base64decode(str: string): string {
 		let base64DecodeChars = new Array(
@@ -446,26 +488,37 @@ export class StrUtil {
 
 
 /**
- * 
+ * 时间工具类，提供时间常量、格式化、日期运算、时区检测等静态方法。
  */
 export class TimeUtil {
 
+	/** 毫秒/秒 常量 */
 	static readonly UNIT_SEC : number = 1000;
+	/** 毫秒/分 常量 */
 	static readonly UNIT_MIN : number = 1000 * 60;
+	/** 毫秒/时 常量 */
 	static readonly UNIT_HOUR: number = 1000 * 60 * 60;
+	/** 毫秒/天 常量 */
 	static readonly UNIT_DAY : number = 1000 * 60 * 60 * 24;
 
+	/**
+	 * 异步等待指定毫秒数。
+	 * @param milSecs 等待的毫秒数
+	 * @returns Promise，在指定时间后 resolve
+	 */
 	static async sleep(milSecs: number): Promise<void> {
 		return new Promise((resolve: (param: any) => void) => {setTimeout(() => { resolve(null);/* do nothing */}, milSecs);})
 	}
 
 	/**
-	 * JS时间Date格式化参数
+	 * 将 Date 格式化为指定格式的字符串。
 	 *
-	 * @param d: date
-	 * @param result : 格式化字符串如：'yyyy-MM-dd HH:mm:ss'
+	 * 支持占位符：`y+`（年）、`M+`（月）、`d+`（日）、`H+`（时）、`m+`（分）、
+	 * `s+`（秒）、`q+`（季度）、`S+`（毫秒），占位符长度决定补零位数。
 	 *
-	 * @returns 
+	 * @param d 要格式化的 Date 对象
+	 * @param f 格式字符串，如 `"yyyy-MM-dd HH:mm:ss.SSS"`（默认值）
+	 * @returns 格式化后的时间字符串
 	 */
 	static format(d: Date, f?: string): string {
 		let result = f ? f : "yyyy-MM-dd HH:mm:ss.SSS";
@@ -490,11 +543,10 @@ export class TimeUtil {
 
 
 	/**
-	 * 添加毫秒数
-	 * 
-	 * @param d: date
-	 * @param ms: 加上的毫秒数
-	 * @returns 
+	 * 在指定日期上添加毫秒数，返回新 Date 对象（不修改原对象）。
+	 * @param d 原始日期
+	 * @param ms 要加上的毫秒数
+	 * @returns 加上毫秒数后的新日期
 	 */
 	static addMilliseconds(d: Date, ms: number): Date {
 		let date = new Date(d);
@@ -504,12 +556,10 @@ export class TimeUtil {
 
 
 	/**
-	 * 添加秒数
-	 *
-	 * @param d: date
-	 * @param secs: 加上的秒数
-	 *
-	 * @returns {Date}
+	 * 在指定日期上添加秒数，返回新 Date 对象（不修改原对象）。
+	 * @param d 原始日期
+	 * @param secs 要加上的秒数
+	 * @returns 加上秒数后的新日期
 	 */
 	static addSeconds(d: Date, secs: number): Date {
 		const date = new Date(d);
@@ -519,12 +569,10 @@ export class TimeUtil {
 
 
 	/**
-	 * 添加天数
-	 *
-	 * @param d: date
-	 * @param days: 加上的天数，比如40天
-	 *
-	 * @returns  加上天数以后的日期
+	 * 在指定日期上添加天数，返回新 Date 对象（不修改原对象）。
+	 * @param d 原始日期
+	 * @param days 要加上的天数
+	 * @returns 加上天数后的新日期
 	 */
 	static addDays(d: Date, days: number): Date {
 		const date = new Date(d);
@@ -533,12 +581,10 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 添加月数
-	 *
-	 * @param d: date
-	 * @param months: 加上的月数
-	 *
-	 * @returns 
+	 * 在指定日期上添加月数，返回新 Date 对象（不修改原对象）。
+	 * @param d 原始日期
+	 * @param months 要加上的月数
+	 * @returns 加上月数后的新日期
 	 */
 	static addMonths(d: Date, months: number): Date {
 		const date = new Date(d);
@@ -548,12 +594,10 @@ export class TimeUtil {
 
 
 	/**
-	 * 添加年数
-	 *
-	 * @param d: date
-	 * @param years: 加上的年数
-	 *
-	 * @returns 
+	 * 在指定日期上添加年数，返回新 Date 对象（不修改原对象）。
+	 * @param d 原始日期
+	 * @param years 要加上的年数
+	 * @returns 加上年数后的新日期
 	 */
 	static addYears(d: Date, years: number): Date {
 		const date = new Date(d);
@@ -562,9 +606,9 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 初始化为一天的`00:00:00`
-	 * @param date 
-	 * @returns 
+	 * 将日期重置为当天的 00:00:00.000，返回新 Date 对象。
+	 * @param date 原始日期
+	 * @returns 重置到当天零点的新日期
 	 */
 	static cleanDay(date: Date): Date {
 		const newDate = new Date(date.getTime());
@@ -573,11 +617,10 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 取得两天之间的时间范围
-	 * 
-	 * @param date 
-	 * @param days 
-	 * @returns 
+	 * 取得从 date 当天零点起，跨 days 天的时间范围。floor 为较早的零点，ceil 为较晚的零点。
+	 * @param date 基准日期
+	 * @param days 跨越的天数
+	 * @returns 包含 floor（范围起点）和 ceil（范围终点）的对象
 	 */
 	static getTimeArea(date: Date, days: number): { floor: Date, ceil: Date } {
 		const d1 = TimeUtil.cleanDay(date);
@@ -590,11 +633,10 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 取得日期与偏移毫秒数之间的时间范围
-	 *
-	 * @param date
-	 * @param ms
-	 * @returns
+	 * 取得从 date 起、偏移 ms 毫秒后的时间范围。floor 为较早的时间点，ceil 为较晚的时间点（已 cleanDay）。
+	 * @param date 基准日期
+	 * @param ms 偏移毫秒数（可为负）
+	 * @returns 包含 floor（范围起点）和 ceil（范围终点）的对象
 	 */
 	static getDateArea(date: Date, ms: number): { floor: Date, ceil: Date } {
 		const d1 = date;
@@ -607,9 +649,8 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 取得所在的时区
-	 * 
-	 * @returns 
+	 * 取得当前环境的时区偏移字符串（如 `GMT8`）。
+	 * @returns 时区字符串
 	 */
 	static getLocalTimeZone(): string {
 		const d = new Date();
@@ -617,8 +658,9 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 取得所在的时区名
-	 * @returns 
+	 * 通过夏令时/冬令时偏移匹配当前环境的 IANA 时区名称（如 `Asia/Shanghai`）。
+	 * 匹配失败时返回 `"Unknown"`。
+	 * @returns IANA 时区名称字符串
 	 */
 	static getLocalTimeZoneName(): string {
 		const tmSummer = new Date(Date.UTC(2005, 6, 30, 0, 0, 0, 0));
@@ -694,9 +736,9 @@ export class TimeUtil {
 	}
 
 	/**
-	 * 取得时间的可读文本
-	 * @param date 
-	 * @returns 
+	 * 将日期格式化为 `"yyyy-MM-dd HH:mm:ss.SSS"` 的可读文本。
+	 * @param date 要格式化的日期
+	 * @returns 格式化后的时间字符串
 	 */
 	static getLocalTimeStr(date: Date): string {
 		return this.format(date, "yyyy-MM-dd HH:mm:ss.SSS");
@@ -705,7 +747,12 @@ export class TimeUtil {
 
 }
 
+/** RGB 颜色只读接口 */
 export interface IColorRGB { readonly r: number, readonly g: number, readonly b: number }
+
+/**
+ * RGB 颜色类，支持十六进制字符串、RGB 字符串、CSS 140 色名匹配及互补色查询。
+ */
 export class ColorRGB implements IColorRGB {
 	readonly r: number;
 	readonly g: number;
@@ -714,6 +761,12 @@ export class ColorRGB implements IColorRGB {
 	readonly hexStr: string;
 	private color140: null | { color: ColorRGB, name: string } = null;
 
+	/**
+	 * 使用 RGB 分量创建颜色。
+	 * @param r 红色分量 (0-255)
+	 * @param g 绿色分量 (0-255)
+	 * @param b 蓝色分量 (0-255)
+	 */
 	constructor(r: number, g: number, b: number) {
 		this.r = r;
 		this.g = g;
@@ -750,6 +803,11 @@ export class ColorRGB implements IColorRGB {
 		return new ColorRGB(r, g, b);
 	}
 
+	/**
+	 * 根据 CSS 颜色名称查找对应的 140 色记录。
+	 * @param name CSS 颜色名称（如 `"Red"`）
+	 * @returns 包含 ColorRGB 实例和颜色名的对象，未匹配时返回 White
+	 */
 	static fromNameTo140(name: string): { color: ColorRGB, name: string } {
 		let result = color140.White;
 		for (let i = 0; i < color140Arr.length; i++) {
@@ -761,6 +819,13 @@ export class ColorRGB implements IColorRGB {
 		return result;
 	}
 
+	/**
+	 * 根据 RGB 分量查找最接近的 CSS 140 色（使用曼哈顿距离匹配）。
+	 * @param r 红色分量 (0-255)
+	 * @param g 绿色分量 (0-255)
+	 * @param b 蓝色分量 (0-255)
+	 * @returns 包含最近似 ColorRGB 实例和颜色名的对象
+	 */
 	static fromRgbTo140(r: number, g: number, b: number): { color: ColorRGB, name: string } {
 		let minIdx = 0;
 		let minDiff = 255 + 255 + 255;
@@ -779,6 +844,11 @@ export class ColorRGB implements IColorRGB {
 		return color140Arr[minIdx].color;
 	}
 
+	/**
+	 * 根据十六进制颜色字符串查找最接近的 CSS 140 色。
+	 * @param str 十六进制颜色字符串（如 `"#FF0000"`）
+	 * @returns 包含最近似 ColorRGB 实例和颜色名的对象
+	 */
 	static fromHexTo140(str: string): { color: ColorRGB, name: string } {
 		let r = 0, g = 0, b = 0;
 		if (!str) {
@@ -792,10 +862,22 @@ export class ColorRGB implements IColorRGB {
 	}
 
 
+	/**
+	 * 返回 `rgb(r,g,b)` 格式的字符串。
+	 * @returns RGB 字符串
+	 */
 	toStrRGB(): string { return this.rgbStr; }
 
+	/**
+	 * 返回 `#RRGGBB` 格式的十六进制字符串。
+	 * @returns 十六进制颜色字符串
+	 */
 	toStrHex(): string { return this.hexStr; }
 
+	/**
+	 * 查找最接近的 CSS 140 色（带缓存，仅首次调用时计算）。
+	 * @returns 包含 ColorRGB 实例和颜色名的对象
+	 */
 	to140Color(): { color: ColorRGB, name: string } {
 		if (null != this.color140) {
 			return this.color140;
@@ -805,9 +887,13 @@ export class ColorRGB implements IColorRGB {
 		}
 	}
 
+	/**
+	 * 查找当前颜色的互补色（基于预定义的 CSS 140 色互补映射表）。
+	 * 参考：https://htmlcolorcodes.com/zh/yanse-xuanze-qi/
+	 * @returns 包含互补色 ColorRGB 实例和颜色名的对象
+	 */
 	oppositeColor(): { color: ColorRGB, name: string } {
 		// 互补色的查询
-		// https://htmlcolorcodes.com/zh/yanse-xuanze-qi/
 		// https://zh.planetcalc.com/7661/
 		let color140 = this.to140Color();
 		let result = color140Arr[0];
