@@ -12,7 +12,10 @@ export class NumUtil {
 	/**
 	 * 以可读的形式格式化数字
 	 *
-	 * @param n: 
+	 * 注意：小数部分也会按分隔符分组（如 123456.789012 → 123,456.789,012），
+	 * 这不符合常规数字格式化习惯，暂不修复。
+	 *
+	 * @param n:
 	 * @param formatExp: 格式表达式（代码还没有写，默认`##,###.##`的形式）
 	 * @returns: 人类可读性的字符串
 	 */
@@ -45,7 +48,7 @@ export class NumUtil {
 		let numStr: string = n.toString();
 		try {
 			let num: number = Math.abs(n);
-			let isPositive: boolean = num == n;
+			let isPositive: boolean = n >= 0;
 			let sArr = this.toFixed(num, m).toString().split(".");
 			let s1 = sArr[0] ? sArr[0] : ""; // 整数字符串
 			let s2 = sArr[1] ? sArr[1] : ""; // 小数字符串
@@ -241,7 +244,7 @@ export class StrUtil {
 		}
 		for (var key in data) {
 			var value = data[key];
-			if (undefined !== value) { result = result.replace("\\{" + key + "\\}", value); }
+			if (undefined !== value) { result = result.replace("{" + key + "}", value); }
 		}
 		return result;
 	}
@@ -709,6 +712,14 @@ export class ColorRGB implements IColorRGB {
 		this.hexStr = `#${rs}${gs}${bs}`;
 	}
 
+	/**
+	 * 从十六进制字符串创建颜色
+	 *
+	 * 注意：仅支持 #RRGGBB 格式（7字符），不支持 #RGB / #RRGGBBAA 等短/长格式，暂不修复。
+	 *
+	 * @param str 十六进制颜色字符串
+	 * @returns ColorRGB 实例
+	 */
 	static fromStrHex(str: string): ColorRGB {
 		let r = 0, g = 0, b = 0;
 		if (!str) {
