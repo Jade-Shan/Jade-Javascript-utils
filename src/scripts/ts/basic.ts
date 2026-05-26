@@ -10,8 +10,9 @@ export class NumUtil {
 	 * @returns 四舍五入后的数字
 	 */
 	static toFixed(n: number, size: number): number {
+		let absN = Math.abs(n);
 		let m = Math.pow(10, size);
-		return Math.floor(n * m + 0.50000000001) / m;
+		return (n >= 0 ? 1 : -1) * Math.floor(absN * m + 0.50000000001) / m;
 	}
 
 	/**
@@ -25,7 +26,6 @@ export class NumUtil {
 	 * @returns 格式化后的可读字符串
 	 */
 	static format(n: number, formatExp?: string): string {
-		// let numStr: string = n.toString().replace(/\$|\,/g, '');
 		// 解析格式
 		let p = 0; // 分隔位符
 		let m = 0; // 小数位数
@@ -40,7 +40,7 @@ export class NumUtil {
 					}
 				}
 			}
-			let s2 = sArr[1]; // 小数格式
+			let s2 = sArr.length > 1 ? sArr[1] : ""; // 小数格式
 			if (s2.length > 0) {
 				for (let ms of s2) {
 					if ("#" == ms) { m = m + 1; }
@@ -96,6 +96,11 @@ export class NumUtil {
 		return ns.includes(".") ? parseFloat(ns) : parseInt(ns, 10);
 	}
 
+	private static getDecimalPlaces(n: number): number {
+		// return (n.toFixed(16).split(".")[1] || "").length;
+		return (n.toString().split(".")[1] || "").length; 
+	}
+
 	/**
 	 * 精确加法，避免浮点数精度丢失（如 0.1 + 0.2 ≠ 0.3 的问题）。
 	 * @param n1 加数
@@ -103,8 +108,8 @@ export class NumUtil {
 	 * @returns 精确的加法结果
 	 */
 	static add(n1: number, n2: number): number {
-		let r1 = (n1.toString().split(".")[1] || "").length;
-		let r2 = (n2.toString().split(".")[1] || "").length;
+		let r1 = this.getDecimalPlaces(n1);
+		let r2 = this.getDecimalPlaces(n2);
 		let m = Math.pow(10, Math.max(r1, r2));
 		let value = (n1 * m + n2 * m) / m;
 		return value;
@@ -117,8 +122,8 @@ export class NumUtil {
 	 * @returns 精确的减法结果
 	 */
 	static sub(n1: number, n2: number): number {
-		let r1 = (n1.toString().split(".")[1] || "").length;
-		let r2 = (n2.toString().split(".")[1] || "").length;
+		let r1 = this.getDecimalPlaces(n1);
+		let r2 = this.getDecimalPlaces(n2);
 		let m = Math.pow(10, Math.max(r1, r2));
 		const value = (n1 * m - n2 * m) / m;
 		return value;
@@ -131,9 +136,8 @@ export class NumUtil {
 	 * @returns 精确的乘法结果
 	 */
 	static mul(n1: number, n2: number): number {
-		let m = 0, s1 = n1.toString(), s2 = n2.toString();
-		m += (s1.split(".")[1] || "").length;
-		m += (s2.split(".")[1] || "").length;
+		let s1 = n1.toString(), s2 = n2.toString();
+		let m = this.getDecimalPlaces(n1) + this.getDecimalPlaces(n2);
 		let value = Number(s1.replace(".", "")) * Number(s2.replace(".", "")) / Math.pow(10, m);
 		return value;
 	}
@@ -145,8 +149,8 @@ export class NumUtil {
 	 * @returns 精确的除法结果
 	 */
 	static div(n1: number, n2: number): number {
-		let t1 = (n1.toString().split(".")[1] || "").length;
-		let t2 = (n2.toString().split(".")[1] || "").length;
+		let t1 = this.getDecimalPlaces(n1);
+		let t2 = this.getDecimalPlaces(n2);
 		let m = t2 - t1;
 		let r1 = Number(n1.toString().replace(".", ""));
 		let r2 = Number(n2.toString().replace(".", ""));
@@ -253,23 +257,18 @@ export class StrUtil {
 	/**
 	 * 字符串模板替换，用对象属性值替换 `{key}` 占位符。
 	 * 例：`"我是{name}，今年{age}了".format({name:"loogn",age:22})`
-	 * @param s 包含 `{key}` 占位符的模板字符串
-	 * @param args 键值对对象（或数组），用于替换占位符
+	 * @param str 包含 `{key}` 占位符的模板字符串
+	 * @param arg 键值对对象（或数组），用于替换占位符
 	 * @returns 替换后的字符串
 	 */
-	static format(s: string, args: any): string {
-		let result = s;
-		if (arguments.length < 1) {
-			return result;
-		}
-		let data: any = arguments;
+	static format(str: string, arg: any): string {
+		let result = str;
 		// 如果模板参数是对象
-		if (arguments.length == 1 && typeof (args) == "object") {
-			data = args;
-		}
-		for (const key of Object.keys(data)) {
-			const value = data[key];
-			if (undefined !== value) { result = result.replace("{" + key + "}", value); }
+		if (typeof (arg) == "object") {
+			for (const key of Object.keys(arg)) {
+				const value = arg[key];
+				if (undefined !== value) { result = result.split("{" + key + "}").join(value); }
+			}
 		}
 		return result;
 	}
@@ -401,8 +400,8 @@ export class TimeUtil {
 	 * @param milSecs 等待的毫秒数
 	 * @returns Promise，在指定时间后 resolve
 	 */
-	static async sleep(milSecs: number): Promise<void> {
-		return new Promise(resolve => setTimeout(resolve, milSecs));
+	static async sleep(milliSecs: number): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, milliSecs));
 	}
 
 	/**
@@ -534,7 +533,7 @@ export class TimeUtil {
 	 * @returns 包含 floor（范围起点）和 ceil（范围终点）的对象
 	 */
 	static getDateArea(date: Date, ms: number): { floor: Date, ceil: Date } {
-		const d1 = date;
+		const d1 = TimeUtil.cleanDay(date);
 		const d2 = TimeUtil.cleanDay(TimeUtil.addMilliseconds(d1, ms));
 		if (d1 < d2) {
 			return { floor: d1, ceil: d2 };
@@ -549,7 +548,7 @@ export class TimeUtil {
 	 */
 	static getLocalTimeZone(): string {
 		const d = new Date();
-		return (`GMT${d.getTimezoneOffset() / 60}`);
+		return (`GMT${- d.getTimezoneOffset() / 60}`);
 	}
 
 	/**
@@ -558,76 +557,7 @@ export class TimeUtil {
 	 * @returns IANA 时区名称字符串
 	 */
 	static getLocalTimeZoneName(): string {
-		const tmSummer = new Date(Date.UTC(2005, 6, 30, 0, 0, 0, 0));
-		const so = -1 * tmSummer.getTimezoneOffset();
-		const tmWinter = new Date(Date.UTC(2005, 12, 30, 0, 0, 0, 0));
-		const wo = -1 * tmWinter.getTimezoneOffset();
-		if (-660 == so && -660 == wo) return 'Pacific/Midway';
-		if (-600 == so && -600 == wo) return 'Pacific/Tahiti';
-		if (-570 == so && -570 == wo) return 'Pacific/Marquesas';
-		if (-540 == so && -600 == wo) return 'America/Adak';
-		if (-540 == so && -540 == wo) return 'Pacific/Gambier';
-		if (-480 == so && -540 == wo) return 'America/Anchorage';
-		if (-480 == so && -480 == wo) return 'Pacific/Pitcairn';
-		if (-420 == so && -480 == wo) return 'America/Los_Angeles';
-		if (-420 == so && -420 == wo) return 'America/Phoenix';
-		if (-360 == so && -420 == wo) return 'America/Denver';
-		if (-360 == so && -360 == wo) return 'America/Guatemala';
-		if (-360 == so && -300 == wo) return 'Pacific/Easter';
-		if (-300 == so && -360 == wo) return 'America/Chicago';
-		if (-300 == so && -300 == wo) return 'America/Bogota';
-		if (-240 == so && -300 == wo) return 'America/New_York';
-		if (-240 == so && -240 == wo) return 'America/Caracas';
-		if (-240 == so && -180 == wo) return 'America/Santiago';
-		if (-180 == so && -240 == wo) return 'America/Halifax';
-		if (-180 == so && -180 == wo) return 'America/Montevideo';
-		if (-180 == so && -120 == wo) return 'America/Sao_Paulo';
-		if (-150 == so && -210 == wo) return 'America/St_Johns';
-		if (-120 == so && -180 == wo) return 'America/Nuuk';
-		if (-120 == so && -120 == wo) return 'America/Noronha';
-		if ( -60 == so &&  -60 == wo) return 'Atlantic/Cape_Verde';
-		if (   0 == so &&  -60 == wo) return 'Atlantic/Azores';
-		if (   0 == so &&    0 == wo) return 'Africa/Casablanca';
-		if (  60 == so &&    0 == wo) return 'Europe/London';
-		if (  60 == so &&   60 == wo) return 'Africa/Algiers';
-		if (  60 == so &&  120 == wo) return 'Africa/Windhoek';
-		if ( 120 == so &&   60 == wo) return 'Europe/Amsterdam';
-		if ( 120 == so &&  120 == wo) return 'Africa/Harare';
-		if ( 180 == so &&  120 == wo) return 'Europe/Athens';
-		if ( 180 == so &&  180 == wo) return 'Africa/Nairobi';
-		if ( 240 == so &&  180 == wo) return 'Europe/Moscow';
-		if ( 240 == so &&  240 == wo) return 'Asia/Dubai';
-		if ( 270 == so &&  210 == wo) return 'Asia/Tehran';
-		if ( 270 == so &&  270 == wo) return 'Asia/Kabul';
-		if ( 300 == so &&  240 == wo) return 'Asia/Baku';
-		if ( 300 == so &&  300 == wo) return 'Asia/Karachi';
-		if ( 330 == so &&  330 == wo) return 'Asia/Kolkata';
-		if ( 345 == so &&  345 == wo) return 'Asia/Kathmandu';
-		if ( 360 == so &&  300 == wo) return 'Asia/Yekaterinburg';
-		if ( 360 == so &&  360 == wo) return 'Asia/Colombo';
-		if ( 390 == so &&  390 == wo) return 'Asia/Yangon';
-		if ( 420 == so &&  360 == wo) return 'Asia/Almaty';
-		if ( 420 == so &&  420 == wo) return 'Asia/Bangkok';
-		if ( 480 == so &&  420 == wo) return 'Asia/Krasnoyarsk';
-		if ( 480 == so &&  480 == wo) return 'Australia/Perth';
-		if ( 540 == so &&  480 == wo) return 'Asia/Irkutsk';
-		if ( 540 == so &&  540 == wo) return 'Asia/Tokyo';
-		if ( 570 == so &&  570 == wo) return 'Australia/Darwin';
-		if ( 570 == so &&  630 == wo) return 'Australia/Adelaide';
-		if ( 600 == so &&  540 == wo) return 'Asia/Yakutsk';
-		if ( 600 == so &&  600 == wo) return 'Australia/Brisbane';
-		if ( 600 == so &&  660 == wo) return 'Australia/Sydney';
-		if ( 630 == so &&  660 == wo) return 'Australia/Lord_Howe';
-		if ( 660 == so &&  600 == wo) return 'Asia/Vladivostok';
-		if ( 660 == so &&  660 == wo) return 'Pacific/Guadalcanal';
-		if ( 690 == so &&  690 == wo) return 'Pacific/Norfolk';
-		if ( 720 == so &&  660 == wo) return 'Asia/Magadan';
-		if ( 720 == so &&  720 == wo) return 'Pacific/Fiji';
-		if ( 720 == so &&  780 == wo) return 'Pacific/Auckland';
-		if ( 765 == so &&  825 == wo) return 'Pacific/Chatham';
-		if ( 780 == so &&  780 == wo) return 'Pacific/Kanton';
-		if ( 840 == so &&  840 == wo) return 'Pacific/Kiritimati';
-		return 'Unknown';
+		return Intl.DateTimeFormat().resolvedOptions().timeZone;
 	}
 
 	/**

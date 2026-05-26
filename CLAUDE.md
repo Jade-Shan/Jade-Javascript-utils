@@ -159,4 +159,4 @@ declare namespace MathJax { ... }
 
 ## 当前进度
 
-当前进度记录在文件 `context/features/20260525-type-check.md` 中。
+当前进度记录在文件 `context/current-feature.md` 中。
