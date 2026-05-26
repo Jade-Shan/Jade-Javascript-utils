@@ -40,7 +40,7 @@ export class NumUtil {
 					}
 				}
 			}
-			let s2 = sArr[1]; // 小数格式
+			let s2 = sArr.length > 1 ? sArr[1] : ""; // 小数格式
 			if (s2.length > 0) {
 				for (let ms of s2) {
 					if ("#" == ms) { m = m + 1; }
@@ -96,6 +96,11 @@ export class NumUtil {
 		return ns.includes(".") ? parseFloat(ns) : parseInt(ns, 10);
 	}
 
+	private static getDecimalPlaces(n: number): number {
+		// return (n.toFixed(16).split(".")[1] || "").length;
+		return (n.toString().split(".")[1] || "").length; 
+	}
+
 	/**
 	 * 精确加法，避免浮点数精度丢失（如 0.1 + 0.2 ≠ 0.3 的问题）。
 	 * @param n1 加数
@@ -103,8 +108,8 @@ export class NumUtil {
 	 * @returns 精确的加法结果
 	 */
 	static add(n1: number, n2: number): number {
-		let r1 = (n1.toString().split(".")[1] || "").length;
-		let r2 = (n2.toString().split(".")[1] || "").length;
+		let r1 = this.getDecimalPlaces(n1);
+		let r2 = this.getDecimalPlaces(n2);
 		let m = Math.pow(10, Math.max(r1, r2));
 		let value = (n1 * m + n2 * m) / m;
 		return value;
@@ -117,8 +122,8 @@ export class NumUtil {
 	 * @returns 精确的减法结果
 	 */
 	static sub(n1: number, n2: number): number {
-		let r1 = (n1.toString().split(".")[1] || "").length;
-		let r2 = (n2.toString().split(".")[1] || "").length;
+		let r1 = this.getDecimalPlaces(n1);
+		let r2 = this.getDecimalPlaces(n2);
 		let m = Math.pow(10, Math.max(r1, r2));
 		const value = (n1 * m - n2 * m) / m;
 		return value;
@@ -131,9 +136,8 @@ export class NumUtil {
 	 * @returns 精确的乘法结果
 	 */
 	static mul(n1: number, n2: number): number {
-		let m = 0, s1 = n1.toString(), s2 = n2.toString();
-		m += (s1.split(".")[1] || "").length;
-		m += (s2.split(".")[1] || "").length;
+		let s1 = n1.toString(), s2 = n2.toString();
+		let m = this.getDecimalPlaces(n1) + this.getDecimalPlaces(n2);
 		let value = Number(s1.replace(".", "")) * Number(s2.replace(".", "")) / Math.pow(10, m);
 		return value;
 	}
@@ -145,8 +149,8 @@ export class NumUtil {
 	 * @returns 精确的除法结果
 	 */
 	static div(n1: number, n2: number): number {
-		let t1 = (n1.toString().split(".")[1] || "").length;
-		let t2 = (n2.toString().split(".")[1] || "").length;
+		let t1 = this.getDecimalPlaces(n1);
+		let t2 = this.getDecimalPlaces(n2);
 		let m = t2 - t1;
 		let r1 = Number(n1.toString().replace(".", ""));
 		let r2 = Number(n2.toString().replace(".", ""));
