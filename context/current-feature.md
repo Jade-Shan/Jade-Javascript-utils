@@ -1,66 +1,90 @@
-# resource.ts 检查报告
+# webHtmlPage.ts 代码审查报告
 
-## 错误
+## 错误/Bug
 
-### 1. 死代码 — `defaultErrImg50x50`（第 8 行）
-
-定义了但从未被引用，可直接删除。
-
----
-
-## 可优化点
-
-### 2. `let` 应改为 `const`
-
-`iconDefault01`、`iconDefault02`、`iconDefault03`、`imgDesktopBg` 从未被重新赋值，应改用 `const`。
+### 1. `bindImageNewTab` 中的赋值副作用（Line 293）
 
 ```typescript
-// 当前
-let iconDefault01 = { ... };
-// 应改为
-const iconDefault01: IconGroup = { ... };
+let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt = elemSlt ? elemSlt : 'img.atc-img');
 ```
 
-### 3. namespace 内的 `export let` 应改为 `export const` / `export function`
-
-`getDefaultIcon`、`getDefaultIconBase64`、`defaultDesktopBackground` 都不会被重新赋值：
+`elemSlt = elemSlt ? elemSlt : ...` 这里的 `=` 是赋值而非比较，会意外修改传入的参数值。应改为：
 
 ```typescript
-// 当前
-export let getDefaultIcon = (name: DefaultIconGroup): IconGroup => { ... }
-// 应改为
-export function getDefaultIcon(name: DefaultIconGroup): IconGroup { ... }
+let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt ? elemSlt : 'img.atc-img');
 ```
 
-### 4. `getDefaultIconBase64` 连续 `if` 效率低（第 332-336 行）
-
-5 个 `if` 条件会逐一检查，即使前面已匹配。应改用 `else if` 或查表：
+### 2. `toggleSideTocWrap` 中 `else` 分支缺少空值检查（Line 433）
 
 ```typescript
-// 当前：5 个独立 if
-if (size == IconSize.x12) { result = ...; }
-if (size == IconSize.x16) { result = ...; }
-// ...
-
-// 建议：查表
-const sizeMap: Record<IconSize, keyof IconGroup> = {
-    [IconSize.x12]: "x12",
-    [IconSize.x16]: "x16",
-    [IconSize.x24]: "x24",
-    [IconSize.x32]: "x32",
-    [IconSize.x48]: "x48",
-};
-const key = sizeMap[size];
-if (key) {
-    const img = grp[key];
-    result = `${img.format},${img.data}`;
+if (elem.classList.contains("toc-close")) {
+    // ...
+    if (null != innerList && innerList.length > 0) {  // ← 有判空
+        innerList.forEach(...);
+    }
+} else {
+    elem.classList.add("toc-close");
+    innerList.forEach(...);  // ← 没有判空，若 innerList 为空会抛异常
 }
 ```
 
-### 5. Enum key 用 `.toString()` 存储（第 319-321 行）
+### 3. `renderPagination` 第二个省略号判断条件不一致（Line 264 vs Line 186）
 
-数字枚举的 `.toString()` 返回 `"0"`、`"1"`、`"2"`，如果枚举定义顺序改变，映射会静默破坏。如果这是有意为之，建议加注释说明。
+两个方法做同一件事但条件不同：
 
-### 6. `getDefaultIcon` 静默回退（第 324 行）
+| 方法 | 判断条件 |
+|------|----------|
+| `renderPaging` (Line 186) | `i < count` |
+| `renderPagination` (Line 264) | `(i + 2) < count` |
 
-传入未知值时静默返回 `iconDefault01`，没有任何警告。建议至少加日志，或者让调用方显式处理。
+`renderPagination` 的 `+2` 会导致页码空隙为 2 时就出现省略号，与 `renderPaging` 行为不一致——应该是同一个逻辑。
+
+### 4. JSDoc 参数名与实际不符
+
+- `renderTopNav` (Line 47): `@param cfg 顶部导航栏` — 实际 `cfg` 是 `PageConfig`，且缺少 `@param elemSlt`
+- `renderSubTitle` (Line 282): `@param page` — 实际参数名是 `cfg`
+
+## 可优化点
+
+### 1. `renderPaging` 和 `renderPagination` 高度重复（~200 行）
+
+一个返回 `HTMLUListElement`，一个返回 `string`，逻辑几乎相同。应让一个调用另一个，消除重复代码。
+
+### 2. `renderTopNav` 大量使用 `navhtml = navhtml + '...'` 拼接（Line 48-78）
+
+可读性远差于 `renderPagination` 中使用的模板字符串。且 `addLink` 函数额外接收 `cfg` 参数，但它本可以直接通过闭包使用外层的 `cfg`。
+
+### 3. 到处使用 `elemSlt = elemSlt ? elemSlt : "default"` 模式
+
+ES6 支持默认参数，这些可以直接写在函数签名中：
+
+```typescript
+// 当前
+renderSubTitle(cfg: PageConfig, elemSlt?: string): void {
+    let elem = document.querySelector(elemSlt ? elemSlt : "#subTitle");
+
+// 建议
+renderSubTitle(cfg: PageConfig, elemSlt: string = "#subTitle"): void {
+    let elem = document.querySelector(elemSlt);
+```
+
+### 4. `null !=` 判空模式可简化
+
+```typescript
+// 当前
+if (null != elemList && elemList.length > 0) {
+// 建议（已编译到 ES6，支持可选链）
+if (elemList?.length) {
+```
+
+### 5. 多处使用 `javascript:void(0);` 作为 `href` 值
+
+这是一个过时的反模式，应该用 `event.preventDefault()` 或 `<button>` 替代。对已废弃的伪协议 `href` 在现代浏览器中可能触发 CSP 警告。
+
+### 6. `renderTopNav` 中的 HTML 注入风险（Line 59 等）
+
+直接拼接 `item.link`、`item.title` 到 HTML，若数据来源不可信会有 XSS 风险（数字类型的 `i`/`pageNo` 是安全的）。
+
+### 7. 文件末尾多余空行（Line 521-531）
+
+末尾有 11 行空白，应清理。
