@@ -8,7 +8,7 @@ export class EscapeUnicode extends HTMLElement {
 		super();
 		let oldHtml = this.innerHTML;
 		// this.innerHTML = "&#x" + oldHtml + ";";
-		this.innerHTML = oldHtml.replace(/(&amp;#x?[0-9a-fA-F]{1,6};)/m, (e => e.replace('&amp;', '&')));
+		this.innerHTML = oldHtml.replace(/(&amp;#x?[0-9a-fA-F]{1,6};)/, (e => e.replace('&amp;', '&')));
 	}
 }
 
@@ -58,7 +58,7 @@ export interface HttpRequestHandler<T, R> {
 }
 
 
-async function doHttp<T, R>(req: HttpRequest<T>, //
+function doHttp<T, R>(req: HttpRequest<T>, //
 	hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
 {
 	return new Promise<HttpResponse<R>>((resolve, reject) => {
@@ -155,7 +155,7 @@ export class WebUtil {
 			imageElem.onabort = () => {  reject({elem: imageElem, url: imageUrl}); };
 			imageElem.onerror = () => {  reject({elem: imageElem, url: imageUrl}); };
 		});
-		await pm.then((param) => { param.elem; }).catch((param) => {
+		await pm.catch((param) => {
 			param.elem.src = defaultImgData;
 			param.elem.crossOrigin = 'Anonymous';
 		});
@@ -210,11 +210,13 @@ export class WebUtil {
 	 * 
 	 * @param  url 
 	 */
-	static goUrl(url: string): void {
+	private static navigateUrl(url: string, target?: string): void {
 		let el = document.createElement("a");
 		document.body.appendChild(el);
 		el.href = url;
-
+		if (target) {
+			el.target = target;
+		}
 		if (el.click) {
 			el.click();
 		} else { // safari 浏览器click事件处理
@@ -229,26 +231,19 @@ export class WebUtil {
 	}
 
 	/**
-	 * 
-	 * @param url 
+	 *
+	 * @param  url
+	 */
+	static goUrl(url: string): void {
+		this.navigateUrl(url);
+	}
+
+	/**
+	 *
+	 * @param url
 	 */
 	static openWindow(url: string): void {
-		let el = document.createElement("a");
-		document.body.appendChild(el);
-		el.href = url;
-		el.target = '_blank';
-
-		if (el.click) {
-			el.click();
-		} else { // safari 浏览器click事件处理
-			try {
-				let evt = document.createEvent('Event');
-				evt.initEvent('click', true, true);
-				el.dispatchEvent(evt);
-			} catch (e) {
-				// new PointOut(e, 2)
-			}
-		}
+		this.navigateUrl(url, '_blank');
 	}
 
 	/**
@@ -344,7 +339,7 @@ export class WebUtil {
 	 * @returns 
 	 */
 	static checkMobile_zh_CN(phoneno: string): boolean {
-		return /^1[3|4|5|8][0-9]\d{8}$/.test(phoneno);
+		return /^1[3458][0-9]\d{8}$/.test(phoneno);
 	}
 
 
@@ -355,7 +350,7 @@ export class WebUtil {
 	 * @returns 
 	 */
 	static checkImageFilePostfix(postfix: string): boolean {
-		return postfix.match(/.jpg|.gif|.png|.bmp/i) ? true : false;
+		return /\.jpg|\.gif|\.png|\.bmp/i.test(postfix);
 	}
 
 
@@ -368,7 +363,6 @@ export class WebUtil {
 	 */
 	static checkImageFileSize(fileInput: HTMLInputElement, imgMaxSize: number): boolean {
 		let filePath = fileInput.value;
-		let fileExt = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
 		if (fileInput.files && fileInput.files[0]) {
 			// alert(fileInput);
 			// alert(fileInput.files[0]);

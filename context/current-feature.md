@@ -34,23 +34,23 @@ const count = uploader.files.length > images.length ? uploader.files.length : im
 
 ## 中等问题
 
-### 6. `doHttp` 多余的 `async` — web.ts:62
+### 6. ~~`doHttp` 多余的 `async`~~ ✅ 已修复 — web.ts:62
 
 函数内部已显式 `new Promise` 并 `return`，没有用 `await`。`async` 反而会把返回的 Promise 再包一层，徒增开销。
 
-### 7. `param.elem;` 无意义的死语句 — web.ts:159
+### 7. ~~`param.elem;` 无意义的死语句~~ ✅ 已修复 — web.ts:159
 
 只是读取属性，什么都不做。
 
-### 8. `fileExt` 赋值后从未使用 — web.ts:372
+### 8. ~~`fileExt` 赋值后从未使用~~ ✅ 已修复 — web.ts:372
 
 计算了文件扩展名但后续没有任何地方引用它。
 
-### 9. `goUrl` / `openWindow` 代码重复 — web.ts:214-253
+### 9. ~~`goUrl` / `openWindow` 代码重复~~ ✅ 已修复 — web.ts:214-253
 
 两个方法几乎一模一样，唯一区别是 `openWindow` 多了 `el.target = '_blank'`，可以合并。
 
-### 10. 图片扩展名正则 `.` 未转义 — web.ts:359
+### 10. ~~图片扩展名正则 `.` 未转义~~ ✅ 已修复 — web.ts:359
 
 ```typescript
 postfix.match(/.jpg|.gif|.png|.bmp/i)
@@ -58,11 +58,11 @@ postfix.match(/.jpg|.gif|.png|.bmp/i)
 
 `.` 匹配任意字符，应该写成 `\.jpg|\.gif|\.png|\.bmp`。另外 `.test()` 比 `.match()` 更适合布尔判断。
 
-### 11. 手机号正则 `[3|4|5|8]` 包含字面量 `|` — web.ts:348
+### 11. ~~手机号正则 `[3|4|5|8]` 包含字面量 `|`~~ ✅ 已修复 — web.ts:348
 
 字符类中 `|` 就是普通字符，这个正则会匹配 `1`,`|`,`3`,`4`,`5`,`8`。应该写成 `[3458]`。
 
-### 12. 正则 `/m` flag 多余 — web.ts:12
+### 12. ~~正则 `/m` flag 多余~~ ✅ 已修复 — web.ts:12
 
 没有使用 `^` 或 `$`，multiline 标记无实际作用。
 
