@@ -400,8 +400,8 @@ export class TimeUtil {
 	 * @param milSecs 等待的毫秒数
 	 * @returns Promise，在指定时间后 resolve
 	 */
-	static async sleep(milSecs: number): Promise<void> {
-		return new Promise(resolve => setTimeout(resolve, milSecs));
+	static async sleep(milliSecs: number): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, milliSecs));
 	}
 
 	/**
@@ -533,7 +533,7 @@ export class TimeUtil {
 	 * @returns 包含 floor（范围起点）和 ceil（范围终点）的对象
 	 */
 	static getDateArea(date: Date, ms: number): { floor: Date, ceil: Date } {
-		const d1 = date;
+		const d1 = TimeUtil.cleanDay(date);
 		const d2 = TimeUtil.cleanDay(TimeUtil.addMilliseconds(d1, ms));
 		if (d1 < d2) {
 			return { floor: d1, ceil: d2 };
