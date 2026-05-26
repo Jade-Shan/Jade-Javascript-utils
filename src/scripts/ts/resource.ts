@@ -315,14 +315,18 @@ const imgDesktopBg: IBase64Img = {
 
 export namespace JadeUIResource {
 
-	let iconGroupMap = new SimpleMap<string, IconGroup>();
-	iconGroupMap.put(DefaultIconGroup.ELEC_FACE.toString(), iconDefault01);
-	iconGroupMap.put(DefaultIconGroup.ELEC_BUG.toString(), iconDefault02);
-	iconGroupMap.put(DefaultIconGroup.CAMERA.toString(), iconDefault03);
+	let iconGroupMap = new SimpleMap<DefaultIconGroup, IconGroup>();
+	iconGroupMap.put(DefaultIconGroup.ELEC_FACE, iconDefault01);
+	iconGroupMap.put(DefaultIconGroup.ELEC_BUG, iconDefault02);
+	iconGroupMap.put(DefaultIconGroup.CAMERA, iconDefault03);
 
 	export function getDefaultIcon(name: DefaultIconGroup): IconGroup {
-		const grp = iconGroupMap.get(name.toString());
-		return grp ? grp : iconDefault01;
+		const grp = iconGroupMap.get(name);
+		if (!grp) {
+			console.warn(`Unknown DefaultIconGroup: ${name}, fallback to ELEC_FACE`);
+			return iconDefault01;
+		}
+		return grp;
 	}
 
 	const sizeKeyMap: Record<number, keyof IconGroup> = {
