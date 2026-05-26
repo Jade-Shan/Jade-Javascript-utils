@@ -1,4 +1,3 @@
-/* jshint esversion: 6 */
 import { StrUtil, TimeUtil } from './basic.js';
 import { SimpleMap } from './dataStructure.js';
 
@@ -30,7 +29,7 @@ export enum Base64ImgType {
 export type IBase64Img = { format: Base64ImgType, data: string };
 
 export interface HttpRequestOption {
-	ingoreCache    ?: boolean;
+	ignoreCache    ?: boolean;
 	headers        ?: SimpleMap<string, string>;
 	timeout        ?: number;
 	withCredentials?: boolean;
@@ -67,7 +66,7 @@ async function doHttp<T, R>(req: HttpRequest<T>, //
 		let method = req.method ? req.method : "GET";
 		xhr.open(method, req.url);
 		xhr.withCredentials = req.opt?.withCredentials ? req.opt?.withCredentials : false;
-		if (req.opt?.ingoreCache) {
+		if (req.opt?.ignoreCache) {
 			xhr.setRequestHeader('Cache-Control', 'no-cache');
 		}
 		if (req.opt?.headers) {
@@ -179,7 +178,7 @@ export class WebUtil {
 	static transUnicodeWikiInHex(c: string): string {
 		// `page.transUnicodeWikiInHex('⛵')`
 		//  `"<esp-unicode>&#x26f5;</esp-unicode>"`
-		return "<esp-unicode>&#x" + c.charCodeAt(0).toString(16) + ";</esp-unicode>";
+		return "<esp-unicode>&#x" + c.codePointAt(0)!.toString(16) + ";</esp-unicode>";
 	}
 
 	/**
@@ -190,7 +189,7 @@ export class WebUtil {
 	static transUnicodeWikiInDec(c: string): string {
 		// `page.transUnicodeWikiInDec('⛵')`
 		//   `"<esp-unicode>&#9973;</esp-unicode>"`
-		return "<esp-unicode>&#" + c.charCodeAt(0) + ";</esp-unicode>";
+		return "<esp-unicode>&#" + c.codePointAt(0)! + ";</esp-unicode>";
 	}
 
 	/**
