@@ -149,11 +149,11 @@ export class WebUtil {
 			resolve: (param: {elem: HTMLImageElement, url: string}) => void,
 			 reject: (param: {elem: HTMLImageElement, url: string}) => void//
 		) => {
-			imageElem.src = imageUrl;
-			imageElem.crossOrigin = 'Anonymous';
 			imageElem.onload  = () => { resolve({elem: imageElem, url: imageUrl}); };
 			imageElem.onabort = () => {  reject({elem: imageElem, url: imageUrl}); };
 			imageElem.onerror = () => {  reject({elem: imageElem, url: imageUrl}); };
+			imageElem.src = imageUrl;
+			imageElem.crossOrigin = 'Anonymous';
 		});
 		await pm.catch((param) => {
 			param.elem.src = defaultImgData;
@@ -461,7 +461,7 @@ export class WebUtil {
 	static previewLocalImage(uploader: HTMLInputElement, images: Array<HTMLImageElement>) {
 		uploader.onchange = (ev: Event) => {
 			if (uploader.files && uploader.files.length > 0 && images.length > 0) {
-				const count = uploader.files.length > images.length ? uploader.files.length : images.length;
+				const count = Math.min(uploader.files.length, images.length);
 				for (let i = 0; i < count; i++) {
 					const file = uploader.files[i];
 					const image = images[i];
