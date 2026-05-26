@@ -43,6 +43,16 @@ class TestBasicUtil {
 		testFunc(1000000 === NumUtil.toFixed(1234567.1, -6), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
 		testFunc(      0 === NumUtil.toFixed(1234567.1, -7), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
 		//
+		testFunc(-1         === NumUtil.toFixed(-1.1234567, 0), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.1       === NumUtil.toFixed(-1.1234567, 1), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.12      === NumUtil.toFixed(-1.1234567, 2), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.123     === NumUtil.toFixed(-1.1234567, 3), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.1235    === NumUtil.toFixed(-1.1234567, 4), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.12346   === NumUtil.toFixed(-1.1234567, 5), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.123457  === NumUtil.toFixed(-1.1234567, 6), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.1234567 === NumUtil.toFixed(-1.1234567, 7), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		testFunc(-1.1234567 === NumUtil.toFixed(-1.1234567, 8), (msg, sty, mk) => { console.log(msg, "NumUtil.toFixed()", sty, mk); });
+		//
 		testFunc("0.09" === NumUtil.format(0.091), (msg, sty, mk) => { console.log(msg, "NumUtil.format()", sty, mk); });
 		testFunc("0.10" === NumUtil.format(0.095), (msg, sty, mk) => { console.log(msg, "NumUtil.format()", sty, mk); });
 		testFunc("0.10" === NumUtil.format(0.099), (msg, sty, mk) => { console.log(msg, "NumUtil.format()", sty, mk); });
@@ -99,6 +109,10 @@ class TestBasicUtil {
 		//
 		testFunc("^^^^^^^^^^^^test-str" === StrUtil.leftPad ("test-str", 20, '^'), (msg, sty, mk) => { console.log(msg, "StrUtil.leftPad ()", sty, mk); });
 		testFunc("test-str^^^^^^^^^^^^" === StrUtil.rightPad("test-str", 20, '^'), (msg, sty, mk) => { console.log(msg, "StrUtil.rightPad()", sty, mk); });
+		//
+		testFunc("我是{name}，今年{age}岁了" === StrUtil.format("我是{name}，今年{age}岁了", {                                    }), (msg, sty, mk) => { console.log(msg, "StrUtil.format()", sty, mk); });
+		testFunc("我是loogn，今年{age}岁了"  === StrUtil.format("我是{name}，今年{age}岁了", { name: "loogn"                      }), (msg, sty, mk) => { console.log(msg, "StrUtil.format()", sty, mk); });
+		testFunc("我是loogn，今年22岁了"     === StrUtil.format("我是{name}，今年{age}岁了", { name: "loogn", age: 22, weight: 70 }), (msg, sty, mk) => { console.log(msg, "StrUtil.format()", sty, mk); });
 	}
 
 	static testTime() {
