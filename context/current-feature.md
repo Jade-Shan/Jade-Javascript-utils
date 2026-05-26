@@ -26,7 +26,7 @@ const count = uploader.files.length > images.length ? uploader.files.length : im
 
 `src` 赋值在第 153 行，但 `onload`/`onerror`/`onabort` 在第 155-157 行才设置。对于浏览器缓存的图片，`onload` 可能在 `src` 赋值时就**同步触发**，此时回调还没绑定。
 
-### 5. 缺少 onerror 时 Promise 永不 settle — web.ts:89-96
+### 5. ~~缺少 onerror 时 Promise 永不 settle~~ ✅ 已修复 — web.ts:93-95
 
 `onerror`/`ontimeout`/`onabort` 只有在用户提供了对应 handler 时才设置。如果请求出现网络错误且用户没传 `onError`，Promise 永远不会 resolve 或 reject，造成内存泄漏。
 

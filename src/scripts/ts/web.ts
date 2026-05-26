@@ -90,9 +90,9 @@ function doHttp<T, R>(req: HttpRequest<T>, //
 			if (onload) { resolve(onload(evt, xhr, req)); }
 			else { resolve({ statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); }
 		};
-		if (onerror   ) { xhr.onerror    = (evt: ProgressEvent) => { reject (onerror  (evt, xhr, req)); }; }
-		if (ontimeout ) { xhr.ontimeout  = (evt: ProgressEvent) => { reject (ontimeout(evt, xhr, req)); }; }
-		if (onabort   ) { xhr.onabort    = (evt: ProgressEvent) => { reject (onabort  (evt, xhr, req)); }; }
+		xhr.onerror   = (evt: ProgressEvent) => { reject(onerror   ? onerror  (evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
+		xhr.ontimeout = (evt: ProgressEvent) => { reject(ontimeout ? ontimeout(evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
+		xhr.onabort   = (evt: ProgressEvent) => { reject(onabort   ? onabort  (evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
 
 		xhr.send();
 	});
