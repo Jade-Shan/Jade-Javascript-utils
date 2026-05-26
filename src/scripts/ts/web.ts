@@ -94,7 +94,7 @@ function doHttp<T, R>(req: HttpRequest<T>, //
 		xhr.ontimeout = (evt: ProgressEvent) => { reject(ontimeout ? ontimeout(evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
 		xhr.onabort   = (evt: ProgressEvent) => { reject(onabort   ? onabort  (evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
 
-		xhr.send();
+		xhr.send(req.body as XMLHttpRequestBodyInit);
 	});
 }
 
@@ -131,7 +131,7 @@ export class WebUtil {
 	static async requestHttp<T, R>(req: HttpRequest<T>, //
 		hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
 	{
-		return await doHttp<T, R>(req, hdl).then(resp => resp).catch(resp => resp);
+		return await doHttp<T, R>(req, hdl);
 	}
 
 	static async loadImageByProxy(imageElem: HTMLImageElement, oriImageUrl: string, //
