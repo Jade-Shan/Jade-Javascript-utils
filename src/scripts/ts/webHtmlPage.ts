@@ -109,7 +109,6 @@ export class WebHtmlPage {
 			let a: HTMLAnchorElement = document.createElement("a");
 			a.innerHTML = "&laquo;";
 			a.onclick = ev => {console.log("already-page-1")};
-			if (genHref) { a.href = "javascript:void(0);"; }
 			let li = document.createElement("li");
 			li.appendChild(a);
 			ulNode.appendChild(li);
@@ -142,7 +141,6 @@ export class WebHtmlPage {
 			a.innerHTML = "...";
 			a.classList.add("disable");
 			a.onclick = ev => console.log(`elips`);
-			if (genHref) { a.href = "javascript:void(0);"; }
 			let li = document.createElement("li");
 			li.appendChild(a);
 			ulNode.appendChild(li);
@@ -163,7 +161,6 @@ export class WebHtmlPage {
 			let a: HTMLAnchorElement = document.createElement("a");
 			a.innerHTML = `${pageNo}`;
 			a.onclick = ev => console.log(`already-curr-page`);
-			if (genHref) { a.href = "javascript:void(0);"; }
 			let li = document.createElement("li");
 			li.classList.add("active")
 			li.appendChild(a);
@@ -188,7 +185,6 @@ export class WebHtmlPage {
 			a.innerHTML = "...";
 			a.classList.add("disable");
 			a.onclick = ev => console.log(`elips`);
-			if (genHref) { a.href = "javascript:void(0);"; }
 			let li = document.createElement("li");
 			li.appendChild(a);
 			ulNode.appendChild(li);
@@ -198,7 +194,6 @@ export class WebHtmlPage {
 			a.innerHTML = "&raquo;";
 			a.classList.add("disable");
 			a.onclick = ev => console.log("already-page-max");
-			if (genHref) { a.href = "javascript:void(0);"; }
 			let li = document.createElement("li");
 			li.appendChild(a);
 			ulNode.appendChild(li);
@@ -236,7 +231,7 @@ export class WebHtmlPage {
 		let html = '<ul class="pagination center">';
 		// first page
 		if (pageNo === 1) {
-			html = html + '<li><a class="disable" href="javascript:void(0);">&laquo;</a></li>';
+			html = html + '<li><a class="disable">&laquo;</a></li>';
 		} else {
 			html = html + `<li><a href="${genPageHref(pageNo - 1)}">&laquo;</a></li>`;
 			html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
@@ -245,7 +240,7 @@ export class WebHtmlPage {
 		// elps
 		if (pageNo > (size + 2)) {
 			i = pageNo - size;
-			html = html + '<li><a class="disable" href="javascript:void(0);">...</a></li>';
+			html = html + '<li><a class="disable">...</a></li>';
 		}
 		// pre no
 		while (pageNo > i) {
@@ -253,7 +248,7 @@ export class WebHtmlPage {
 			i = i + 1;
 		}
 		// curr page
-		html = html + `<li class="active"><a href="javascript:void(0);">${pageNo }</a></li>`;
+		html = html + `<li class="active"><a>${pageNo }</a></li>`;
 		// post no
 		i = pageNo + 1;
 		while (i < count && i <= (pageNo + size)) {
@@ -262,10 +257,10 @@ export class WebHtmlPage {
 		}
 		// elps
 		if (i < count) {
-			html = html + '<li><a class="disable" href="javascript:void(0);">...</a></li>';
+			html = html + '<li><a class="disable">...</a></li>';
 		}
 		if (pageNo === count) {
-			html = html + '<li><a class="disable" href="javascript:void(0);">&raquo;</a></li>';
+			html = html + '<li><a class="disable">&raquo;</a></li>';
 		} else {
 			html = html + `<li><a href="${genPageHref(count)}">${count}</a></li>`;
 			html = html + `<li><a href="${genPageHref(pageNo + 1)}">&raquo;</a></li>`;
@@ -299,12 +294,10 @@ export class WebHtmlPage {
 	} 
 
 	static removeElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void {
-		if (null != elemList && elemList.length > 0) {
-			if (null != className) {
-				elemList.forEach((elem, idx, parent) => {
-					elem.classList.remove(...className);
-				});
-			}
+		if (elemList?.length) {
+			elemList.forEach((elem, idx, parent) => {
+				elem.classList.remove(...className);
+			});
 		}
 	}
 
@@ -315,12 +308,10 @@ export class WebHtmlPage {
 	}
 
 	static addElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void {
-		if (null != elemList && elemList.length > 0) {
-			if (null != className) {
-				elemList.forEach((elem, idx, parent) => {
-					elem.classList.add(...className);
-				});
-			}
+		if (elemList?.length) {
+			elemList.forEach((elem, idx, parent) => {
+				elem.classList.add(...className);
+			});
 		}
 	}
 
@@ -330,7 +321,7 @@ export class WebHtmlPage {
 	}
 
 	static setElemHtml<T extends HTMLElement>(elemList: NodeListOf<T>, html: string): void {
-		if (null != elemList && elemList.length > 0) {
+		if (elemList?.length) {
 				elemList.forEach((elem, idx, parent) => {
 					elem.innerHTML = html;
 				});
@@ -343,7 +334,7 @@ export class WebHtmlPage {
 	}
 
 	static bindOnClick<T extends HTMLElement>(elemList: NodeListOf<T>, func: () => void): void {
-		if (null != elemList && elemList.length > 0) {
+		if (elemList?.length) {
 			elemList.forEach((elem, idx, parent) => {
 				elem.onclick = func;
 			});
@@ -364,7 +355,7 @@ export class WebHtmlPage {
 		tagSlt = tagSlt ? tagSlt : "div.sideTocIdx";
 		// document.querySelectorAll
 		let elemList = document.querySelectorAll<HTMLElement>(tagSlt);
-		if (null != elemList && elemList.length > 0) {
+		if (elemList?.length) {
 			elemList.forEach((elem, idx, parent) => {
 				elem.innerHTML = html;
 			});
@@ -396,7 +387,7 @@ export class WebHtmlPage {
 
 		elemSlt = elemSlt? elemSlt: "div.sideTocIdx";
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
-		if (null != elemList && elemList.length > 0) {
+		if (elemList?.length) {
 			elemList.forEach((elem, idx, parent) => {
 				if (elem.classList.contains("toc-close")) {
 					// do nothing
@@ -415,13 +406,13 @@ export class WebHtmlPage {
 		elemSlt = elemSlt ? elemSlt : "div.sideTocIdx";
 		margin = margin ? margin : 80;
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
-		if (null != elemList && elemList.length > 0) {
+		if (elemList?.length) {
 			innerSlt = innerSlt ? innerSlt : "div.sideToc";
 			let innerList = document.querySelectorAll<HTMLElement>(innerSlt);
 			elemList.forEach((elem, idx, parent) => {
 				if (elem.classList.contains("toc-close")) {
 					elem.classList.remove("toc-close");
-					if (null != innerList && innerList.length > 0) {
+					if (innerList?.length) {
 						innerList.forEach((elemInn, idx, parent) => {
 							// elemInn.style = `overflow: hidden; padding: 10px 20px; height: ${WebHtmlPage.caculateSideTocBoxHeight(margin)}px; transition: 1s;`;
 							elemInn.style = ``;
@@ -429,7 +420,7 @@ export class WebHtmlPage {
 					}
 				} else {
 					elem.classList.add("toc-close");
-					if (null != innerList && innerList.length > 0) {
+					if (innerList?.length) {
 						innerList.forEach((elemInn, idx, parent) => {
 							elemInn.style = `overflow: auto; padding: 0px 20px; height: 0px; transition: 1s;`;
 						});
@@ -460,7 +451,7 @@ export class WebHtmlPage {
 		};
 		elemSlt = elemSlt ? elemSlt : "div.sideTocIdx";
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
-		if (null != elemList && elemList.length > 0) {
+		if (elemList?.length) {
 			elemList.forEach((elem, idx, parent) => { effect(elem, elemSlt) });
 		}
 	};
@@ -518,14 +509,3 @@ export class WebHtmlPage {
 	}
 
 }
-
-
-
-
-
-
-
-
-
-
-

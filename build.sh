@@ -81,3 +81,5 @@ echo '--- finish : compile javascript ---'
 #  mkdir -p webroot/docs/
 #  cp -r  docs/* webroot/docs/
 #  echo '--- finish: copy doc ---'
+
+sleep 3 && sync
