@@ -261,7 +261,7 @@ export class WebHtmlPage {
 			i = i + 1;
 		}
 		// elps
-		if ((i + 2) < count) {
+		if (i < count) {
 			html = html + '<li><a class="disable" href="javascript:void(0);">...</a></li>';
 		}
 		if (pageNo === count) {

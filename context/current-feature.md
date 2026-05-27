@@ -1,49 +1,5 @@
 # webHtmlPage.ts 代码审查报告
 
-## 错误/Bug
-
-### 1. `bindImageNewTab` 中的赋值副作用（Line 293）
-
-```typescript
-let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt = elemSlt ? elemSlt : 'img.atc-img');
-```
-
-`elemSlt = elemSlt ? elemSlt : ...` 这里的 `=` 是赋值而非比较，会意外修改传入的参数值。应改为：
-
-```typescript
-let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt ? elemSlt : 'img.atc-img');
-```
-
-### 2. `toggleSideTocWrap` 中 `else` 分支缺少空值检查（Line 433）
-
-```typescript
-if (elem.classList.contains("toc-close")) {
-    // ...
-    if (null != innerList && innerList.length > 0) {  // ← 有判空
-        innerList.forEach(...);
-    }
-} else {
-    elem.classList.add("toc-close");
-    innerList.forEach(...);  // ← 没有判空，若 innerList 为空会抛异常
-}
-```
-
-### 3. `renderPagination` 第二个省略号判断条件不一致（Line 264 vs Line 186）
-
-两个方法做同一件事但条件不同：
-
-| 方法 | 判断条件 |
-|------|----------|
-| `renderPaging` (Line 186) | `i < count` |
-| `renderPagination` (Line 264) | `(i + 2) < count` |
-
-`renderPagination` 的 `+2` 会导致页码空隙为 2 时就出现省略号，与 `renderPaging` 行为不一致——应该是同一个逻辑。
-
-### 4. JSDoc 参数名与实际不符
-
-- `renderTopNav` (Line 47): `@param cfg 顶部导航栏` — 实际 `cfg` 是 `PageConfig`，且缺少 `@param elemSlt`
-- `renderSubTitle` (Line 282): `@param page` — 实际参数名是 `cfg`
-
 ## 可优化点
 
 ### 1. `renderPaging` 和 `renderPagination` 高度重复（~200 行）
