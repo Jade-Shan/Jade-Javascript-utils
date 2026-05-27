@@ -40,9 +40,9 @@ export class WebHtmlPage {
 	}
 
 	/**
-	 * 
-	 * @param cfg 顶部导航栏
-	 * @param items 
+	 * @param cfg 页面配置
+	 * @param items 导航节点列表
+	 * @param elemSlt 目标元素选择器
 	 */
 	renderTopNav(cfg: PageConfig, items: Array<NavTreeNode>, elemSlt?: string): void {
 		let navhtml = '<div class="navbar-header"> <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#example-navbar-collapse"> <span class="sr-only">切换导航</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button> <a class="navbar-brand" href="/">Jade Dungeon</a> </div> <div class="collapse navbar-collapse" id="example-navbar-collapse"> <ul class="nav navbar-nav">';
@@ -275,9 +275,8 @@ export class WebHtmlPage {
 	};
 
 	/**
-	 * 
-	 * @param page 
-	 * @param elemSlt 
+	 * @param cfg 页面配置
+	 * @param elemSlt 目标元素选择器
 	 */
 	renderSubTitle(cfg: PageConfig, elemSlt?: string): void {
 		let elem = document.querySelector(elemSlt ? elemSlt : "#subTitle");
@@ -291,7 +290,7 @@ export class WebHtmlPage {
 	 * @param elemSlt 
 	 */
 	bindImageNewTab(elemSlt?: string): void {
-		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt = elemSlt ? elemSlt : 'img.atc-img');
+		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt ? elemSlt : 'img.atc-img');
 		elemArr.forEach((photoImg: HTMLImageElement, key: number, parent: NodeListOf<HTMLImageElement>) => {
 			if (photoImg) {
 				photoImg.onclick = (ev: MouseEvent): any => { WebUtil.openWindow(photoImg.src); };
@@ -430,9 +429,11 @@ export class WebHtmlPage {
 					}
 				} else {
 					elem.classList.add("toc-close");
-					innerList.forEach((elemInn, idx, parent) => {
-						elemInn.style = `overflow: auto; padding: 0px 20px; height: 0px; transition: 1s;`;
-					});
+					if (null != innerList && innerList.length > 0) {
+						innerList.forEach((elemInn, idx, parent) => {
+							elemInn.style = `overflow: auto; padding: 0px 20px; height: 0px; transition: 1s;`;
+						});
+					}
 				}
 			});
 		}
