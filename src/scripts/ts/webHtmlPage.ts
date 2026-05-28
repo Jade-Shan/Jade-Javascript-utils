@@ -2,31 +2,18 @@ import { StrUtil } from './basic.js';
 import { WebUtil } from './web.js';
 
 
-declare interface BootstrapModalDialog {
-	modal(type: string): void;
-}
-
 export interface PageConfig {
 	apiRoot: string;
 	pageTitle: string;
 	subTitle: string;
 	ajaxTimeout: number;
 
-	//constructor(apiRoot: string = "/", pageTitle: string = "New Page", subTitle: string = "new Desc",
-	//	ajaxTimeout: number = 5000) //
-	//{
-	//	this.apiRoot = apiRoot;
-	//	this.pageTitle = pageTitle;
-	//	this.subTitle = subTitle;
-	//	this.ajaxTimeout = ajaxTimeout;
-	//}
-
 }
 
 export interface NavTreeNode {
 	id?: string;
 	title: string;
-	link?: string
+	link?: string;
 	isNewWin?: boolean;
 	subs?: Array<NavTreeNode>;
 }
@@ -83,7 +70,7 @@ export class WebHtmlPage {
 		}
 	}
 
-	static parseHTML(html: string) {
+	static parseHTML(html: string): DocumentFragment {
 		let t = document.createElement('template');
 		t.innerHTML = html;
 		return t.content;
@@ -93,7 +80,7 @@ export class WebHtmlPage {
 		goPageFunc?: (n: number) => void): HTMLUListElement //
 	{
 		pageNo = pageNo && pageNo > 0 ? pageNo : 1;
-		count  = count  && count  > 0 ? count  : 1;
+		count = count && count > 0 ? count : 1;
 
 		let genGoPage = (n0: number) => {
 			return goPageFunc ? (ev: MouseEvent) => { goPageFunc(n0) } :
@@ -224,7 +211,7 @@ export class WebHtmlPage {
 
 	static renderPagination(pageNo: number, count: number, genPageHref: (n: number) => string = (num: number) => `javascript:nextPage(${num});`): string {
 		pageNo = pageNo && pageNo > 0 ? pageNo : 1;
-		count  = count  && count  > 0 ? count  : 1;
+		count = count && count > 0 ? count : 1;
 		let size = 5;
 		// 1 ... 3 4 5 6 7 _8_ 9 10 11 12 13 ... 20
 		let i = 1;
