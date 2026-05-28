@@ -225,6 +225,13 @@ export class StrUtil {
 	}
 
 	/**
+	 * 转义 HTML 特殊字符，防止 XSS 注入。
+	 */
+	static escapeHtml(s: string): string {
+		return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+	}
+
+	/**
 	 * 在字符串左侧填充字符直到达到指定长度。
 	 * @param str 原始字符串
 	 * @param max 目标长度
@@ -636,9 +643,10 @@ export class ColorRGB implements IColorRGB {
 	static fromNameTo140(name: string): { color: ColorRGB, name: string } {
 		let result = color140.White;
 		for (let i = 0; i < color140Arr.length; i++) {
-			let color = color140Arr[i];
-			if (name == color.name) {
+			let rec = color140Arr[i];
+			if (name == rec.name) {
 				result = color140Arr[i].color;
+				break;
 			}
 		}
 		return result;
@@ -720,11 +728,11 @@ export class ColorRGB implements IColorRGB {
 	oppositeColor(): { color: ColorRGB, name: string } {
 		// 互补色的查询
 		// https://zh.planetcalc.com/7661/
-		let color140 = this.to140Color();
+		let matchedColor = this.to140Color();
 		let result = color140Arr[0];
 		for (let i = 0; i < color140Arr.length; i++) {
 			let rec = color140Arr[i];
-			if (color140.name == rec.name) {
+			if (matchedColor.name == rec.name) {
 				result = rec;
 			}
 		}
@@ -1023,6 +1031,8 @@ let colorRevMap: Record<string, string> = {
 let color140Arr = Object.keys(color140).map(name => ({
     name,
     color: color140[name as keyof typeof color140],
-    rev: color140[colorRevMap[name] as keyof typeof color140],
+    rev: colorRevMap[name]
+        ? color140[colorRevMap[name] as keyof typeof color140]
+        : color140.White,
 }));
 

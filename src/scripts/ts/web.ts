@@ -1,4 +1,3 @@
-/* jshint esversion: 6 */
 import { StrUtil, TimeUtil } from './basic.js';
 import { SimpleMap } from './dataStructure.js';
 
@@ -9,7 +8,7 @@ export class EscapeUnicode extends HTMLElement {
 		super();
 		let oldHtml = this.innerHTML;
 		// this.innerHTML = "&#x" + oldHtml + ";";
-		this.innerHTML = oldHtml.replace(/(&amp;#x?[0-9a-fA-F]{1,6};)/m, (e => e.replace('&amp;', '&')));
+		this.innerHTML = oldHtml.replace(/(&amp;#x?[0-9a-fA-F]{1,6};)/, (e => e.replace('&amp;', '&')));
 	}
 }
 
@@ -30,7 +29,7 @@ export enum Base64ImgType {
 export type IBase64Img = { format: Base64ImgType, data: string };
 
 export interface HttpRequestOption {
-	ingoreCache    ?: boolean;
+	ignoreCache    ?: boolean;
 	headers        ?: SimpleMap<string, string>;
 	timeout        ?: number;
 	withCredentials?: boolean;
@@ -59,7 +58,7 @@ export interface HttpRequestHandler<T, R> {
 }
 
 
-async function doHttp<T, R>(req: HttpRequest<T>, //
+function doHttp<T, R>(req: HttpRequest<T>, //
 	hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
 {
 	return new Promise<HttpResponse<R>>((resolve, reject) => {
@@ -67,7 +66,7 @@ async function doHttp<T, R>(req: HttpRequest<T>, //
 		let method = req.method ? req.method : "GET";
 		xhr.open(method, req.url);
 		xhr.withCredentials = req.opt?.withCredentials ? req.opt?.withCredentials : false;
-		if (req.opt?.ingoreCache) {
+		if (req.opt?.ignoreCache) {
 			xhr.setRequestHeader('Cache-Control', 'no-cache');
 		}
 		if (req.opt?.headers) {
@@ -91,11 +90,11 @@ async function doHttp<T, R>(req: HttpRequest<T>, //
 			if (onload) { resolve(onload(evt, xhr, req)); }
 			else { resolve({ statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); }
 		};
-		if (onerror   ) { xhr.onerror    = (evt: ProgressEvent) => { reject (onerror  (evt, xhr, req)); }; }
-		if (ontimeout ) { xhr.ontimeout  = (evt: ProgressEvent) => { reject (ontimeout(evt, xhr, req)); }; }
-		if (onabort   ) { xhr.onabort    = (evt: ProgressEvent) => { reject (onabort  (evt, xhr, req)); }; }
+		xhr.onerror   = (evt: ProgressEvent) => { reject(onerror   ? onerror  (evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
+		xhr.ontimeout = (evt: ProgressEvent) => { reject(ontimeout ? ontimeout(evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
+		xhr.onabort   = (evt: ProgressEvent) => { reject(onabort   ? onabort  (evt, xhr, req) : { statusCode: xhr.status, statusMsg: xhr.statusText, body: xhr.response as unknown as R }); };
 
-		xhr.send();
+		xhr.send(req.body as XMLHttpRequestBodyInit);
 	});
 }
 
@@ -132,7 +131,7 @@ export class WebUtil {
 	static async requestHttp<T, R>(req: HttpRequest<T>, //
 		hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
 	{
-		return await doHttp<T, R>(req, hdl).then(resp => resp).catch(resp => resp);
+		return await doHttp<T, R>(req, hdl);
 	}
 
 	static async loadImageByProxy(imageElem: HTMLImageElement, oriImageUrl: string, //
@@ -150,13 +149,13 @@ export class WebUtil {
 			resolve: (param: {elem: HTMLImageElement, url: string}) => void,
 			 reject: (param: {elem: HTMLImageElement, url: string}) => void//
 		) => {
-			imageElem.src = imageUrl;
-			imageElem.crossOrigin = 'Anonymous';
 			imageElem.onload  = () => { resolve({elem: imageElem, url: imageUrl}); };
 			imageElem.onabort = () => {  reject({elem: imageElem, url: imageUrl}); };
 			imageElem.onerror = () => {  reject({elem: imageElem, url: imageUrl}); };
+			imageElem.src = imageUrl;
+			imageElem.crossOrigin = 'Anonymous';
 		});
-		await pm.then((param) => { param.elem; }).catch((param) => {
+		await pm.catch((param) => {
 			param.elem.src = defaultImgData;
 			param.elem.crossOrigin = 'Anonymous';
 		});
@@ -179,7 +178,7 @@ export class WebUtil {
 	static transUnicodeWikiInHex(c: string): string {
 		// `page.transUnicodeWikiInHex('⛵')`
 		//  `"<esp-unicode>&#x26f5;</esp-unicode>"`
-		return "<esp-unicode>&#x" + c.charCodeAt(0).toString(16) + ";</esp-unicode>";
+		return "<esp-unicode>&#x" + c.codePointAt(0)!.toString(16) + ";</esp-unicode>";
 	}
 
 	/**
@@ -190,7 +189,7 @@ export class WebUtil {
 	static transUnicodeWikiInDec(c: string): string {
 		// `page.transUnicodeWikiInDec('⛵')`
 		//   `"<esp-unicode>&#9973;</esp-unicode>"`
-		return "<esp-unicode>&#" + c.charCodeAt(0) + ";</esp-unicode>";
+		return "<esp-unicode>&#" + c.codePointAt(0)! + ";</esp-unicode>";
 	}
 
 	/**
@@ -211,11 +210,13 @@ export class WebUtil {
 	 * 
 	 * @param  url 
 	 */
-	static goUrl(url: string): void {
+	private static navigateUrl(url: string, target?: string): void {
 		let el = document.createElement("a");
 		document.body.appendChild(el);
 		el.href = url;
-
+		if (target) {
+			el.target = target;
+		}
 		if (el.click) {
 			el.click();
 		} else { // safari 浏览器click事件处理
@@ -230,26 +231,19 @@ export class WebUtil {
 	}
 
 	/**
-	 * 
-	 * @param url 
+	 *
+	 * @param  url
+	 */
+	static goUrl(url: string): void {
+		this.navigateUrl(url);
+	}
+
+	/**
+	 *
+	 * @param url
 	 */
 	static openWindow(url: string): void {
-		let el = document.createElement("a");
-		document.body.appendChild(el);
-		el.href = url;
-		el.target = '_blank';
-
-		if (el.click) {
-			el.click();
-		} else { // safari 浏览器click事件处理
-			try {
-				let evt = document.createEvent('Event');
-				evt.initEvent('click', true, true);
-				el.dispatchEvent(evt);
-			} catch (e) {
-				// new PointOut(e, 2)
-			}
-		}
+		this.navigateUrl(url, '_blank');
 	}
 
 	/**
@@ -345,7 +339,7 @@ export class WebUtil {
 	 * @returns 
 	 */
 	static checkMobile_zh_CN(phoneno: string): boolean {
-		return /^1[3|4|5|8][0-9]\d{8}$/.test(phoneno);
+		return /^1[3458][0-9]\d{8}$/.test(phoneno);
 	}
 
 
@@ -356,7 +350,7 @@ export class WebUtil {
 	 * @returns 
 	 */
 	static checkImageFilePostfix(postfix: string): boolean {
-		return postfix.match(/.jpg|.gif|.png|.bmp/i) ? true : false;
+		return /\.jpg|\.gif|\.png|\.bmp/i.test(postfix);
 	}
 
 
@@ -369,7 +363,6 @@ export class WebUtil {
 	 */
 	static checkImageFileSize(fileInput: HTMLInputElement, imgMaxSize: number): boolean {
 		let filePath = fileInput.value;
-		let fileExt = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
 		if (fileInput.files && fileInput.files[0]) {
 			// alert(fileInput);
 			// alert(fileInput.files[0]);
@@ -468,7 +461,7 @@ export class WebUtil {
 	static previewLocalImage(uploader: HTMLInputElement, images: Array<HTMLImageElement>) {
 		uploader.onchange = (ev: Event) => {
 			if (uploader.files && uploader.files.length > 0 && images.length > 0) {
-				const count = uploader.files.length > images.length ? uploader.files.length : images.length;
+				const count = Math.min(uploader.files.length, images.length);
 				for (let i = 0; i < count; i++) {
 					const file = uploader.files[i];
 					const image = images[i];

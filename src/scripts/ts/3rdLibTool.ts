@@ -16,7 +16,7 @@ export class SyntaxHighlighterHelper {
 	 */
 	static loadCodeHightlight(hlRootPath?: string, hlCodePath?: string) {
 		hlRootPath = hlRootPath ? hlRootPath : "";
-		hlCodePath = hlCodePath ? hlCodePath : "../../vimwiki-theme/3rd/SyntaxHighlighter/2.1.364/scripts/";
+		hlCodePath = hlCodePath ? hlCodePath : "../../vimwiki-theme/3rd/SyntaxHighlighter/2.1.364/scripts";
 		let basePath = `${hlRootPath}${hlCodePath}/`;
 		let parsePath = (arr: Array<string>): Array<string> => {
 			let lines: Array<string> = [];
@@ -71,7 +71,7 @@ declare class MathJaxRec {
 
 declare namespace MathJax {
 	namespace Hub {
-		function Config(cofig: any): void;
+		function Config(config: any): void;
 		function Queue(func: () => void): void;
 		function getAllJax(): Array<MathJaxRec>;
 	}
@@ -79,7 +79,7 @@ declare namespace MathJax {
 
 export class MathJaxHelper {
 
-	private static defalutMathJaxCfg = {
+	private static defaultMathJaxCfg = {
 		TeX: { equationNumbers: { autoNumber: ["AMS"], useLabelIds: true }, extensions: ["color.js", "enclose.js"] },
 		extensions: ["tex2jax.js", "TeX/AMSmath.js", "TeX/AMSsymbols.js"],
 		tex2jax: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], skipTags: ['script', 'noscript', 'style', 'textarea', 'code', 'pre'] },
@@ -94,7 +94,7 @@ export class MathJaxHelper {
 	// Fix <code> tags after MathJax finishes running. This is a
 	// hack to overcome a shortcoming of Markdown. Discussion at
 	// https://github.com/mojombo/jekyll/issues/199
-	private static defaultQueue() {
+	static defaultQueue() {
 		let all = MathJax.Hub.getAllJax();
 		for (let i = 0; i < all.length; i += 1) {
 			if (all[i].SourceElement().parentNode.className.indexOf('has-jax') == -1) {
@@ -107,7 +107,7 @@ export class MathJaxHelper {
 	}
 
 	static initMathJax(config?: any, queueFunc?: () => void) {
-		MathJax.Hub.Config(config ? config : MathJaxHelper.defalutMathJaxCfg);
+		MathJax.Hub.Config(config ? config : MathJaxHelper.defaultMathJaxCfg);
 		MathJax.Hub.Queue(queueFunc ? queueFunc : MathJaxHelper.defaultQueue);
 	}
 
@@ -168,7 +168,7 @@ export class BootStrapHelper {
 	 * @param elemSlt 
 	 */
 	static bindImageFrame(elemSlt?: string, photoFrameId?: string): void {
-		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt = elemSlt ? elemSlt : 'img.atc-img');
+		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt ? elemSlt : 'img.atc-img');
 		elemArr.forEach((photoImg: HTMLImageElement, key: number, parent: NodeListOf<HTMLImageElement>) => {
 			if (photoImg) {
 				photoImg.onclick = (ev: MouseEvent): any => {

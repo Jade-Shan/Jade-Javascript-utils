@@ -24,7 +24,7 @@ let defaultErrImg50x50 = {
 		"18N8f/2Q=="
 };
 
-let iconDefault01 = {
+const iconDefault01: IconGroup = {
 	x12: {
 		format: Base64ImgType.BASE64_PNG, data:
 			"iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAA+ElEQVR4AYXBTWoacRwA0PfXCVgr" +
@@ -89,7 +89,7 @@ let iconDefault01 = {
 			"OUFSJBCFQBTHMHC4nylFx/LNPXJ1AAAAAElFTkSuQmCC"
 	}
 };
-let iconDefault02 = {
+const iconDefault02: IconGroup = {
 	x12: {
 		format: Base64ImgType.BASE64_PNG, data:
 			"iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAA1klEQVR4AYXBQUoCUQAA0Df6RUGC" +
@@ -155,7 +155,7 @@ let iconDefault02 = {
 			"jAeOAAAAAElFTkSuQmCC"
 	}
 };
-let iconDefault03 = {
+const iconDefault03: IconGroup = {
 	x12: {
 		format: Base64ImgType.BASE64_PNG, data:
 			"iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAABQUlEQVR4AX3BsWoTYQAA4O+Sn1MS" +
@@ -262,7 +262,7 @@ let iconDefault03 = {
 	}
 };
 
-let imgDesktopBg = {
+const imgDesktopBg: IBase64Img = {
 	format: Base64ImgType.BASE64_JPG, data:
 		'/9j/4AAQSkZJRgABAQEAYABgAAD/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAEAAAAAAAD/7AARRHVja3kAAQAEAAAAUAAA/9sAQwACAQECAQECAgICAgICAgMFAwMDAwMGBAQDBQcGBwcHBgcH' +
 		'CAkLCQgICggHBwoNCgoLDAwMDAcJDg8NDA4LDAwM/9sAQwECAgIDAwMGAwMGDAgHCAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM/8AAEQgAZABkAwEiAAIR' +
@@ -315,29 +315,39 @@ let imgDesktopBg = {
 
 export namespace JadeUIResource {
 
-	let iconGroupMap = new SimpleMap<string, IconGroup>();
-	iconGroupMap.put(DefaultIconGroup.ELEC_FACE.toString(), iconDefault01);
-	iconGroupMap.put(DefaultIconGroup.ELEC_BUG.toString(), iconDefault02);
-	iconGroupMap.put(DefaultIconGroup.CAMERA.toString(), iconDefault03);
+	let iconGroupMap = new SimpleMap<DefaultIconGroup, IconGroup>();
+	iconGroupMap.put(DefaultIconGroup.ELEC_FACE, iconDefault01);
+	iconGroupMap.put(DefaultIconGroup.ELEC_BUG, iconDefault02);
+	iconGroupMap.put(DefaultIconGroup.CAMERA, iconDefault03);
 
-	export let getDefaultIcon = (name: DefaultIconGroup): IconGroup => {
-		let grp = iconGroupMap.get(name.toString());
-		return grp ? grp : iconDefault01;
+	export function getDefaultIcon(name: DefaultIconGroup): IconGroup {
+		const grp = iconGroupMap.get(name);
+		if (!grp) {
+			console.warn(`Unknown DefaultIconGroup: ${name}, fallback to ELEC_FACE`);
+			return iconDefault01;
+		}
+		return grp;
 	}
 
+	const sizeKeyMap: Record<number, keyof IconGroup> = {
+		[IconSize.x12]: "x12",
+		[IconSize.x16]: "x16",
+		[IconSize.x24]: "x24",
+		[IconSize.x32]: "x32",
+		[IconSize.x48]: "x48",
+	};
 
-	export let getDefaultIconBase64 = (name: DefaultIconGroup, size: IconSize): string => {
-		let result = "";
-		let grp = getDefaultIcon(name);
-		if (size == IconSize.x12) { result = `${grp.x12.format},${grp.x12.data}`; }
-		if (size == IconSize.x16) { result = `${grp.x16.format},${grp.x16.data}`; }
-		if (size == IconSize.x24) { result = `${grp.x24.format},${grp.x24.data}`; }
-		if (size == IconSize.x32) { result = `${grp.x32.format},${grp.x32.data}`; }
-		if (size == IconSize.x48) { result = `${grp.x48.format},${grp.x48.data}`; }
-		return result;
+	export function getDefaultIconBase64(name: DefaultIconGroup, size: IconSize): string {
+		const grp = getDefaultIcon(name);
+		const key = sizeKeyMap[size];
+		if (key) {
+			const img = grp[key];
+			return `${img.format},${img.data}`;
+		}
+		return "";
 	}
 
-	export let defaultDesktopBackground = imgDesktopBg;
+	export const defaultDesktopBackground = imgDesktopBg;
 
 }
 

@@ -279,9 +279,9 @@ class TestWebHtmlPage {
 	static testJquery() {
 		let cfg: PageConfig = { apiRoot: "/", pageTitle: "test-page", subTitle: "for-test", ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);
-		page.renderSubTitle(cfg);
+		page.renderSubTitle();
 		//
-		page.renderTopNav(cfg, [
+		page.renderTopNav([
 			{ title: "Journal", link: "/" },
 			{ title: "Gallery", link: "/gallery.html" },
 			{ title: "Note", link: "//118.178.197.156/study/study/wiki_html" },
@@ -301,17 +301,22 @@ class TestWebHtmlPage {
 
 		//
 		// _1_ 2 3 4 5 6 ... 20
-		WebHtmlPage.setElemHtmlBySelectorAll('#pageBar01', WebHtmlPage.renderPagination( 1, 20, n => `javascript:queryBlog(${n})`));
+		document.querySelector('#pageBar01')?.appendChild(WebHtmlPage.renderPaging( 1, 20,  n => {console.log(`call-func-${n}`)}));
 		// 1 2 3 4 5 6 _7_ 8 9 10 11 12 ... 20
-		WebHtmlPage.setElemHtmlBySelectorAll('#pageBar02', WebHtmlPage.renderPagination( 7, 20, n => `javascript:queryBlog(${n})`));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging( 7, 20,  n => {console.log(`call-func-${n}`)}));
+		// WebHtmlPage.setElemHtml('#pageBar02', WebHtmlPage.renderPaging( 7, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ... 3 4 5 6 7 _8_ 9 10 11 12 13 ... 20
-		WebHtmlPage.setElemHtmlBySelectorAll('#pageBar03', WebHtmlPage.renderPagination( 8, 20, n => `javascript:queryBlog(${n})`));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging( 8, 20,  n => {console.log(`call-func-${n}`)}));
+		// WebHtmlPage.setElemHtml('#pageBar03', WebHtmlPage.renderPaging( 8, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ... 8 9 10 11 12 _13_ 14 15 16 17 18 ... 20
-		WebHtmlPage.setElemHtmlBySelectorAll('#pageBar07', WebHtmlPage.renderPagination(13, 20, n => `javascript:queryBlog(${n})`));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(13, 20,  n => {console.log(`call-func-${n}`)}));
+		// WebHtmlPage.setElemHtml('#pageBar07', WebHtmlPage.renderPaging(13, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ...  9 10 11 12 13 _14_ 15 16 17 18 19 20
-		WebHtmlPage.setElemHtmlBySelectorAll('#pageBar08', WebHtmlPage.renderPagination(14, 20, n => `javascript:queryBlog(${n})`));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(14, 20,  n => {console.log(`call-func-${n}`)}));
+		// WebHtmlPage.setElemHtml('#pageBar08', WebHtmlPage.renderPaging(14, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ... 15 16 17 18 19 _20_
-		WebHtmlPage.setElemHtmlBySelectorAll('#pageBar09', WebHtmlPage.renderPagination(20, 20, n => `javascript:queryBlog(${n})`));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(20, 20,  n => {console.log(`call-func-${n}`)}));
+		// WebHtmlPage.setElemHtml('#pageBar09', WebHtmlPage.renderPaging(20, 20, n => `javascript:console.log('str-${n}')`));
 
 		//
 		DataTableHelper.bindInitDataTable();
@@ -334,10 +339,10 @@ class TestWebHtmlPage {
 			tocOri.remove();
 		}
 		//
-		WebHtmlPage.bindOnClickBySelectorAll('#tocLevBtn' ,  () => {page.toggleSideTocContract("div.sideTocIdx")});
-		WebHtmlPage.bindOnClickBySelectorAll('#tocLevBtn2',  () => {page.toggleSideTocContract("div.sideTocIdx")});
-		WebHtmlPage.bindOnClickBySelectorAll('#tocBoxBtn' ,  () => {page.toggleSideTocWrap    ("div.sideTocIdx", 90, "div.sideToc")});
-		WebHtmlPage.bindOnClickBySelectorAll('#tocBoxBtn2',  () => {page.toggleSideTocWrap    ("div.sideTocIdx", 80, "div.sideToc")});
+		WebHtmlPage.bindOnClick('#tocLevBtn' ,  () => {page.toggleSideTocContract("div.sideTocIdx")});
+		WebHtmlPage.bindOnClick('#tocLevBtn2',  () => {page.toggleSideTocContract("div.sideTocIdx")});
+		WebHtmlPage.bindOnClick('#tocBoxBtn' ,  () => {page.toggleSideTocWrap    ("div.sideTocIdx", 90, "div.sideToc")});
+		WebHtmlPage.bindOnClick('#tocBoxBtn2',  () => {page.toggleSideTocWrap    ("div.sideTocIdx", 80, "div.sideToc")});
 
 		let changeTocWithWindow = () => {
 			page.changeTocPanelSize("div#sideTocIdxTree" , 80);

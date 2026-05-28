@@ -1,6 +1,7 @@
 import { PageConfig, WebHtmlPage } from './webHtmlPage.js';
 import { ShowdownUtils, BootStrapHelper } from './3rdLibTool.js';
 import { WebUtil, HttpResponse } from "./web.js"
+import { SimpleMap, SimpleStack, SimpleQueue } from './dataStructure.js'
 
 
 interface UserInfoResp {
@@ -123,8 +124,12 @@ export class BlogPage {
 	}
 
 	static async loadUserArticles (userId: string, currPage: number) {
+		let headers: SimpleMap<string, string> = new SimpleMap([["Accept","application/json, text/javascript, */*; q=0.01"]]);
 		let list: HttpResponse<UserArticlesResp> = await WebUtil.requestHttp<string, UserArticlesResp>({
-			method: "GET", url: `http://www.jade-dungeon.cn:8088/api/blog/loadByUser?userId=${userId}&page=${currPage}`
+			method: "GET", url: `http://www.jade-dungeon.cn:8088/api/blog/loadByUser?userId=${userId}&page=${currPage}`,
+			opt: {
+				headers: headers
+			}
 		}, {
 			onLoad: (evt, xhr, req) => {
 				// console.log(xhr.response);
@@ -154,16 +159,18 @@ export class BlogPage {
 		//  html = html + WebHtmlPage.renderPagination(20, 20, n => `javascript:queryBlog(${n})`)
 		if (tk) tk.innerHTML = html;
 
-		let pagging = WebHtmlPage.renderPaging(articles.page, articles.pageCount);
+		// 服务端返回的pageCount是总页数不准确，所以需要+1。正在催促后端修改。等他们修好了，就可以去掉+1了。
+		let pagging = WebHtmlPage.renderPaging(articles.page, articles.pageCount + 1, n => {this.loadUserArticles(userId, n);});
 		tk?.appendChild(pagging);
 
 		let br = document.createElement("br");
-		pagging = WebHtmlPage.renderPaging( 1, 20); tk?.appendChild(pagging);tk?.appendChild(br);
-		pagging = WebHtmlPage.renderPaging( 7, 20); tk?.appendChild(pagging);tk?.appendChild(br);
-		pagging = WebHtmlPage.renderPaging( 8, 20); tk?.appendChild(pagging);tk?.appendChild(br);
-		pagging = WebHtmlPage.renderPaging(13, 20); tk?.appendChild(pagging);tk?.appendChild(br);
-		pagging = WebHtmlPage.renderPaging(14, 20); tk?.appendChild(pagging);tk?.appendChild(br);
-		pagging = WebHtmlPage.renderPaging(20, 20); tk?.appendChild(pagging);tk?.appendChild(br);
+		tk?.appendChild(br);
+		// pagging = WebHtmlPage.renderPaging( 1, 20); tk?.appendChild(pagging);tk?.appendChild(br);
+		// pagging = WebHtmlPage.renderPaging( 7, 20); tk?.appendChild(pagging);tk?.appendChild(br);
+		// pagging = WebHtmlPage.renderPaging( 8, 20); tk?.appendChild(pagging);tk?.appendChild(br);
+		// pagging = WebHtmlPage.renderPaging(13, 20); tk?.appendChild(pagging);tk?.appendChild(br);
+		// pagging = WebHtmlPage.renderPaging(14, 20); tk?.appendChild(pagging);tk?.appendChild(br);
+		// pagging = WebHtmlPage.renderPaging(20, 20); tk?.appendChild(pagging);tk?.appendChild(br);
 	}
 
 	static async initWikiPage(basePath: string, title: string) {
@@ -171,9 +178,9 @@ export class BlogPage {
 
 		let cfg: PageConfig = { apiRoot: "/", pageTitle: "Diary", subTitle: title, ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);
-		page.renderSubTitle(cfg);
+		page.renderSubTitle();
 		//
-		page.renderTopNav(cfg, [
+		page.renderTopNav([
 			{ title: "Journal", link: "/" },
 			{ title: "Gallery", link: "/gallery.html" },
 			{ title: "Note", link: "//118.178.197.156/study/study/wiki_html" },
