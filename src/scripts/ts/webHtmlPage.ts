@@ -76,15 +76,26 @@ export class WebHtmlPage {
 		return t.content;
 	}
 
-	static renderPaging(pageNo: number, count: number, genHref?: (n: number) => string, 
-		goPageFunc?: (n: number) => void): HTMLUListElement //
+	static renderPaging(pageNo: number, count: number, callBack?: ((n: number) => string) | ((n: number) => void)): HTMLUListElement //
 	{
 		pageNo = pageNo && pageNo > 0 ? pageNo : 1;
 		count = count && count > 0 ? count : 1;
 
-		let genGoPage = (n0: number) => {
-			return goPageFunc ? (ev: MouseEvent) => { goPageFunc(n0) } :
-			(ev: MouseEvent) => {console.log(`go-page(${n0})`)}; 
+		let bindCallback = (elem: HTMLElement, html: string, n0: number, callBack?: ((n: number) => string) | ((n: number) => void)) => {
+			let a: HTMLAnchorElement = document.createElement("a");
+			a.innerHTML = html;
+			if (callBack) {
+				if (typeof callBack === 'function' && typeof callBack(n0) === 'string') {
+					a.href = callBack(n0) as string;
+				} else {
+					a.onclick = (ev: MouseEvent) => { callBack(n0) };
+				}
+			} else {
+				return (ev: MouseEvent) => { console.log(`link-not-bind:(${n0})`) };
+			}
+			let li = document.createElement("li");
+			li.appendChild(a);
+			elem.appendChild(li);
 		}
 
 		let size = 5;
@@ -101,25 +112,8 @@ export class WebHtmlPage {
 			li.appendChild(a);
 			ulNode.appendChild(li);
 		} else {
-			{
-				let a: HTMLAnchorElement = document.createElement("a");
-				a.innerHTML = "&laquo;";
-				a.onclick = genGoPage(pageNo - i);
-				if (!goPageFunc && genHref) { a.href = genHref(pageNo - 1); }
-				let li = document.createElement("li");
-				li.appendChild(a);
-				ulNode.appendChild(li);
-			}
-			//
-			{
-				let a: HTMLAnchorElement = document.createElement("a");
-				a.innerHTML = `${i}`;
-				a.onclick = genGoPage(i);
-				if (!goPageFunc && genHref) { a.href = genHref(i) }
-				let li = document.createElement("li");
-				li.appendChild(a);
-				ulNode.appendChild(li);
-			}
+				bindCallback(ulNode, "&laquo;", pageNo - 1, callBack);
+				bindCallback(ulNode, `${i}`, i, callBack);
 		}
 		i = i + 1;
 		// elps
@@ -135,13 +129,7 @@ export class WebHtmlPage {
 		}
 		// pre no
 		while (pageNo > i) {
-			let a: HTMLAnchorElement = document.createElement("a");
-			a.innerHTML = `${i}`;
-			a.onclick = genGoPage(i);
-			if (!goPageFunc && genHref) { a.href = genHref(i); }
-			let li = document.createElement("li");
-			li.appendChild(a);
-			ulNode.appendChild(li);
+			bindCallback(ulNode, `${i}`, i, callBack);
 			i = i + 1;
 		}
 		// curr page
@@ -158,13 +146,7 @@ export class WebHtmlPage {
 		// post no
 		i = pageNo + 1;
 		while (i < count && i <= (pageNo + size)) {
-			let a: HTMLAnchorElement = document.createElement("a");
-			a.innerHTML = `${i}`;
-			a.onclick = genGoPage(i);
-			if (!goPageFunc && genHref) { a.href = genHref(i); }
-			let li = document.createElement("li");
-			li.appendChild(a);
-			ulNode.appendChild(li);
+			bindCallback(ulNode, `${i}`, i, callBack);
 			i = i + 1;
 		}
 		// elps
@@ -186,24 +168,8 @@ export class WebHtmlPage {
 			li.appendChild(a);
 			ulNode.appendChild(li);
 		} else {
-			{
-				let a: HTMLAnchorElement = document.createElement("a");
-				a.innerHTML = `${count}`;
-				a.onclick = genGoPage(count);
-				if (!goPageFunc && genHref) { a.href = genHref(count); }
-				let li = document.createElement("li");
-				li.appendChild(a);
-				ulNode.appendChild(li);
-			}
-			{
-				let a: HTMLAnchorElement = document.createElement("a");
-				a.innerHTML = "&raquo;";
-				a.onclick = genGoPage(pageNo + 1);
-				if (!goPageFunc && genHref) { a.href = genHref(pageNo + 1); }
-				let li = document.createElement("li");
-				li.appendChild(a);
-				ulNode.appendChild(li);
-			}
+				bindCallback(ulNode, `${count}`, count, callBack);
+				bindCallback(ulNode, "&raquo;", pageNo + 1, callBack);
 		}
 		return ulNode;
 	};

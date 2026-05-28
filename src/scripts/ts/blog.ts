@@ -160,7 +160,7 @@ export class BlogPage {
 		if (tk) tk.innerHTML = html;
 
 		// 服务端返回的pageCount是总页数不准确，所以需要+1。正在催促后端修改。等他们修好了，就可以去掉+1了。
-		let pagging = WebHtmlPage.renderPaging(articles.page, articles.pageCount + 1, n => `javascript:alert(${n})`, n => {this.loadUserArticles(userId, n);});
+		let pagging = WebHtmlPage.renderPaging(articles.page, articles.pageCount + 1, n => {this.loadUserArticles(userId, n);});
 		tk?.appendChild(pagging);
 
 		let br = document.createElement("br");
