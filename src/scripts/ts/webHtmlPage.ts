@@ -57,13 +57,13 @@ export class WebHtmlPage {
 				navhtml = navhtml + '<a ' ;
 				if (item.isNewWin) { navhtml = navhtml + ' target="_blank" '; }
 				if (item.id) { navhtml = navhtml + ' id="' + StrUtil.escapeHtml(item.id) + '" '; }
-				navhtml = navhtml + ' href="' + StrUtil.escapeHtml(item.link!) + '">' + StrUtil.escapeHtml(item.title) + '</a></li>';
+				navhtml = navhtml + ' href="' + StrUtil.escapeHtml(item.link || '') + '">' + StrUtil.escapeHtml(item.title) + '</a></li>';
 			}
 		};
 
 		let addSub = function (item: NavTreeNode) {
 			navhtml = navhtml + '<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">';
-			navhtml = navhtml + item.title;
+			navhtml = navhtml + StrUtil.escapeHtml(item.title);
 			navhtml = navhtml + '<b class="caret"></b></a><ul class="dropdown-menu">';
 			if (item.subs && item.subs.length > 0) {
 				item.subs.forEach((value, idx, arrys) => { addLink(value, cfg); });
