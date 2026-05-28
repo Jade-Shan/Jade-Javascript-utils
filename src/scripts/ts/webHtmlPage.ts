@@ -84,15 +84,15 @@ export class WebHtmlPage {
 		let bindCallback = (elem: HTMLElement, html: string, n0: number, addClass: string, callBack?: (n: number) => void) => {
 			let a: HTMLAnchorElement = document.createElement("a");
 			a.innerHTML = html;
-			if (addClass) {
-				a.classList.add(addClass);
-			}
 			if (callBack && typeof callBack === 'function') {
 				a.onclick = (ev: MouseEvent) => { callBack(n0) };
 			} else {
 				return (ev: MouseEvent) => { console.log(`link-not-bind:(${n0})`) };
 			}
 			let li = document.createElement("li");
+			if (addClass && addClass.length > 0) {
+				li.classList.add(addClass)
+			}
 			li.appendChild(a);
 			elem.appendChild(li);
 		}
@@ -122,13 +122,7 @@ export class WebHtmlPage {
 		}
 		// curr page
 		{
-			let a: HTMLAnchorElement = document.createElement("a");
-			a.innerHTML = `${pageNo}`;
-			a.onclick = ev => console.log(`already-curr-page`);
-			let li = document.createElement("li");
-			li.classList.add("active")
-			li.appendChild(a);
-			ulNode.appendChild(li);
+			bindCallback(ulNode, `${pageNo}`, pageNo, "active", n => { console.log("already-curr-page") });
 			i = i + 1;
 		}
 		// post no
