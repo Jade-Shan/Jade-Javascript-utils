@@ -44,7 +44,7 @@ export class WebHtmlPage {
 	 * @param items 导航节点列表
 	 * @param elemSlt 目标元素选择器
 	 */
-	renderTopNav(cfg: PageConfig, items: Array<NavTreeNode>, elemSlt?: string): void {
+	renderTopNav(cfg: PageConfig, items: Array<NavTreeNode>, elemSlt: string = "#topnav"): void {
 		let navhtml = '<div class="navbar-header"> <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#example-navbar-collapse"> <span class="sr-only">切换导航</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button> <a class="navbar-brand" href="/">Jade Dungeon</a> </div> <div class="collapse navbar-collapse" id="example-navbar-collapse"> <ul class="nav navbar-nav">';
 		let addLink = (item: NavTreeNode, cfg: PageConfig) =>  {
 			if (item.title === "") {
@@ -76,7 +76,7 @@ export class WebHtmlPage {
 			})
 		}
 		navhtml = navhtml + '</ul></div>';
-		let navElem = document.querySelector(elemSlt ? elemSlt : "#topnav");
+		let navElem = document.querySelector(elemSlt);
 		if (navElem) {
 			navElem.innerHTML = navhtml;
 		}
@@ -221,12 +221,11 @@ export class WebHtmlPage {
 	};
 
 
-	static renderPagination(pageNo: number, count: number, genPageHref?: (n: number) => string): string {
+	static renderPagination(pageNo: number, count: number, genPageHref: (n: number) => string = (num: number) => `javascript:nextPage(${num});`): string {
 		pageNo = pageNo && pageNo > 0 ? pageNo : 1;
 		count  = count  && count  > 0 ? count  : 1;
 		let size = 5;
 		// 1 ... 3 4 5 6 7 _8_ 9 10 11 12 13 ... 20
-		genPageHref = genPageHref ? genPageHref : (num: number) =>`javascript:nextPage(${num});`; 
 		let i = 1;
 		let html = '<ul class="pagination center">';
 		// first page
@@ -273,8 +272,8 @@ export class WebHtmlPage {
 	 * @param cfg 页面配置
 	 * @param elemSlt 目标元素选择器
 	 */
-	renderSubTitle(cfg: PageConfig, elemSlt?: string): void {
-		let elem = document.querySelector(elemSlt ? elemSlt : "#subTitle");
+	renderSubTitle(cfg: PageConfig, elemSlt: string = "#subTitle"): void {
+		let elem = document.querySelector(elemSlt);
 		if (elem) {
 			elem.innerHTML = cfg.subTitle;
 		}
@@ -284,8 +283,8 @@ export class WebHtmlPage {
 	 * 
 	 * @param elemSlt 
 	 */
-	bindImageNewTab(elemSlt?: string): void {
-		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt ? elemSlt : 'img.atc-img');
+	bindImageNewTab(elemSlt: string = 'img.atc-img'): void {
+		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt);
 		elemArr.forEach((photoImg: HTMLImageElement, key: number, parent: NodeListOf<HTMLImageElement>) => {
 			if (photoImg) {
 				photoImg.onclick = (ev: MouseEvent): any => { WebUtil.openWindow(photoImg.src); };
@@ -351,8 +350,7 @@ export class WebHtmlPage {
 	 * @param srcSlt 
 	 * @param tagSlt 
 	 */
-	static prepareTocIndex(html: string, tagSlt?: string): void {
-		tagSlt = tagSlt ? tagSlt : "div.sideTocIdx";
+	static prepareTocIndex(html: string, tagSlt: string = "div.sideTocIdx"): void {
 		// document.querySelectorAll
 		let elemList = document.querySelectorAll<HTMLElement>(tagSlt);
 		if (elemList?.length) {
@@ -382,10 +380,7 @@ export class WebHtmlPage {
 	 * 
 	 * @param elemSlt 
 	 */
-	changeTocPanelSize(elemSlt?: string, margin?: number): void {
-		margin = margin ? margin : 80;
-
-		elemSlt = elemSlt? elemSlt: "div.sideTocIdx";
+	changeTocPanelSize(elemSlt: string = "div.sideTocIdx", margin: number = 80): void {
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
 		if (elemList?.length) {
 			elemList.forEach((elem, idx, parent) => {
@@ -402,12 +397,9 @@ export class WebHtmlPage {
 	/**
 	 * 展开与折叠目录面板
 	 */
-	toggleSideTocWrap(elemSlt?: string, margin?: number, innerSlt?: string): void {
-		elemSlt = elemSlt ? elemSlt : "div.sideTocIdx";
-		margin = margin ? margin : 80;
+	toggleSideTocWrap(elemSlt: string = "div.sideTocIdx", margin: number = 80, innerSlt: string = "div.sideToc"): void {
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
 		if (elemList?.length) {
-			innerSlt = innerSlt ? innerSlt : "div.sideToc";
 			let innerList = document.querySelectorAll<HTMLElement>(innerSlt);
 			elemList.forEach((elem, idx, parent) => {
 				if (elem.classList.contains("toc-close")) {
@@ -433,7 +425,7 @@ export class WebHtmlPage {
 	/**
 	 * 展开与折叠目录树
 	 */
-	toggleSideTocContract(elemSlt?: string): void {
+	toggleSideTocContract(elemSlt: string = "div.sideTocIdx"): void {
 		let effect = (elem: HTMLElement, elemSlt: string) => {
 			if (elem.classList.contains('toc-cont-flg')) {
 				elem.classList.remove('toc-cont-flg');
@@ -449,7 +441,6 @@ export class WebHtmlPage {
 				WebHtmlPage.   addElemClassBySelectorAll(`${elemSlt}>ul ul`, 'toc-sub-close' );
 			}
 		};
-		elemSlt = elemSlt ? elemSlt : "div.sideTocIdx";
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
 		if (elemList?.length) {
 			elemList.forEach((elem, idx, parent) => { effect(elem, elemSlt) });
@@ -464,8 +455,8 @@ export class WebHtmlPage {
 	 * @param cookieKey 
 	 * @param elemSlt 
 	 */
-	changeTheme(themeName: string, cookieKey?: string, elemSlt?: string): void {
-		let styles = document.querySelectorAll<HTMLLinkElement>(elemSlt ? elemSlt : 'link[title]');
+	changeTheme(themeName: string, cookieKey: string = "ui.theme", elemSlt: string = 'link[title]'): void {
+		let styles = document.querySelectorAll<HTMLLinkElement>(elemSlt);
 		let activeLink: HTMLLinkElement|null = null;
 		for (let i=0; i < styles.length; i++) {
 			let lnk = styles[i];
@@ -476,7 +467,7 @@ export class WebHtmlPage {
 			lnk.disabled = true;
 		}
 		if (activeLink) {
-				WebUtil.setCookieValue(cookieKey ? cookieKey : "ui.theme", themeName, {sameSite:'Lax'});
+				WebUtil.setCookieValue(cookieKey, themeName, {sameSite:'Lax'});
 				activeLink.disabled = false; 
 		}
 	};
@@ -485,8 +476,8 @@ export class WebHtmlPage {
 	 * 
 	 * @param cookieKey 
 	 */
-	initUITheme(cookieKey?: string): void {
-		let currUITheme = WebUtil.loadCookieValue(cookieKey ? cookieKey : "ui.theme");
+	initUITheme(cookieKey: string = "ui.theme"): void {
+		let currUITheme = WebUtil.loadCookieValue(cookieKey);
 		if (currUITheme) {
 			this.changeTheme(currUITheme);
 		}
