@@ -2,25 +2,6 @@
 
 ## Bug
 
-### 1. XSS 漏洞 — `addSub` 中 `item.title` 未转义 (line 66)
-
-```typescript
-// 当前: 直接拼接，可注入 HTML
-navhtml = navhtml + item.title;
-// 应改为:
-navhtml = navhtml + StrUtil.escapeHtml(item.title);
-```
-
-`addLink` 中对 `item.title`、`item.link`、`item.id` 都做了 `StrUtil.escapeHtml()` 转义，但 `addSub` 里遗漏了 `item.title`。
-
-### 2. `item.link!` 非空断言不当 (line 60)
-
-`NavTreeNode.link` 是可选字段 (`link?: string`)，当 `link` 为 `undefined` 时会生成 `href="undefined"`。应加空值判断：
-
-```typescript
-navhtml = navhtml + ' href="' + StrUtil.escapeHtml(item.link || '') + '">...';
-```
-
 ### 3. 直接覆写 `elem.style` 导致内联样式丢失 (lines 391, 411, 418)
 
 三处使用 `elem.style = \`...\`` 直接赋值整个 style 属性，会清空元素上已有的其他内联样式：
