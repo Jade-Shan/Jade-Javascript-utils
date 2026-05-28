@@ -118,7 +118,7 @@ export class WebHtmlPage {
 				let a: HTMLAnchorElement = document.createElement("a");
 				a.innerHTML = "&laquo;";
 				a.onclick = genGoPage(pageNo - i);
-				if (genHref) { a.href = genHref(pageNo - 1); }
+				if (!goPageFunc && genHref) { a.href = genHref(pageNo - 1); }
 				let li = document.createElement("li");
 				li.appendChild(a);
 				ulNode.appendChild(li);
@@ -128,7 +128,7 @@ export class WebHtmlPage {
 				let a: HTMLAnchorElement = document.createElement("a");
 				a.innerHTML = `${i}`;
 				a.onclick = genGoPage(i);
-				if (genHref) { a.href = genHref(i) }
+				if (!goPageFunc && genHref) { a.href = genHref(i) }
 				let li = document.createElement("li");
 				li.appendChild(a);
 				ulNode.appendChild(li);
@@ -151,7 +151,7 @@ export class WebHtmlPage {
 			let a: HTMLAnchorElement = document.createElement("a");
 			a.innerHTML = `${i}`;
 			a.onclick = genGoPage(i);
-			if (genHref) { a.href = genHref(i); }
+			if (!goPageFunc && genHref) { a.href = genHref(i); }
 			let li = document.createElement("li");
 			li.appendChild(a);
 			ulNode.appendChild(li);
@@ -174,7 +174,7 @@ export class WebHtmlPage {
 			let a: HTMLAnchorElement = document.createElement("a");
 			a.innerHTML = `${i}`;
 			a.onclick = genGoPage(i);
-			if (genHref) { a.href = genHref(i); }
+			if (!goPageFunc && genHref) { a.href = genHref(i); }
 			let li = document.createElement("li");
 			li.appendChild(a);
 			ulNode.appendChild(li);
@@ -203,7 +203,7 @@ export class WebHtmlPage {
 				let a: HTMLAnchorElement = document.createElement("a");
 				a.innerHTML = `${count}`;
 				a.onclick = genGoPage(count);
-				if (genHref) { a.href = genHref(count); }
+				if (!goPageFunc && genHref) { a.href = genHref(count); }
 				let li = document.createElement("li");
 				li.appendChild(a);
 				ulNode.appendChild(li);
@@ -212,7 +212,7 @@ export class WebHtmlPage {
 				let a: HTMLAnchorElement = document.createElement("a");
 				a.innerHTML = "&raquo;";
 				a.onclick = genGoPage(pageNo + 1);
-				if (genHref) { a.href = genHref(pageNo + 1); }
+				if (!goPageFunc && genHref) { a.href = genHref(pageNo + 1); }
 				let li = document.createElement("li");
 				li.appendChild(a);
 				ulNode.appendChild(li);
