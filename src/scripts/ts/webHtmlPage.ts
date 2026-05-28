@@ -32,13 +32,13 @@ export class WebHtmlPage {
 	 * @param items 导航节点列表
 	 * @param elemSlt 目标元素选择器
 	 */
-	renderTopNav(cfg: PageConfig, items: Array<NavTreeNode>, elemSlt: string = "#topnav"): void {
+	renderTopNav(items: Array<NavTreeNode>, elemSlt: string = "#topnav"): void {
 		let navhtml = '<div class="navbar-header"> <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#example-navbar-collapse"> <span class="sr-only">切换导航</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button> <a class="navbar-brand" href="/">Jade Dungeon</a> </div> <div class="collapse navbar-collapse" id="example-navbar-collapse"> <ul class="nav navbar-nav">';
-		let addLink = (item: NavTreeNode, cfg: PageConfig) =>  {
+		let addLink = (item: NavTreeNode) => {
 			if (item.title === "") {
 				navhtml = navhtml + '<li class="divider"></li>';
 			} else {
-				if (cfg && cfg.pageTitle === item.title) {
+				if (this.cfg.pageTitle === item.title) {
 					navhtml = navhtml + '<li class="active">';
 				} else { navhtml = navhtml + '<li>'; }
 				navhtml = navhtml + '<a ' ;
@@ -53,14 +53,14 @@ export class WebHtmlPage {
 			navhtml = navhtml + StrUtil.escapeHtml(item.title);
 			navhtml = navhtml + '<b class="caret"></b></a><ul class="dropdown-menu">';
 			if (item.subs && item.subs.length > 0) {
-				item.subs.forEach((value, idx, arrys) => { addLink(value, cfg); });
+				item.subs.forEach((value) => { addLink(value); });
 			}
 			navhtml = navhtml + '</ul></li>';
 		};
 
 		if (items && items.length > 0) {
-			items.forEach((item, idx, arrys) => {
-				if (item.link) { addLink(item, cfg); } else if (item.subs) { addSub(item); }
+			items.forEach((item) => {
+				if (item.link) { addLink(item); } else if (item.subs) { addSub(item); }
 			})
 		}
 		navhtml = navhtml + '</ul></div>';
@@ -260,10 +260,10 @@ export class WebHtmlPage {
 	 * @param cfg 页面配置
 	 * @param elemSlt 目标元素选择器
 	 */
-	renderSubTitle(cfg: PageConfig, elemSlt: string = "#subTitle"): void {
+	renderSubTitle(elemSlt: string = "#subTitle"): void {
 		let elem = document.querySelector(elemSlt);
 		if (elem) {
-			elem.innerHTML = cfg.subTitle;
+			elem.innerHTML = this.cfg.subTitle;
 		}
 	};
 
@@ -375,7 +375,8 @@ export class WebHtmlPage {
 				if (elem.classList.contains("toc-close")) {
 					// do nothing
 				} else {
-					elem.style  =  `height: ${WebHtmlPage.caculateSideTocBoxHeight(margin)}px; transition: 1s;`;
+					elem.style.height = `${WebHtmlPage.caculateSideTocBoxHeight(margin)}px`;
+				elem.style.transition = '1s';
 				}
 			});
 		}
@@ -395,14 +396,20 @@ export class WebHtmlPage {
 					if (innerList?.length) {
 						innerList.forEach((elemInn, idx, parent) => {
 							// elemInn.style = `overflow: hidden; padding: 10px 20px; height: ${WebHtmlPage.caculateSideTocBoxHeight(margin)}px; transition: 1s;`;
-							elemInn.style = ``;
+							elemInn.style.overflow = '';
+							elemInn.style.padding = '';
+							elemInn.style.height = '';
+							elemInn.style.transition = '';
 						});
 					}
 				} else {
 					elem.classList.add("toc-close");
 					if (innerList?.length) {
 						innerList.forEach((elemInn, idx, parent) => {
-							elemInn.style = `overflow: auto; padding: 0px 20px; height: 0px; transition: 1s;`;
+							elemInn.style.overflow = 'auto';
+							elemInn.style.padding = '0px 20px';
+							elemInn.style.height = '0px';
+							elemInn.style.transition = '1s';
 						});
 					}
 				}

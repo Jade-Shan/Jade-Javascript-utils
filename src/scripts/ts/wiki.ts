@@ -8,9 +8,9 @@ export class WikiPage {
 
 		let cfg: PageConfig = { apiRoot: "/", pageTitle: "Study Notes", subTitle: title, ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);
-		page.renderSubTitle(cfg);
+		page.renderSubTitle();
 		//
-		page.renderTopNav(cfg, [
+		page.renderTopNav([
 			{ title: "Journal", link: "/" },
 			{ title: "Gallery", link: "/gallery.html" },
 			{ title: "Note", link: "//118.178.197.156/study/study/wiki_html" },
