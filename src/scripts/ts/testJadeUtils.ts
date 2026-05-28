@@ -301,21 +301,21 @@ class TestWebHtmlPage {
 
 		//
 		// _1_ 2 3 4 5 6 ... 20
-		document.querySelector('#pageBar01')?.appendChild(WebHtmlPage.renderPaging( 1, 20, n => `javascript:console.log('str-${n}')`));
+		document.querySelector('#pageBar01')?.appendChild(WebHtmlPage.renderPaging( 1, 20,  n => {console.log(`call-func-${n}`)}));
 		// 1 2 3 4 5 6 _7_ 8 9 10 11 12 ... 20
-		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging( 7, 20, n => {console.log(`call-func-${n}`)}));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging( 7, 20,  n => {console.log(`call-func-${n}`)}));
 		// WebHtmlPage.setElemHtml('#pageBar02', WebHtmlPage.renderPaging( 7, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ... 3 4 5 6 7 _8_ 9 10 11 12 13 ... 20
-		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging( 8, 20, n => `javascript:console.log('str-${n}')`));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging( 8, 20,  n => {console.log(`call-func-${n}`)}));
 		// WebHtmlPage.setElemHtml('#pageBar03', WebHtmlPage.renderPaging( 8, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ... 8 9 10 11 12 _13_ 14 15 16 17 18 ... 20
-		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(13, 20, n => {console.log(`call-func-${n}`)}));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(13, 20,  n => {console.log(`call-func-${n}`)}));
 		// WebHtmlPage.setElemHtml('#pageBar07', WebHtmlPage.renderPaging(13, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ...  9 10 11 12 13 _14_ 15 16 17 18 19 20
-		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(14, 20, n => `javascript:console.log('str-${n}')`));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(14, 20,  n => {console.log(`call-func-${n}`)}));
 		// WebHtmlPage.setElemHtml('#pageBar08', WebHtmlPage.renderPaging(14, 20, n => `javascript:console.log('str-${n}')`));
 		// 1 ... 15 16 17 18 19 _20_
-		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(20, 20, n => {console.log(`call-func-${n}`)}));
+		document.querySelector('#pageBar02')?.appendChild(WebHtmlPage.renderPaging(20, 20,  n => {console.log(`call-func-${n}`)}));
 		// WebHtmlPage.setElemHtml('#pageBar09', WebHtmlPage.renderPaging(20, 20, n => `javascript:console.log('str-${n}')`));
 
 		//

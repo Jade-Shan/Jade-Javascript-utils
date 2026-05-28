@@ -76,20 +76,19 @@ export class WebHtmlPage {
 		return t.content;
 	}
 
-	static renderPaging(pageNo: number, count: number, callBack?: ((n: number) => string) | ((n: number) => void)): HTMLUListElement //
+	static renderPaging(pageNo: number, count: number, callBack?: (n: number) => void): HTMLUListElement //
 	{
 		pageNo = pageNo && pageNo > 0 ? pageNo : 1;
 		count = count && count > 0 ? count : 1;
 
-		let bindCallback = (elem: HTMLElement, html: string, n0: number, callBack?: ((n: number) => string) | ((n: number) => void)) => {
+		let bindCallback = (elem: HTMLElement, html: string, n0: number, addClass: string, callBack?: (n: number) => void) => {
 			let a: HTMLAnchorElement = document.createElement("a");
 			a.innerHTML = html;
-			if (callBack) {
-				if (typeof callBack === 'function' && typeof callBack(n0) === 'string') {
-					a.href = callBack(n0) as string;
-				} else {
-					a.onclick = (ev: MouseEvent) => { callBack(n0) };
-				}
+			if (addClass) {
+				a.classList.add(addClass);
+			}
+			if (callBack && typeof callBack === 'function') {
+				a.onclick = (ev: MouseEvent) => { callBack(n0) };
 			} else {
 				return (ev: MouseEvent) => { console.log(`link-not-bind:(${n0})`) };
 			}
@@ -105,31 +104,20 @@ export class WebHtmlPage {
 		let i = 1;
 		// first page
 		if (pageNo === 1) {
-			let a: HTMLAnchorElement = document.createElement("a");
-			a.innerHTML = "&laquo;";
-			a.onclick = ev => {console.log("already-page-1")};
-			let li = document.createElement("li");
-			li.appendChild(a);
-			ulNode.appendChild(li);
+			bindCallback(ulNode, "&laquo;", pageNo - 1, "", n => { console.log("already-page-1") });
 		} else {
-				bindCallback(ulNode, "&laquo;", pageNo - 1, callBack);
-				bindCallback(ulNode, `${i}`, i, callBack);
+			bindCallback(ulNode, "&laquo;", pageNo - 1, "", callBack);
+			bindCallback(ulNode, `${i}`, i, "", callBack);
 		}
 		i = i + 1;
 		// elps
 		if (pageNo > (size + 2)) {
 			i = pageNo - size;
-			let a: HTMLAnchorElement = document.createElement("a");
-			a.innerHTML = "...";
-			a.classList.add("disable");
-			a.onclick = ev => console.log(`elips`);
-			let li = document.createElement("li");
-			li.appendChild(a);
-			ulNode.appendChild(li);
+			bindCallback(ulNode, "...", i, "disable", n => { console.log("elips") });
 		}
 		// pre no
 		while (pageNo > i) {
-			bindCallback(ulNode, `${i}`, i, callBack);
+			bindCallback(ulNode, `${i}`, i, "", callBack);
 			i = i + 1;
 		}
 		// curr page
@@ -146,30 +134,18 @@ export class WebHtmlPage {
 		// post no
 		i = pageNo + 1;
 		while (i < count && i <= (pageNo + size)) {
-			bindCallback(ulNode, `${i}`, i, callBack);
+			bindCallback(ulNode, `${i}`, i, "", callBack);
 			i = i + 1;
 		}
 		// elps
 		if (i < count) {
-			let a: HTMLAnchorElement = document.createElement("a");
-			a.innerHTML = "...";
-			a.classList.add("disable");
-			a.onclick = ev => console.log(`elips`);
-			let li = document.createElement("li");
-			li.appendChild(a);
-			ulNode.appendChild(li);
+			bindCallback(ulNode, "...", i, "disable", n => { console.log("elips") });
 		}
 		if (pageNo === count) {
-			let a: HTMLAnchorElement = document.createElement("a");
-			a.innerHTML = "&raquo;";
-			a.classList.add("disable");
-			a.onclick = ev => console.log("already-page-max");
-			let li = document.createElement("li");
-			li.appendChild(a);
-			ulNode.appendChild(li);
+			bindCallback(ulNode, "&raquo;", pageNo + 1, "disable", n => { console.log("already-page-max") });
 		} else {
-				bindCallback(ulNode, `${count}`, count, callBack);
-				bindCallback(ulNode, "&raquo;", pageNo + 1, callBack);
+			bindCallback(ulNode, `${count}`, count, "", callBack);
+			bindCallback(ulNode, "&raquo;", pageNo + 1, "", callBack);
 		}
 		return ulNode;
 	};
