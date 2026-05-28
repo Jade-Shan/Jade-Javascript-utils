@@ -1,3 +1,4 @@
+import { StrUtil } from './basic.js';
 import { WebUtil } from './web.js';
 
 
@@ -54,9 +55,9 @@ export class WebHtmlPage {
 					navhtml = navhtml + '<li class="active">';
 				} else { navhtml = navhtml + '<li>'; }
 				navhtml = navhtml + '<a ' ;
-				if (item.isNewWin) { navhtml = navhtml + ' target="_blank" '; } 
-				if (item.id) { navhtml = navhtml + ' id="' + item.id + '" '; } 
-				navhtml = navhtml + ' href="' + item.link + '">' + item.title + '</a></li>';
+				if (item.isNewWin) { navhtml = navhtml + ' target="_blank" '; }
+				if (item.id) { navhtml = navhtml + ' id="' + StrUtil.escapeHtml(item.id) + '" '; }
+				navhtml = navhtml + ' href="' + StrUtil.escapeHtml(item.link!) + '">' + StrUtil.escapeHtml(item.title) + '</a></li>';
 			}
 		};
 

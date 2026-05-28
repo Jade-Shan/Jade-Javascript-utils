@@ -225,6 +225,13 @@ export class StrUtil {
 	}
 
 	/**
+	 * 转义 HTML 特殊字符，防止 XSS 注入。
+	 */
+	static escapeHtml(s: string): string {
+		return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+	}
+
+	/**
 	 * 在字符串左侧填充字符直到达到指定长度。
 	 * @param str 原始字符串
 	 * @param max 目标长度
