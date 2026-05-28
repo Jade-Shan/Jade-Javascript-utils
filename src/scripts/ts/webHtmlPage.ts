@@ -209,52 +209,52 @@ export class WebHtmlPage {
 	};
 
 
-	static renderPagination(pageNo: number, count: number, genPageHref: (n: number) => string = (num: number) => `javascript:nextPage(${num});`): string {
-		pageNo = pageNo && pageNo > 0 ? pageNo : 1;
-		count = count && count > 0 ? count : 1;
-		let size = 5;
-		// 1 ... 3 4 5 6 7 _8_ 9 10 11 12 13 ... 20
-		let i = 1;
-		let html = '<ul class="pagination center">';
-		// first page
-		if (pageNo === 1) {
-			html = html + '<li><a class="disable">&laquo;</a></li>';
-		} else {
-			html = html + `<li><a href="${genPageHref(pageNo - 1)}">&laquo;</a></li>`;
-			html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
-		}
-		i = i + 1;
-		// elps
-		if (pageNo > (size + 2)) {
-			i = pageNo - size;
-			html = html + '<li><a class="disable">...</a></li>';
-		}
-		// pre no
-		while (pageNo > i) {
-			html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
-			i = i + 1;
-		}
-		// curr page
-		html = html + `<li class="active"><a>${pageNo }</a></li>`;
-		// post no
-		i = pageNo + 1;
-		while (i < count && i <= (pageNo + size)) {
-			html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
-			i = i + 1;
-		}
-		// elps
-		if (i < count) {
-			html = html + '<li><a class="disable">...</a></li>';
-		}
-		if (pageNo === count) {
-			html = html + '<li><a class="disable">&raquo;</a></li>';
-		} else {
-			html = html + `<li><a href="${genPageHref(count)}">${count}</a></li>`;
-			html = html + `<li><a href="${genPageHref(pageNo + 1)}">&raquo;</a></li>`;
-		}
-		html = html + '</ul>';
-		return html;
-	};
+	// static renderPagination(pageNo: number, count: number, genPageHref: (n: number) => string = (num: number) => `javascript:nextPage(${num});`): string {
+	// 	pageNo = pageNo && pageNo > 0 ? pageNo : 1;
+	// 	count = count && count > 0 ? count : 1;
+	// 	let size = 5;
+	// 	// 1 ... 3 4 5 6 7 _8_ 9 10 11 12 13 ... 20
+	// 	let i = 1;
+	// 	let html = '<ul class="pagination center">';
+	// 	// first page
+	// 	if (pageNo === 1) {
+	// 		html = html + '<li><a class="disable">&laquo;</a></li>';
+	// 	} else {
+	// 		html = html + `<li><a href="${genPageHref(pageNo - 1)}">&laquo;</a></li>`;
+	// 		html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
+	// 	}
+	// 	i = i + 1;
+	// 	// elps
+	// 	if (pageNo > (size + 2)) {
+	// 		i = pageNo - size;
+	// 		html = html + '<li><a class="disable">...</a></li>';
+	// 	}
+	// 	// pre no
+	// 	while (pageNo > i) {
+	// 		html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
+	// 		i = i + 1;
+	// 	}
+	// 	// curr page
+	// 	html = html + `<li class="active"><a>${pageNo }</a></li>`;
+	// 	// post no
+	// 	i = pageNo + 1;
+	// 	while (i < count && i <= (pageNo + size)) {
+	// 		html = html + `<li><a href="${genPageHref(i)}">${i}</a></li>`;
+	// 		i = i + 1;
+	// 	}
+	// 	// elps
+	// 	if (i < count) {
+	// 		html = html + '<li><a class="disable">...</a></li>';
+	// 	}
+	// 	if (pageNo === count) {
+	// 		html = html + '<li><a class="disable">&raquo;</a></li>';
+	// 	} else {
+	// 		html = html + `<li><a href="${genPageHref(count)}">${count}</a></li>`;
+	// 		html = html + `<li><a href="${genPageHref(pageNo + 1)}">&raquo;</a></li>`;
+	// 	}
+	// 	html = html + '</ul>';
+	// 	return html;
+	// };
 
 	/**
 	 * @param cfg 页面配置
@@ -280,57 +280,60 @@ export class WebHtmlPage {
 		});
 	} 
 
-	static removeElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void {
+	static removeElemClass(selector: string, ...className: string[]): void;
+	static removeElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void;
+	static removeElemClass<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, ...className: string[]): void {
+		const elemList: NodeListOf<HTMLElement> =
+			typeof selectorOrList === 'string'
+				? document.querySelectorAll<HTMLElement>(selectorOrList)
+				: selectorOrList;
 		if (elemList?.length) {
-			elemList.forEach((elem, idx, parent) => {
+			elemList.forEach((elem) => {
 				elem.classList.remove(...className);
 			});
 		}
 	}
 
-	static removeElemClassBySelectorAll(selectorAll: string, ...className: string[]): void {
-		let elemArr = document.querySelectorAll<HTMLElement>(selectorAll);
-		WebHtmlPage.removeElemClass(elemArr, ...className);		
-
-	}
-
-	static addElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void {
+	static addElemClass(selector: string, ...className: string[]): void;
+	static addElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void;
+	static addElemClass<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, ...className: string[]): void {
+		const elemList: NodeListOf<HTMLElement> =
+			typeof selectorOrList === 'string'
+				? document.querySelectorAll<HTMLElement>(selectorOrList)
+				: selectorOrList;
 		if (elemList?.length) {
-			elemList.forEach((elem, idx, parent) => {
+			elemList.forEach((elem) => {
 				elem.classList.add(...className);
 			});
 		}
 	}
 
-	static addElemClassBySelectorAll(selectorAll: string, ...className: string[]): void {
-		let elemArr = document.querySelectorAll<HTMLElement>(selectorAll);
-		WebHtmlPage.addElemClass(elemArr, ...className);		
-	}
-
-	static setElemHtml<T extends HTMLElement>(elemList: NodeListOf<T>, html: string): void {
+	static setElemHtml(selector: string, html: string): void;
+	static setElemHtml<T extends HTMLElement>(elemList: NodeListOf<T>, html: string): void;
+	static setElemHtml<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, html: string): void {
+		const elemList: NodeListOf<HTMLElement> =
+			typeof selectorOrList === 'string'
+				? document.querySelectorAll<HTMLElement>(selectorOrList)
+				: selectorOrList;
 		if (elemList?.length) {
-				elemList.forEach((elem, idx, parent) => {
-					elem.innerHTML = html;
-				});
-		}
-	}
-
-	static setElemHtmlBySelectorAll(selectorAll: string, html: string): void {
-		let elemArr = document.querySelectorAll<HTMLElement>(selectorAll);
-		WebHtmlPage.setElemHtml(elemArr, html);		
-	}
-
-	static bindOnClick<T extends HTMLElement>(elemList: NodeListOf<T>, func: () => void): void {
-		if (elemList?.length) {
-			elemList.forEach((elem, idx, parent) => {
-				elem.onclick = func;
+			elemList.forEach((elem) => {
+				elem.innerHTML = html;
 			});
 		}
 	}
 
-	static bindOnClickBySelectorAll(selectorAll: string, func: () => void): void {
-		let elemArr = document.querySelectorAll<HTMLElement>(selectorAll);
-		WebHtmlPage.bindOnClick(elemArr, func);		
+	static bindOnClick(selector: string, func: () => void): void;
+	static bindOnClick<T extends HTMLElement>(elemList: NodeListOf<T>, func: () => void): void;
+	static bindOnClick<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, func: () => void): void {
+		const elemList: NodeListOf<HTMLElement> =
+			typeof selectorOrList === 'string'
+				? document.querySelectorAll<HTMLElement>(selectorOrList)
+				: selectorOrList;
+		if (elemList?.length) {
+			elemList.forEach((elem) => {
+				elem.onclick = func;
+			});
+		}
 	}
 
 	/**
@@ -346,10 +349,10 @@ export class WebHtmlPage {
 				elem.innerHTML = html;
 			});
 		}
-		this.removeElemClassBySelectorAll(`${tagSlt}    ul`, 'toc-icon-close');
-		this.   addElemClassBySelectorAll(`${tagSlt}    ul`, 'toc-icon-open' );
-		this.removeElemClassBySelectorAll(`${tagSlt}>ul ul`, 'toc-sub-close' );
-		this.   addElemClassBySelectorAll(`${tagSlt}>ul ul`, 'toc-sub-open'  );
+		WebHtmlPage.removeElemClass(`${tagSlt}    ul`, 'toc-icon-close');
+		WebHtmlPage.addElemClass   (`${tagSlt}    ul`, 'toc-icon-open' );
+		WebHtmlPage.removeElemClass(`${tagSlt}>ul ul`, 'toc-sub-close' );
+		WebHtmlPage.addElemClass   (`${tagSlt}>ul ul`, 'toc-sub-open'  );
 	};
 
 	/**
@@ -424,16 +427,16 @@ export class WebHtmlPage {
 		let effect = (elem: HTMLElement, elemSlt: string) => {
 			if (elem.classList.contains('toc-cont-flg')) {
 				elem.classList.remove('toc-cont-flg');
-				WebHtmlPage.removeElemClassBySelectorAll(`${elemSlt}    ul`, 'toc-icon-close');
-				WebHtmlPage.   addElemClassBySelectorAll(`${elemSlt}    ul`, 'toc-icon-open' );
-				WebHtmlPage.removeElemClassBySelectorAll(`${elemSlt}>ul ul`, 'toc-sub-close' );
-				WebHtmlPage.   addElemClassBySelectorAll(`${elemSlt}>ul ul`, 'toc-sub-open'  );
+				WebHtmlPage.removeElemClass(`${elemSlt}    ul`, 'toc-icon-close');
+				WebHtmlPage.   addElemClass(`${elemSlt}    ul`, 'toc-icon-open' );
+				WebHtmlPage.removeElemClass(`${elemSlt}>ul ul`, 'toc-sub-close' );
+				WebHtmlPage.   addElemClass(`${elemSlt}>ul ul`, 'toc-sub-open'  );
 			} else {
 				elem.classList.add('toc-cont-flg');
-				WebHtmlPage.removeElemClassBySelectorAll(`${elemSlt}    ul`, 'toc-icon-open' );
-				WebHtmlPage.   addElemClassBySelectorAll(`${elemSlt}    ul`, 'toc-icon-close');
-				WebHtmlPage.removeElemClassBySelectorAll(`${elemSlt}>ul ul`, 'toc-sub-open'  );
-				WebHtmlPage.   addElemClassBySelectorAll(`${elemSlt}>ul ul`, 'toc-sub-close' );
+				WebHtmlPage.removeElemClass(`${elemSlt}    ul`, 'toc-icon-open' );
+				WebHtmlPage.   addElemClass(`${elemSlt}    ul`, 'toc-icon-close');
+				WebHtmlPage.removeElemClass(`${elemSlt}>ul ul`, 'toc-sub-open'  );
+				WebHtmlPage.   addElemClass(`${elemSlt}>ul ul`, 'toc-sub-close' );
 			}
 		};
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
