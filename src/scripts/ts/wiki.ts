@@ -2,8 +2,21 @@ import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from './webHtmlP
 
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from './3rdLibTool.js';
 
+/**
+ * Wiki 页面
+ *
+ * 组织 Wiki 页面的完整初始化流程，包括导航、代码高亮、数学公式、
+ * 图片查看、DataTable 以及目录面板的交互。
+ */
 export class WikiPage {
 
+	/**
+	 * Wiki 页面初始化入口
+	 *
+	 * @param basePath - 站点根路径前缀，用于加载 SyntaxHighlighter 脚本
+	 * @param title - 页面副标题
+	 * @returns {Promise<void>}
+	 */
 	static async initWikiPage(basePath: string, title: string) {
 
 		let cfg: PageConfig = { apiRoot: "/", pageTitle: "Study Notes", subTitle: title, ajaxTimeout: 500 };

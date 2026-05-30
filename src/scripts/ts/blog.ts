@@ -5,45 +5,93 @@ import { WebUtil, HttpResponse } from "./web.js"
 import { SimpleMap } from './dataStructure.js'
 
 
+/**
+ * 用户信息接口响应
+ */
 interface UserInfoResp {
 	status: string;
+	/** 用户信息 */
 	user: {
+		/** 用户名 */
 		userName: string;
+		/** 头像 URL */
 		avatar: string;
+		/** 个人描述 */
 		desc: string;
+		/** 加入时间 */
 		joinTime: string;
+		/** 用户组 */
 		group: string;
+		/** 个人主页 URL */
 		homePageUrl: string;
 	}
 };
 
+/**
+ * 推荐文章
+ */
 interface RecommendArticle {
+	/** 文章标题 */
 	title: string;
+	/** 缩略图 URL */
 	thumbnail: string;
+	/** 文章链接 */
 	link: string;
 };
 
+/**
+ * 推荐文章列表接口响应
+ */
 interface RecommendArticlesResp {
+	/** 响应状态 */
 	status: string;
+	/** 推荐文章列表（字段名与后端 API 保持一致） */
 	recommands: Array<RecommendArticle>;
 };
 
+/**
+ * 用户文章
+ */
 interface UserArticle {
+	/** 发布时间（时间戳） */
 	time: number;
+	/** 作者 */
 	auth: string;
+	/** 文章标题 */
 	title: string;
+	/** 文章正文（Markdown） */
 	text: string;
 };
 
+/**
+ * 用户文章列表接口响应
+ */
 interface UserArticlesResp {
+	/** 响应状态 */
 	status: string;
+	/** 当前页码 */
 	page: number;
+	/** 总页数（注：后端返回值比实际少 1，参见 CLAUDE.md 待跟进问题） */
 	pageCount: number;
+	/** 文章列表 */
 	articles: Array<UserArticle>;
 };
 
+/**
+ * 博客页面
+ *
+ * 组织博客页面的完整初始化流程，包括用户信息加载、推荐文章列表、
+ * 文章分页列表以及主题切换。
+ */
 export class BlogPage {
 
+	/**
+	 * 加载用户信息并渲染到侧栏 Widget
+	 *
+	 * @param apiRoot - API 根路径
+	 * @param userId - 用户 ID
+	 * @returns {Promise<void>}
+	 */
 	static async loadUserInfo(apiRoot: string, userId: string) {
 		let userInfoResp: HttpResponse<UserInfoResp> = await WebUtil.requestHttp<string, UserInfoResp>({
 			method: "GET", url: `${apiRoot}api/blog/loadUserById?userId=${encodeURIComponent(userId)}`
@@ -80,6 +128,12 @@ export class BlogPage {
 		if (t6) t6.href        = userInfo.user.homePageUrl;
 	}
 
+	/**
+	 * 加载推荐文章列表并渲染到侧栏 Widget
+	 *
+	 * @param apiRoot - API 根路径
+	 * @returns {Promise<void>}
+	 */
 	static async loadRecommendArticles (apiRoot: string) {
 		let recoms: HttpResponse<RecommendArticlesResp> = await WebUtil.requestHttp<string, RecommendArticlesResp>({
 			method: "GET", url: `${apiRoot}api/blog/loadRecommandArticles`
@@ -104,6 +158,12 @@ export class BlogPage {
 		if (tk) tk.innerHTML = html;
 	}
 
+	/**
+	 * 将文章对象渲染为 HTML
+	 *
+	 * @param atc - 用户文章
+	 * @returns {string} 渲染后的 HTML 字符串
+	 */
 	static renderArticle(atc: UserArticle) {
 		let date = new Date();
 		date.setTime(atc.time);
@@ -119,6 +179,14 @@ export class BlogPage {
 		return html;
 	}
 
+	/**
+	 * 加载用户文章列表（分页）并渲染
+	 *
+	 * @param apiRoot - API 根路径
+	 * @param userId - 用户 ID
+	 * @param currPage - 当前页码
+	 * @returns {Promise<void>}
+	 */
 	static async loadUserArticles (apiRoot: string, userId: string, currPage: number) {
 		let headers: SimpleMap<string, string> = new SimpleMap([["Accept","application/json, text/javascript, */*; q=0.01"]]);
 		let list: HttpResponse<UserArticlesResp> = await WebUtil.requestHttp<string, UserArticlesResp>({
@@ -153,6 +221,14 @@ export class BlogPage {
 		tk?.appendChild(br);
 	}
 
+	/**
+	 * 博客页面初始化入口
+	 *
+	 * @param basePath - 站点根路径前缀
+	 * @param title - 页面副标题
+	 * @param userId - 用户 ID，默认为 "teo"
+	 * @returns {Promise<void>}
+	 */
 	static async initWikiPage(basePath: string, title: string, userId: string = "teo") {
 
 		let apiRoot = "//www.jade-dungeon.cn:8088/";
