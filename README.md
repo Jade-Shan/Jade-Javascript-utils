@@ -72,6 +72,14 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 
 ---
 
+## 待跟进的后端 API 问题
+
+| API | 问题 | 前端影响 | 状态 |
+|-----|------|---------|------|
+| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
+| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog.ts` 第 154 行对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+
+---
 
 
 

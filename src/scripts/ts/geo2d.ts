@@ -10,11 +10,11 @@ export interface GeoShape2D extends IGeo2D {
 	getCenter(): Point2D;
 
 	/**
-	 * 对于一个外部的点`(x,y)`，返回这个点到图形近的顶占和距离
+	 * 对于一个外部的点`(x,y)`，返回这个点到图形最近的顶点和距离
 	 * 
 	 * @param x 外部点的坐标x
 	 * @param y 外部点的坐标y
-	 * @returns 最近的点`vertex`和距离`distancd`
+	 * @returns 最近的点`vertex`和距离`distance`
 	 */
 	getMostCloseVertex(x: number, y: number): { vertex: Point2D, distance: number }
 
@@ -53,29 +53,19 @@ export class Circle2D implements GeoCurve2D, ICircle2D {
 	getCenter(): Point2D { return this.c; }
 
 	getMostCloseVertex(x: number, y: number): { vertex: Point2D, distance: number } {
-		let dx      = this.c.x - x;
-		let dy      = this.c.y - y;
-		let cDist   = Math.round(Math.sqrt(dx * dx + dy * dy)); // 点到圆心的距离
-		let minDist = cDist - this.radius // 点到圆的距离
+		let dx    = x - this.c.x;
+		let dy    = y - this.c.y;
+		let cDist = Math.sqrt(dx * dx + dy * dy);
+		let dist  = Math.abs(cDist - this.radius);
 
-		if (cDist == 0) {
-			// 点和圆心重合
-			return { vertex: this.c, distance: minDist };
-		} else if (dx == 0) {
-			// 点和圆心水平对齐,cos不存在
-			return { vertex: new Point2D(this.c.x, this.c.y - minDist), distance: minDist };
-		} else if (dy ==0 ) {
-			// 点和圆心垂直对齐,cos不存在
-			return { vertex: new Point2D(this.c.x - minDist, this.c.y), distance: minDist };
+		if (cDist < 1e-10) {
+			// 点和圆心重合，圆上任意一点都是最近点
+			return { vertex: new Point2D(this.c.x + this.radius, this.c.y), distance: dist };
 		} else {
 			let angle = Math.atan2(dy, dx);
-			let ca = Geo2DUtils.formatAngle(angle);
-			console.log(`${(new Date()).getUTCMilliseconds()}: ` +
-				`angle: ${NumUtil.toFixed(ca.oriAgl, 3)} = ${NumUtil.toFixed(ca.fmtAgl, 3)} = ` +
-				`${NumUtil.toFixed(ca.oriDgr, 2)}° = ${NumUtil.toFixed(ca.fmtDgr, 2)}°`);
-			let tx = Math.sin(angle) * minDist;
-			let ty = Math.cos(angle) * minDist;
-			return { vertex: new Point2D(tx, ty), distance: minDist };
+			let tx = this.c.x + Math.cos(angle) * this.radius;
+			let ty = this.c.y + Math.sin(angle) * this.radius;
+			return { vertex: new Point2D(tx, ty), distance: dist };
 		}
 	}
 
@@ -90,26 +80,14 @@ export class Circle2D implements GeoCurve2D, ICircle2D {
 		// 圆心`C`为新的坐标系的原点，计算射线`C->P`的长度
 		let dx     = x - this.c.x;
 		let dy     = y - this.c.y;
-		let lenghCP = Math.sqrt(dx * dx + dy * dy);
-		if (lenghCP < this.radius) { // 点在圆内，不存在切线
+		let lengthCP = Math.sqrt(dx * dx + dy * dy);
+		if (lengthCP < this.radius) { // 点在圆内，不存在切线
 			return [];
 		}
 		// 圆心`C`为新的坐标系的原点，计算射线`C->P`的角度
 		let angleCP  = Math.atan2(dy, dx);
-		// let ca1 = Geo2DUtils.formatAngle(angleCP);
-		// console.log(`${(new Date()).getUTCMilliseconds()}:
-		// 	angleCP: ${NumUtil.toFixed(ca1.oriAgl, 3)} = ${NumUtil.toFixed(ca1.fmtAgl, 3)} = ` +
-		// 	`${NumUtil.toFixed(ca1.oriDgr, 2)}° = ${NumUtil.toFixed(ca1.fmtDgr, 2)}°
-		// 	`);
-		//
 		// 计算`C->Q1`和`C->Q2`这两个射线相对于与`C->P`的夹角后，
-		let anglePCQ = Math.acos(this.radius / lenghCP);
-		// let ca2 = Geo2DUtils.formatAngle(anglePCQ);
-		// console.log(`${(new Date()).getUTCMilliseconds()}:
-		// 	angle: ${NumUtil.toFixed(ca2.oriAgl, 3)} = ${NumUtil.toFixed(ca2.fmtAgl, 3)} = ` +
-		// 	`${NumUtil.toFixed(ca2.oriDgr, 2)}° = ${NumUtil.toFixed(ca2.fmtDgr, 2)}°
-		// 	`);
-		//
+		let anglePCQ = Math.acos(this.radius / lengthCP);
 		// 得到了`C->Q1`和`C->Q2`这两个射线相对于与`C->P`的夹角后，
 		// 再加上`C->P`在坐标系中的角度`aCP`，
 		// 就是`C->Q1`和`C->Q2`在整个坐标系中的角度：
@@ -127,7 +105,7 @@ export class Circle2D implements GeoCurve2D, ICircle2D {
 }
 
 export type IPoint2D = { readonly x: number, readonly y: number };
-export class Point2D implements GeoCurve2D, IPoint2D {
+export class Point2D implements GeoPolygon2D, IPoint2D {
 	readonly x    : number;
 	readonly y    : number;
 	private center: Point2D | null;
@@ -154,31 +132,16 @@ export class Point2D implements GeoCurve2D, IPoint2D {
 	getVertexesFrom(x: number, y: number): Array<Point2D> { return [this]; }
 
 	/**
-	 * 对于一个外部的点`(x,y)`，返回这个点到图形近的顶占和距离
+	 * 对于一个外部的点`(x,y)`，返回这个点到图形最近的顶点和距离
 	 * 
 	 * @param x 外部点的坐标x
 	 * @param y 外部点的坐标y
-	 * @returns 最近的点`vertex`和距离`distancd`
+	 * @returns 最近的点`vertex`和距离`distance`
 	 */
 	getMostCloseVertex(x: number, y: number): { vertex: Point2D, distance: number } {
 		let n = Geo2DUtils.distanceP2P({ x: this.x, y: this.y }, { x: x, y: y });
 		return { vertex: this.getCenter(), distance: n };
 	}
-
-	///**
-	// * 对于一个外部的点`(x,y)`，返回这个点到图形近的顶占的射线
-	// * 
-	// * @param x 外部点的坐标x
-	// * @param y 外部点的坐标y
-	// * @param length 射线最大的长度
-	// * 
-	// * @returns 点到所有顶点的射线
-	// */
-	//getVertexRaysFrom(x: number, y: number): Array<{vertex:IPoint2D, ray: Ray2D}> {
-	//	let point = { x: x, y: y };
-	//	let quad = Geo2DUtils.quadOfPoint({ x: this.x - x, y: this.y - y });
-	//	return [Geo2DUtils.calVtxDstAngle(point, this, quad)];
-	//}
 
 }
 
@@ -208,12 +171,6 @@ export class Line2D implements GeoPolygon2D, ILine2D {
 		return l1 < l2 ? { vertex: this.a, distance: l1 } : { vertex: this.b, distance: l2 };
 	}
 
-	//getVertexRaysFrom(x: number, y: number): Array<Ray2D> {
-	//	let point = { x: x, y: y };
-	//	let quad = Geo2DUtils.quadOfLine({ a: { x: this.a.x - x, y: this.a.y - y }, b: { x: this.b.x - x, y: this.b.y - y } });
-	//	return [Geo2DUtils.calVtxDstAngle(point, this.a, quad), Geo2DUtils.calVtxDstAngle(point, this.b, quad)];
-	//}
-
 }
 
 export type IRay2D = {
@@ -242,10 +199,7 @@ export class Ray2D implements GeoPolygon2D, IRay2D {
 		this.angle  = Math.atan2(dy, dx);
 		this.cAngle = this.angle < 0 ? Geo2DUtils.PI_DOUBLE + this.angle : this.angle;
 		let ccg     = this.cAngle * 180 / Math.PI;
-		this.angleStr = ``;
-		// `(${NumUtil.toFixed(dx, 2)}, ${NumUtil.toFixed(dy, 2)})` +
-		// 	` = ${NumUtil.toFixed(this.angle, 2)} = ${NumUtil.toFixed(this.cAngle, 2)}` +
-		// 	` = ${NumUtil.toFixed(ccg, 2)}°`;
+		this.angleStr = `${NumUtil.toFixed(ccg, 2)}°`;
 		this.length = Geo2DUtils.distanceP2P(start, mid);
 	}
 
@@ -259,10 +213,6 @@ export class Ray2D implements GeoPolygon2D, IRay2D {
 		let n = Geo2DUtils.distanceP2P(this.center, { x: x, y: y });
 		return { vertex: this.center, distance: n };
 	}
-
-	//getVertexRaysFrom(x: number, y: number): Array<Ray2D> {
-	//	return [new Ray2D({ x: x, y: y }, this.center)];
-	//}
 
 }
 
@@ -282,7 +232,7 @@ export class Rectangle2D implements GeoPolygon2D, IRectangle2D {
 		this.y      = y;
 		this.width  = width;
 		this.height = height;
-		this.center = new Point2D((this.x + this.width) / 2, (this.y + this.height) / 2);
+		this.center = new Point2D(this.x + this.width / 2, this.y + this.height / 2);
 		this.vertexs = [ //
 			new Point2D(this.x             , this.y), //
 			new Point2D(this.x + this.width, this.y), //
@@ -316,19 +266,6 @@ export class Rectangle2D implements GeoPolygon2D, IRectangle2D {
 		return { vertex: pt, distance: md };
 	}
 
-	//getVertexRaysFrom(x: number, y: number): Array<Ray2D> {
-	//	let point = { x: x, y: y };
-	//	let quad = 0b0000;
-	//	quad = quad | Geo2DUtils.quadOfLine({ a: { x: this.vertexs[0].x - x, y: this.vertexs[0].y - y }, b: { x: this.vertexs[1].x - x, y: this.vertexs[1].y - y } });
-	//	quad = quad | Geo2DUtils.quadOfLine({ a: { x: this.vertexs[1].x - x, y: this.vertexs[1].y - y }, b: { x: this.vertexs[2].x - x, y: this.vertexs[2].y - y } });
-	//	quad = quad | Geo2DUtils.quadOfLine({ a: { x: this.vertexs[2].x - x, y: this.vertexs[2].y - y }, b: { x: this.vertexs[3].x - x, y: this.vertexs[3].y - y } });
-	//	return [ //
-	//		Geo2DUtils.calVtxDstAngle(point, this.vertexs[0], quad),
-	//		Geo2DUtils.calVtxDstAngle(point, this.vertexs[1], quad),
-	//		Geo2DUtils.calVtxDstAngle(point, this.vertexs[2], quad),
-	//		Geo2DUtils.calVtxDstAngle(point, this.vertexs[3], quad)];
-	//}
-
 }
 
 /**
@@ -356,9 +293,6 @@ export interface IAngle {
 	oriDgr: number;
 	fmtDgr: number;
 
-	// this.cAngle = this.angle < 0 ? Geo2DUtils.PI_DOUBLE + this.angle : this.angle;
-	// let ccg = this.cAngle * 180 / Math.PI;
-	// this.angleStr = ``;
 }
 
 export interface IRevolveOption {
@@ -404,18 +338,11 @@ export namespace Geo2DUtils {
 	 * @returns  result > 0为左， < 0为右， =0为线上
 	 */
 	export function pointOfLineSide(line: ILine2D, p: IPoint2D): number {
-		/* 这个算法和标准的不一样，但是跑出来的结果一样。为了安全还是用标准的算法吧。
-		 return (line.a.y - line.b.y) * p.x + 
-			 (line.b.x - line.a.x) * p.y + line.a.x * line.a.y - 
-			 line.b.x * line.a.y;
-			 */
-		// 标准的算法
 		return (line.a.y - line.b.y) * p.x + //
 			(line.b.x - line.a.x) * p.y + line.a.x * line.b.y - //
 			line.a.y * line.b.x;
 	}
 
-	/*  */
 	/**
 	 * 判断点p在线段line 的垂直交点
 	 * @param line line
@@ -455,7 +382,7 @@ export namespace Geo2DUtils {
 	 * @param p point
 	 * @returns distance
 	 */
-	export function pointToLineDistence(line: ILine2D, p: IPoint2D): number {
+	export function pointToLineDistance(line: ILine2D, p: IPoint2D): number {
 		let q = pointToLine(line, p);
 		return distanceP2P(p, q);
 	}
@@ -467,11 +394,8 @@ export namespace Geo2DUtils {
 	 * @returns 是否相交，如果相交就返回交点的坐标
 	 */
 	export function segmentsIntr(line1: ILine2D, line2: ILine2D): boolean | Point2D {
-		let isCross: boolean = false;
-		let x = 0;
-		let y = 0;
 
-		// 三角形abc 面积的2倍 
+		// 三角形abc 面积的2倍
 		let area_abc = (line1.a.x - line2.a.x) * (line1.b.y - line2.a.y) - (line1.a.y - line2.a.y) * (line1.b.x - line2.a.x);
 		// 三角形abd 面积的2倍 
 		let area_abd = (line1.a.x - line2.b.x) * (line1.b.y - line2.b.y) - (line1.a.y - line2.b.y) * (line1.b.x - line2.b.x);
@@ -538,10 +462,6 @@ export namespace Geo2DUtils {
 	 * 
 	 */
 	export function quadOfLine(line: ILine2D): QuadPos {
-		// x1 = l.a.x
-		// y1 = l.a.y
-		// x2 = l.b.x
-		// y2 = l.b.y
 		let quadP1 = quadOfPoint(line.a) as number;
 		let quadP2 = quadOfPoint(line.b) as number;
 
@@ -559,19 +479,16 @@ export namespace Geo2DUtils {
 			else if (k < 0 && b > 0) { quad = 0b0001 | quad; } // 函数过 1, 2, 4 象限
 			else if (k < 0 && b < 0) { quad = 0b0100 | quad; } // 函数过 2, 3, 4 象限
 		}
-		// console.log(`line: (${x1},${y1})->${x2},${y2}) : 0b${quad.toString(2)}`);
 		return quad as QuadPos;
 	}
 
 	export function setRayLength(ray: IRay2D, length: number): Ray2D {
 		let x = Math.cos(ray.angle + Math.PI) * length + ray.start.x;
 		let y = Math.sin(ray.angle + Math.PI) * length + ray.start.y;
-		// { start: ray.start, mid: {x:x,y:y}, // 
-		// 	angle: ray.angle, cAngle: ray.cAngle, length: length };
 		return new Ray2D(ray.start, { x: x, y: y });
 	}
 
-	export function calRayByPoints(start: IPoint2D, mid: IPoint2D, quad: number): Ray2D {
+	export function calRayByPoints(start: IPoint2D, mid: IPoint2D): Ray2D {
 		return new Ray2D(start, mid);
 	}
 
@@ -595,23 +512,6 @@ export namespace Geo2DUtils {
 		}
 		return results;
 	}
-
-	//export function calVtxDstAngle(start: IPoint2D, mid: IPoint2D, quad: number): Ray2D {
-	//	return new Ray2D(start, mid);
-	//}
-
-	//export function filterObstacleRaysNew(rays: Array<IRay2D>): Array<Ray2D> {
-	//	let results: Array<Ray2D> = [];
-	//	// 找到角度最大的点与最小的点
-	//	let min = rays[0];
-	//	let max = rays[0];
-	//	for (let i = 1; i < rays.length; i++) {
-	//		let curr = rays[i];
-	//		if (curr.cAngle < min.cAngle) { min = curr; }
-	//		if (curr.cAngle > max.cAngle) { max = curr }
-	//	}
-	//	return results;
-	//}
 
 	/**
 	 * 对于一个外部的点，它到指定的图形每个顶点会有对应的多条射线`rays`。
@@ -641,36 +541,6 @@ export namespace Geo2DUtils {
 		}
 		return results;
 	}
-
-	///**
-	// * 两条点到图形的切线，用线段表示
-	// * 
-	// * @param x 点的坐标x
-	// * @param y 点的坐标y
-	// * @param length 线段的长度
-	// * @param rays 多条射线
-	// * @returns 返回两条切线的线段
-	// */
-	//export function genTangentRays(x: number, y: number, geo2D: GeoShape2D, length: number): Array<Ray2D> {
-	//	// 注意三角函数使用时的坐标
-	//	// 数学上的坐标轴第一象限的原点在左下角
-	//	// 在Canvas画布上，原点在左上角
-	//	let rayArr: Array<Ray2D> = geo2D.getVertexRaysFrom(x, y);
-	//	let rays = filterObstacleRays(rayArr);
-	//	let result: Array<Ray2D> = [];
-
-	//	if (rays && rays.length > 0) {
-	//		for (let i = 0; i < rays.length; i++) {
-	//			result.push(Geo2DUtils.setRayLength(rays[i], length));
-	//		}
-	//	}
-	//	// for (let i = 0; i < rays.length; i++) {
-	//	// 	let endX = x + Math.round(length * Math.cos(rays[i].angle));
-	//	// 	let endY = y + Math.round(length * Math.sin(rays[i].angle));
-	//	// 	result.push(new Line2D({ x: x, y: y }, { x: endX, y: endY }));
-	//	// }
-	//	return result;
-	//}
 
 	/**
 	 * 以`c`为圆心，计算以`c`为端点并且经过`start`点的射线旋转到
@@ -708,40 +578,24 @@ export namespace Geo2DUtils {
 				diffAngle = diffAngle + PI_DOUBLE;
 			}
 		}
-// 		let ca = formatAngle(diffAngle);
-// 		let side = checkPointLineSide({ a: startPoint, b: endPoint }, c);
-//		console.log(`${(new Date()).getUTCMilliseconds()} 
-//=================================================================================	
-//		 side ${NumUtil.toFixed(side, 2)} ` +
-//			`revolv ${NumUtil.toFixed(d1.x, 3)}, ${NumUtil.toFixed(d1.y, 3)} ` +
-//			`to ${NumUtil.toFixed(d2.x, 3)},${NumUtil.toFixed(d2.y, 3)} ` +
-//			`angle: ${NumUtil.toFixed(diffAngle, 3)} = ${NumUtil.toFixed(ca.fmtAgl, 2)} = ` +
-//			`${NumUtil.toFixed(ca.oriDgr, 2)}° = ${NumUtil.toFixed(ca.fmtDgr, 2)}° 
-//=================================================================================	
-//			`);
 
 		return { start: startAngle, end: endAngle, diff: diffAngle };
 	}
 
 	export function checkPointLineSide(line: ILine2D, p: IPoint2D): number {
-		//console.log(`--------------------------------${(new Date()).getMilliseconds()}`)
 		let side = 0;
 		let ll = line.b.y < line.a.y ? { a: line.b, b: line.a } : line;
 		let angleAB = Math.atan2(ll.b.y - ll.a.y, ll.b.x - ll.a.x);
-		//console.log(`line angle: ${formatAngleStr(angle)}`);
 		if (ll.a.y < p.y && p.y < ll.b.y) {
 			let angleAP = Math.atan2(p.y - ll.a.y, p.x - ll.a.x);
-			//console.log(`point angle: ${formatAngleStr(ac)}`);
-			//console.log(`diff angle: ${formatAngleStr(diffAngle)}`);
 			side = angleAB - angleAP;
 		} else if (p.y < ll.a.y) {
 			let cx = ll.a.x - ((ll.b.x - ll.a.x) / (ll.b.y - ll.a.y) * (ll.a.y - p.y))
-			side = p.x - cx; 
+			side = p.x - cx;
 		} else if (ll.b.y < p.y) {
 			let cx = (ll.b.x - ll.a.x) / (ll.b.y - ll.a.y) * (p.y - ll.a.y) - ll.a.x;
 			side = p.x - cx;
 		}
-		//console.log(`--------------------------------${(new Date()).getMilliseconds()}`)
 		return side;
 	}
 

@@ -1,7 +1,7 @@
 import { TimeUtil } from "./basic.js";
 import { CanvasUtils, ImageClip } from "./canvas.js";
 import { JadeUIResource, DefaultIconGroup } from "./resource.js";
-import { CircleToken, ICanvasFrame, ImageResource, LineToken, RectangleToken, SandTable, SandTableUtils, ScenceDataResp } from "./sandtable.js";
+import { CircleToken, ICanvasFrame, ImageResource, LineToken, RectangleToken, SandTable, SandTableUtils, SceneDataResp } from "./sandtable.js";
 import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "./UIWindow.js";
 
 export namespace TestJadeTRPG {
@@ -24,7 +24,7 @@ export namespace TestJadeTRPG {
 		//
 		let bgImgClip: ImageClip = { "imgKey": "icons", "sx": 0, "sy": 0, "width": 300, "height": 300, "imageElem": imgResources[1].imgElem };
 		let user = CircleToken.fromRecord({
-			"type": "Circle", "id": "jade", "x": 153, "y": 152, "visiable": true, "blockView": true, "color": "Blue", //
+			"type": "Circle", "id": "jade", "x": 153, "y": 152, "visible": true, "blockView": true, "color": "Blue", //
 			"img": imgUsr01, "radius": 25 //
 		}, imgResources);
 		//
@@ -44,7 +44,7 @@ export namespace TestJadeTRPG {
 		if (null != cvsCtx002) {
 			// load token from json
 			let fnt = RectangleToken.fromRecord({ "type": "Rectangle", "id": "furnishing-1696391644699", //
-				"x": 156, "y": 190, "width": 50, "height": 50, "visiable": true, "blockView": false, "color": "Blue", //
+				"x": 156, "y": 190, "width": 50, "height": 50, "visible": true, "blockView": false, "color": "Blue", //
 				"img": imgFnt01
 			}, imgResources);
 			// draw image
@@ -58,7 +58,7 @@ export namespace TestJadeTRPG {
 		if (null != cvsCtx003) {
 			// load token from json
 			let line = LineToken.fromRecord({ "type": "Line", "id": "wall-1653882430769", 
-				"x": 53, "y": 112, "x2": 160, "y2": 214, "color": "#0000FF", "visiable": false, "blockView": true
+				"x": 53, "y": 112, "x2": 160, "y2": 214, "color": "#0000FF", "visible": false, "blockView": true
 			});
 			// draw image
 			line.draw(cvsCtx003);
@@ -69,10 +69,10 @@ export namespace TestJadeTRPG {
 		let cvsCtx004 = document.querySelector<HTMLCanvasElement>("#testTrpg004")?.getContext("2d");
 		if (null != cvsCtx004) {
 			//
-			let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 150, "y":  80, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x":  80, "y": 150, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 220, "y": 150, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 150, "y": 220, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 150, "y":  80, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x":  80, "y": 150, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 220, "y": 150, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 150, "y": 220, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
 			//
 			user .draw(cvsCtx004);
 			enm01.draw(cvsCtx004);
@@ -90,10 +90,10 @@ export namespace TestJadeTRPG {
 		/* ========================== */
 		let cvsCtx005 = document.querySelector<HTMLCanvasElement>("#testTrpg005")?.getContext("2d");
 		if (null != cvsCtx005) {
-			let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 150, "y":  80, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x":  80, "y": 150, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 220, "y": 150, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 150, "y": 220, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 150, "y":  80, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x":  80, "y": 150, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 220, "y": 150, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 150, "y": 220, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
 			//
 			CanvasUtils.drawVertexShadowFrom(cvsCtx005, user.c.x, user.c.y, enm01, viewSize, styleMith);
 			CanvasUtils.drawVertexShadowFrom(cvsCtx005, user.c.x, user.c.y, enm02, viewSize, styleMith);
@@ -111,10 +111,10 @@ export namespace TestJadeTRPG {
 		/* ========================== */
 		let cvsCtx006 = document.querySelector<HTMLCanvasElement>("#testTrpg006")?.getContext("2d");
 		if (null != cvsCtx006) {
-			let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 100, "y": 100, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x": 200, "y": 100, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 100, "y": 200, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-			let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 200, "y": 200, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 100, "y": 100, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x": 200, "y": 100, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 100, "y": 200, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+			let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 200, "y": 200, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
 			//
 			CanvasUtils.drawVertexShadowFrom(cvsCtx006, user.c.x, user.c.y, enm01, viewSize, styleMith);
 			CanvasUtils.drawVertexShadowFrom(cvsCtx006, user.c.x, user.c.y, enm02, viewSize, styleMith);
@@ -133,10 +133,10 @@ export namespace TestJadeTRPG {
 		let cvsCtx007 = document.querySelector<HTMLCanvasElement>("#testTrpg007")?.getContext("2d");
 		if (null != cvsCtx007) {
 			//
-			let fnt01 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt01", "x": 125, "y":  50, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt02 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt02", "x":  50, "y": 125, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt03 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt03", "x": 200, "y": 125, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt04 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt04", "x": 125, "y": 200, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt01 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt01", "x": 125, "y":  50, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt02 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt02", "x":  50, "y": 125, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt03 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt03", "x": 200, "y": 125, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt04 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt04", "x": 125, "y": 200, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
 			//
 			CanvasUtils.drawVertexShadowFrom(cvsCtx007, user.c.x, user.c.y, fnt01, viewSize, {lineWidth: 1, strokeStyle: "Gray", fillStyle: "rgba(100,100,100,0.5)"});
 			CanvasUtils.drawVertexShadowFrom(cvsCtx007, user.c.x, user.c.y, fnt02, viewSize, {lineWidth: 1, strokeStyle: "Gray", fillStyle: "rgba(100,100,100,0.5)"});
@@ -155,10 +155,10 @@ export namespace TestJadeTRPG {
 		let cvsCtx008 = document.querySelector<HTMLCanvasElement>("#testTrpg008")?.getContext("2d");
 		if (null != cvsCtx008) {
 			//
-			let fnt01 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt01", "x": 125, "y":  50, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt02 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt02", "x":  50, "y": 125, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt03 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt03", "x": 200, "y": 125, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt04 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt04", "x": 125, "y": 200, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt01 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt01", "x": 125, "y":  50, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt02 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt02", "x":  50, "y": 125, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt03 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt03", "x": 200, "y": 125, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt04 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt04", "x": 125, "y": 200, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
 			//
 			CanvasUtils.drawVertexShadowFrom(cvsCtx008, user.c.x, user.c.y, fnt01, viewSize, styleMith);
 			CanvasUtils.drawVertexShadowFrom(cvsCtx008, user.c.x, user.c.y, fnt02, viewSize, styleMith);
@@ -176,10 +176,10 @@ export namespace TestJadeTRPG {
 		/* ========================== */
 		let cvsCtx009 = document.querySelector<HTMLCanvasElement>("#testTrpg009")?.getContext("2d");
 		if (null != cvsCtx009) {
-			let fnt01 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt01", "x":  60, "y":  60, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources); 
-			let fnt02 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt02", "x": 180, "y":  60, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt03 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt03", "x":  60, "y": 190, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
-			let fnt04 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt04", "x": 180, "y": 190, "visiable": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt01 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt01", "x":  60, "y":  60, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources); 
+			let fnt02 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt02", "x": 180, "y":  60, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt03 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt03", "x":  60, "y": 190, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
+			let fnt04 = RectangleToken.fromRecord({"type": "Rectangle", "id": "fnt04", "x": 180, "y": 190, "visible": true, "blockView": true, "color": "Gray", "img": imgFnt01, "width": 50, "height": 50}, imgResources);
 			//
 			CanvasUtils.drawVertexShadowFrom(cvsCtx009, user.c.x, user.c.y, fnt01, viewSize, styleMith);
 			CanvasUtils.drawVertexShadowFrom(cvsCtx009, user.c.x, user.c.y, fnt02, viewSize, styleMith);
@@ -197,10 +197,10 @@ export namespace TestJadeTRPG {
 		/* ========================== */
 		let cvsCtx010 = document.querySelector<HTMLCanvasElement>("#testTrpg010")?.getContext("2d");
 		if (null != cvsCtx010) {
-			let wall01 = LineToken.fromRecord({"type": "Line", "id": "wall001", "x": 120, "y":  80, "x2": 180, "y2":  80, "visiable": true, "blockView": true, "color": "Lime"});
-			let wall02 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x": 220, "y": 120, "x2": 220, "y2": 180, "visiable": true, "blockView": true, "color": "Lime"});
-			let wall03 = LineToken.fromRecord({"type": "Line", "id": "wall003", "x": 120, "y": 220, "x2": 180, "y2": 220, "visiable": true, "blockView": true, "color": "Lime"});
-			let wall04 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x":  80, "y": 120, "x2":  80, "y2": 180, "visiable": true, "blockView": true, "color": "Lime"});
+			let wall01 = LineToken.fromRecord({"type": "Line", "id": "wall001", "x": 120, "y":  80, "x2": 180, "y2":  80, "visible": true, "blockView": true, "color": "Lime"});
+			let wall02 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x": 220, "y": 120, "x2": 220, "y2": 180, "visible": true, "blockView": true, "color": "Lime"});
+			let wall03 = LineToken.fromRecord({"type": "Line", "id": "wall003", "x": 120, "y": 220, "x2": 180, "y2": 220, "visible": true, "blockView": true, "color": "Lime"});
+			let wall04 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x":  80, "y": 120, "x2":  80, "y2": 180, "visible": true, "blockView": true, "color": "Lime"});
 			//
 			CanvasUtils.drawVertexShadowFrom(cvsCtx010, user.c.x, user.c.y, wall01, viewSize, styleMith);
 			CanvasUtils.drawVertexShadowFrom(cvsCtx010, user.c.x, user.c.y, wall02, viewSize, styleMith);
@@ -218,10 +218,10 @@ export namespace TestJadeTRPG {
 		/* ========================== */
 		let cvsCtx011 = document.querySelector<HTMLCanvasElement>("#testTrpg011")?.getContext("2d");
 		if (null != cvsCtx011) {
-			let wall01 = LineToken.fromRecord({"type": "Line", "id": "wall001", "x": 180, "y":  80, "x2": 220, "y2": 120, "visiable": true, "blockView": true, "color": "Lime"});
-			let wall02 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x": 220, "y": 180, "x2": 180, "y2": 220, "visiable": true, "blockView": true, "color": "Lime"});
-			let wall03 = LineToken.fromRecord({"type": "Line", "id": "wall003", "x": 120, "y": 220, "x2":  80, "y2": 180, "visiable": true, "blockView": true, "color": "Lime"});
-			let wall04 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x":  80, "y": 120, "x2": 120, "y2":  80, "visiable": true, "blockView": true, "color": "Lime"});
+			let wall01 = LineToken.fromRecord({"type": "Line", "id": "wall001", "x": 180, "y":  80, "x2": 220, "y2": 120, "visible": true, "blockView": true, "color": "Lime"});
+			let wall02 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x": 220, "y": 180, "x2": 180, "y2": 220, "visible": true, "blockView": true, "color": "Lime"});
+			let wall03 = LineToken.fromRecord({"type": "Line", "id": "wall003", "x": 120, "y": 220, "x2":  80, "y2": 180, "visible": true, "blockView": true, "color": "Lime"});
+			let wall04 = LineToken.fromRecord({"type": "Line", "id": "wall002", "x":  80, "y": 120, "x2": 120, "y2":  80, "visible": true, "blockView": true, "color": "Lime"});
 			//
 			CanvasUtils.drawVertexShadowFrom(cvsCtx011, user.c.x, user.c.y, wall01, viewSize, styleMith);
 			CanvasUtils.drawVertexShadowFrom(cvsCtx011, user.c.x, user.c.y, wall02, viewSize, styleMith);
@@ -287,10 +287,10 @@ export namespace TestJadeTRPG {
 			buff.cvs.style.height = `${imgHeight}px`;
 			await SandTableUtils.drawDarkScene(buff, oriMap, shadowStyle);
 			img02 = await SandTableUtils.drawBrightScene(buff, oriMap, async (frame) => { 
-				let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 100, "y": 100, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-				let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x": 200, "y": 100, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-				let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 100, "y": 200, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
-				let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 200, "y": 200, "visiable": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+				let enm01 = CircleToken.fromRecord({"type": "Circle", "id": "enm01", "x": 100, "y": 100, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+				let enm02 = CircleToken.fromRecord({"type": "Circle", "id": "enm02", "x": 200, "y": 100, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+				let enm03 = CircleToken.fromRecord({"type": "Circle", "id": "enm03", "x": 100, "y": 200, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
+				let enm04 = CircleToken.fromRecord({"type": "Circle", "id": "enm04", "x": 200, "y": 200, "visible": true, "blockView": true, "color": "Red", "img": imgEnm01, "radius": 25}, imgResources);
 				//
 				CanvasUtils.drawVertexShadowFrom(cvsCtx014, user.c.x, user.c.y, enm01, viewSize, mistMapStyle);
 				CanvasUtils.drawVertexShadowFrom(cvsCtx014, user.c.x, user.c.y, enm02, viewSize, mistMapStyle);
@@ -438,7 +438,7 @@ export namespace TestJadeTRPG {
 		});
 		// 
 		let user = CircleToken.fromRecord(testSceneData.mapDatas.teams[2], testSceneData.imgResources);
-		await sandTable.drawSceneWithUserView({proxyUrl: imgProxyUrl});
+		await sandTable.drawSceneWithUserView([user], {proxyUrl: imgProxyUrl});
 		//
 		user.draw(finalCvsCtx)
 	}
@@ -446,7 +446,7 @@ export namespace TestJadeTRPG {
 }
 
 
-let testSceneData: ScenceDataResp = {
+let testSceneData: SceneDataResp = {
   "username": "jade",
   "loginToken": "jade|a8dce1e8-63c3-4825-8932-5dd8f430aaa4|1747416892778",
   "imgResources": [
@@ -455,47 +455,47 @@ let testSceneData: ScenceDataResp = {
   ],
   "mapDatas": {
     "teams": [
-      {"id": "spectator", "x": 236, "y": 230, "visiable": false, "blockView": false, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 100, "sy": 150, "width": 50, "height": 50}, "type": "Circle", "radius": 25},
-      {"id": "teo"      , "x": 240, "y": 299, "visiable": true , "blockView": true , "color": "#0000FF", "img": {"imgKey": "icons", "sx": 100, "sy": 50 , "width": 50, "height": 50}, "type": "Circle", "radius": 25},
-      {"id": "jade"     , "x": 344, "y": 152, "visiable": true , "blockView": true , "color": "#0000FF", "img": {"imgKey": "icons", "sx": 100, "sy": 100, "width": 50, "height": 50}, "type": "Circle", "radius": 25}
+      {"id": "spectator", "x": 236, "y": 230, "visible": false, "blockView": false, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 100, "sy": 150, "width": 50, "height": 50}, "type": "Circle", "radius": 25},
+      {"id": "teo"      , "x": 240, "y": 299, "visible": true , "blockView": true , "color": "#0000FF", "img": {"imgKey": "icons", "sx": 100, "sy": 50 , "width": 50, "height": 50}, "type": "Circle", "radius": 25},
+      {"id": "jade"     , "x": 344, "y": 152, "visible": true , "blockView": true , "color": "#0000FF", "img": {"imgKey": "icons", "sx": 100, "sy": 100, "width": 50, "height": 50}, "type": "Circle", "radius": 25}
     ],
     "creaters": [
-      {"id": "orc1"                 , "x": 150, "y": 245, "visiable": true, "blockView": true, "color": "#FF0000", "img": {"imgKey": "icons", "sx": 100, "sy":  0, "width":  50, "height":  50}, "type": "Circle", "radius": 25},
-      {"id": "creater-1696391803781", "x": 150, "y": 550, "visiable": true, "blockView": true, "color": "#0000FF", "img": {"imgKey": "icons", "sx":   0, "sy": 50, "width": 100, "height": 100}, "type": "Circle", "radius": 50}
+      {"id": "orc1"                 , "x": 150, "y": 245, "visible": true, "blockView": true, "color": "#FF0000", "img": {"imgKey": "icons", "sx": 100, "sy":  0, "width":  50, "height":  50}, "type": "Circle", "radius": 25},
+      {"id": "creater-1696391803781", "x": 150, "y": 550, "visible": true, "blockView": true, "color": "#0000FF", "img": {"imgKey": "icons", "sx":   0, "sy": 50, "width": 100, "height": 100}, "type": "Circle", "radius": 50}
     ],
     "furnishings": [
-      {"id": "furnishing-1696391644699", "x":  56, "y": 590, "visiable": true, "blockView": false, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 0, "width": 50, "height": 50}, "type": "Rectangle", "width": 62, "height": 57},
-      {"id": "furnishing-1696391761836", "x": 189, "y": 587, "visiable": true, "blockView": false, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 0, "width": 50, "height": 50}, "type": "Rectangle", "width": 61, "height": 58}
+      {"id": "furnishing-1696391644699", "x":  56, "y": 590, "visible": true, "blockView": false, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 0, "width": 50, "height": 50}, "type": "Rectangle", "width": 62, "height": 57},
+      {"id": "furnishing-1696391761836", "x": 189, "y": 587, "visible": true, "blockView": false, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 0, "width": 50, "height": 50}, "type": "Rectangle", "width": 61, "height": 58}
     ],
     "doors": [
-      {"id": "door-1696391873911", "x": 539, "y": 161, "visiable": true, "blockView": true, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 150, "width": 50, "height": 50}, "type": "Rectangle", "width": 23, "height": 64},
-      {"id": "door-1696392071983", "x": 261, "y": 440, "visiable": true, "blockView": true, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 150, "width": 50, "height": 50}, "type": "Rectangle", "width": 80, "height": 21}
+      {"id": "door-1696391873911", "x": 539, "y": 161, "visible": true, "blockView": true, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 150, "width": 50, "height": 50}, "type": "Rectangle", "width": 23, "height": 64},
+      {"id": "door-1696392071983", "x": 261, "y": 440, "visible": true, "blockView": true, "color": "#0000FF", "img": {"imgKey": "icons", "sx": 0, "sy": 150, "width": 50, "height": 50}, "type": "Rectangle", "width": 80, "height": 21}
     ],
     "walls": [
-      {"id": "wall-1653882416304", "x":  87, "y": 342, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":   7, "y2": 343},
-      {"id": "wall-1653882423195", "x":  65, "y": 118, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  61, "y2": 345},
-      {"id": "wall-1653882430769", "x": 253, "y": 112, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  60, "y2": 114},
-      {"id": "wall-1653882436394", "x": 252, "y": 148, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 253, "y2":  38},
-      {"id": "wall-1653882453537", "x": 342, "y":  38, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 238, "y2":  37},
-      {"id": "wall-1653882460387", "x": 342, "y":   2, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 345, "y2":  53},
-      {"id": "wall-1653882466531", "x": 456, "y":   1, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 459, "y2":  49},
-      {"id": "wall-1653882472219", "x": 459, "y":  39, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 568, "y2":  45},
-      {"id": "wall-1653882478634", "x": 563, "y":  39, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 562, "y2": 147},
-      {"id": "wall-1653882484634", "x": 846, "y": 106, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 559, "y2": 109},
-      {"id": "wall-1653882489986", "x": 854, "y":  24, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 851, "y2": 121},
-      {"id": "wall-1653882549427", "x": 555, "y": 230, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 558, "y2": 300},
-      {"id": "wall-1653882556026", "x": 154, "y": 451, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":   8, "y2": 452},
-      {"id": "wall-1653882561250", "x": 552, "y": 444, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 349, "y2": 447},
-      {"id": "wall-1653882565866", "x": 543, "y": 447, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 548, "y2": 339},
-      {"id": "wall-1653882644179", "x": 543, "y": 344, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 762, "y2": 342},
-      {"id": "wall-1696391396938", "x": 246, "y": 760, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 258, "y2": 448},
-      {"id": "wall-1696391405167", "x": 251, "y": 654, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  45, "y2": 653},
-      {"id": "wall-1696391411067", "x":  40, "y": 654, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  49, "y2": 450},
-      {"id": "wall-1696391417911", "x": 556, "y": 750, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 249, "y2": 755},
-      {"id": "wall-1696391424165", "x": 552, "y": 754, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 555, "y2": 646},
-      {"id": "wall-1696391428367", "x": 550, "y": 650, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 754, "y2": 653},
-      {"id": "wall-1696391433055", "x": 541, "y": 550, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 755, "y2": 547},
-      {"id": "wall-1696391437780", "x": 752, "y": 552, "visiable": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 755, "y2": 447}
+      {"id": "wall-1653882416304", "x":  87, "y": 342, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":   7, "y2": 343},
+      {"id": "wall-1653882423195", "x":  65, "y": 118, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  61, "y2": 345},
+      {"id": "wall-1653882430769", "x": 253, "y": 112, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  60, "y2": 114},
+      {"id": "wall-1653882436394", "x": 252, "y": 148, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 253, "y2":  38},
+      {"id": "wall-1653882453537", "x": 342, "y":  38, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 238, "y2":  37},
+      {"id": "wall-1653882460387", "x": 342, "y":   2, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 345, "y2":  53},
+      {"id": "wall-1653882466531", "x": 456, "y":   1, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 459, "y2":  49},
+      {"id": "wall-1653882472219", "x": 459, "y":  39, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 568, "y2":  45},
+      {"id": "wall-1653882478634", "x": 563, "y":  39, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 562, "y2": 147},
+      {"id": "wall-1653882484634", "x": 846, "y": 106, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 559, "y2": 109},
+      {"id": "wall-1653882489986", "x": 854, "y":  24, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 851, "y2": 121},
+      {"id": "wall-1653882549427", "x": 555, "y": 230, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 558, "y2": 300},
+      {"id": "wall-1653882556026", "x": 154, "y": 451, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":   8, "y2": 452},
+      {"id": "wall-1653882561250", "x": 552, "y": 444, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 349, "y2": 447},
+      {"id": "wall-1653882565866", "x": 543, "y": 447, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 548, "y2": 339},
+      {"id": "wall-1653882644179", "x": 543, "y": 344, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 762, "y2": 342},
+      {"id": "wall-1696391396938", "x": 246, "y": 760, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 258, "y2": 448},
+      {"id": "wall-1696391405167", "x": 251, "y": 654, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  45, "y2": 653},
+      {"id": "wall-1696391411067", "x":  40, "y": 654, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2":  49, "y2": 450},
+      {"id": "wall-1696391417911", "x": 556, "y": 750, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 249, "y2": 755},
+      {"id": "wall-1696391424165", "x": 552, "y": 754, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 555, "y2": 646},
+      {"id": "wall-1696391428367", "x": 550, "y": 650, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 754, "y2": 653},
+      {"id": "wall-1696391433055", "x": 541, "y": 550, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 755, "y2": 547},
+      {"id": "wall-1696391437780", "x": 752, "y": 552, "visible": false, "blockView": true, "color": "#0000FF", "type": "Line", "x2": 755, "y2": 447}
     ]
   }
 };

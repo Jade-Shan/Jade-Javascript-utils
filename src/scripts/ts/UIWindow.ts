@@ -4,6 +4,9 @@ import { JadeUIResource, IconGroup, DefaultIconGroup } from "./resource.js";
 import { WebUtil } from "./web.js";
 
 const WIN_Z_IDX_MIN = 2000;
+const WIN_BORDER_SIZE = 6;
+const WIN_BODY_PADDING = 25;
+const DOCK_BAR_MARGIN = 10;
 
 /**
  * 桌面环境的参数配置
@@ -45,12 +48,12 @@ export class UIDesktop {
 	getCurrTopWin(): UIObj | undefined { return this.currWin.top; }
 	setCurrTopWin(win: UIObj): void { this.currWin.top = win; }
 
-	getCurrDragging() { return this.currWin.dragging;};
+	getCurrDragging() { return this.currWin.dragging; }
 	setCurrDragging(dragging: DraggingWindow) {
 		this.currWin.dragging = dragging;
 	}
 
-	getCurrScaling() { return this.currWin.scaling;};
+	getCurrScaling() { return this.currWin.scaling; }
 	setCurrScaling(scaling: ScalingWindow) {
 		this.currWin.scaling= scaling;
 	}
@@ -89,7 +92,7 @@ export class UIDesktop {
 	 * 桌面上有没有docker
 	 * @returns 是否有
 	 */
-	hasDockBar(): boolean { return this.dockBar ? true : false; }
+	hasDockBar(): boolean { return this.dockBar !== undefined; }
 
 	/**
 	 * 取得桌面上窗口的最大层数
@@ -105,10 +108,10 @@ export class UIDesktop {
 	 * @returns 新窗口弹出的坐标
 	 */
 	getNewWindowPosition(width: number, height: number): IPoint2D {
-		let margin = 90; // 新弹出的位置的间隔
-		let maxLevel = 8; // 同一次弹出时叠加几次
-		let maxWidth = this.desktopDiv.clientWidth - margin;
-		let maxHeigh = this.desktopDiv.clientHeight - margin;
+		const margin = 90; // 新弹出的位置的间隔
+		const maxLevel = 8; // 同一次弹出时叠加几次
+		const maxWidth = this.desktopDiv.clientWidth - margin;
+		const maxHeight = this.desktopDiv.clientHeight - margin;
 
 		let newX = this.newWindowPosition.lastPos.x + margin;
 		let newY = this.newWindowPosition.lastPos.y + margin;
@@ -122,13 +125,13 @@ export class UIDesktop {
 			this.newWindowPosition.lastTopStart.y = newY;
 		}
 
-		if (((newX + width) > maxWidth)) {// 一行满了，换一行 
+		if (((newX + width) > maxWidth)) {// 一行满了，换一行
 			newX = margin;
 			newY = this.newWindowPosition.lastTopStart.y + margin;
 			this.newWindowPosition.lastTopStart.x = newX;
 			this.newWindowPosition.lastTopStart.y = newY;
 		}
-		if ((newY + height) > maxHeigh) { // 纵向满了，回头
+		if ((newY + height) > maxHeight) { // 纵向满了，回头
 			newX = margin;
 			newY = margin;
 			this.newWindowPosition.lastTopStart.x = newX;
@@ -157,24 +160,27 @@ export class UIDesktop {
 		}
 	}
 
-	/**
-	 * 关闭一个窗口
-	 * 
-	 * @param win 要关闭的窗口
-	 */
-	optWinClose(win: UIObj) {
-		this.allWindows.remove(win.id);
+	private reorderWindows(excludeId: string): Array<UIObj> {
 		let newIndex: Array<UIObj> = [];
 		for (let i = 0; i < this.windowZIndex.length; i++) {
 			let w = this.windowZIndex[i];
-			if (win.id === w.id) {
-				// do nothing
-			} else {
+			if (w.id !== excludeId) {
 				w.activeWindow(false);
 				w.setZIndex(WIN_Z_IDX_MIN + newIndex.length);
 				newIndex.push(w);
 			}
 		}
+		return newIndex;
+	}
+
+	/**
+	 * 关闭一个窗口
+	 *
+	 * @param win 要关闭的窗口
+	 */
+	optWinClose(win: UIObj) {
+		this.allWindows.remove(win.id);
+		let newIndex = this.reorderWindows(win.id);
 		this.windowZIndex = newIndex;
 		this.desktopDiv.removeChild(win.ui.win);
 		if (newIndex.length > 0) {
@@ -189,24 +195,13 @@ export class UIDesktop {
 
 	/**
 	 * 指定一个窗口为当前活动窗口
-	 * 
+	 *
 	 * @param win 指定的窗口
 	 */
 	optWinActive(win: UIObj) {
-		let newIndex: Array<UIObj> = [];
-		for (let i = 0; i < this.windowZIndex.length; i++) {
-			let w = this.windowZIndex[i];
-			if (w.id === win.id) {
-				// do nothing
-			} else {
-				w.activeWindow(false);
-				w.setZIndex(WIN_Z_IDX_MIN + newIndex.length);
-				newIndex.push(w);
-			}
-		}
+		let newIndex = this.reorderWindows(win.id);
 		newIndex.push(win);
 		this.windowZIndex = newIndex;
-		//
 		win.activeWindow(true);
 		win.setZIndex(WIN_Z_IDX_MIN + newIndex.length);
 	}
@@ -333,10 +328,10 @@ export let defaultWinOption = {
 				//
 				end.left   = 0;
 				end.top    = 0;
-				end.width  = pElem.clientWidth - 6;
+				end.width  = pElem.clientWidth - WIN_BORDER_SIZE;
 				// 如果桌面上有dock，留几个像素让dock可以响应鼠标
 				end.height = win.desktop.hasDockBar() ?
-						pElem.clientHeight - 10 : pElem.clientHeight - 6;
+						pElem.clientHeight - DOCK_BAR_MARGIN : pElem.clientHeight - WIN_BORDER_SIZE;
 			}
 			JadeWindowUI.showWinMaxMinAnima(win, 300, 50, start, end);
 			setTimeout(() => {
@@ -348,8 +343,8 @@ export let defaultWinOption = {
 				if (win.ui.statusBar) {
 					bodyHeight = bodyHeight - win.ui.statusBar.clientHeight;
 				}
-				win.ui.windowBody.style.height = `${bodyHeight - 25}px`;
-				win.ui.windowBody.style.width  = `${end.width  - 25}px`;
+				win.ui.windowBody.style.height = `${bodyHeight - WIN_BODY_PADDING}px`;
+				win.ui.windowBody.style.width  = `${end.width  - WIN_BODY_PADDING}px`;
 			}, 350);
 		});
 	},
@@ -393,16 +388,16 @@ export let defaultWinOption = {
 	bindWindowScaleSelect: (win: UIObj): any=> {
 		let desktop = win.desktop;
 		let winDiv = win.ui.win;
-		let checkScaleStart = (winDiv: HTMLElement, e: MouseEvent): 1|2|3|4|5|6|7|8|9 => {
+		let checkScaleStart = (e: MouseEvent): 1|2|3|4|5|6|7|8|9 => {
 			let effSize = 7; // 会触发的范围是5个像素
 			let width  = winDiv.offsetWidth ;
 			let height = winDiv.offsetHeight;
 			let rect = winDiv.getBoundingClientRect();
 			let cPoint = { // 点击的位置
-				x: parseInt(`${e.clientX - rect.left}`), 
+				x: parseInt(`${e.clientX - rect.left}`),
 				y: parseInt(`${e.clientY - rect.top }`)
 			};
-			// 
+			//
 			let distance = { x: width - cPoint.x, y: height - cPoint.y };
 			let direction: 1|2|3|4|5|6|7|8|9 = 5;
 			if (distance.x < 0) {
@@ -421,9 +416,8 @@ export let defaultWinOption = {
 		};
 		winDiv.addEventListener("mousedown", (e) => {
 			if (win.cfg.scalable && !win.status.isMax && !win.status.isMin) {
-				let desktop = win.desktop;
 				let desktopDiv = desktop.desktopDiv;
-				let direction = checkScaleStart(winDiv, e);
+				let direction = checkScaleStart(e);
 				if (5 != direction) {
 					desktop.setCurrScaling({ win: win, direction: direction });
 					if (2 === direction || 8 === direction) {
@@ -492,20 +486,19 @@ export let defaultWinOption = {
 					end.width = winStart.width - dx;
 				}
 				if (5 != direction) {
-					end.height = end.height - 6;
+					end.height = end.height - WIN_BORDER_SIZE;
 				}
 
-				let bodyHeight = winDiv.offsetHeight - currWin.ui.titleBar.clientHeight;
-				if (currWin.ui.statusBar) {
-					bodyHeight = bodyHeight - currWin.ui.statusBar.clientHeight;
-				}
-				//
 				winDiv.style.left   = `${end.left  }px`;
 				winDiv.style.top    = `${end.top   }px`;
 				winDiv.style.width  = `${end.width }px`;
 				winDiv.style.height = `${end.height}px`;
-				currWin.ui.windowBody.style.height = `${bodyHeight - 25}px`;
-				currWin.ui.windowBody.style.width  = `${end.width  - 25}px`;
+				let bodyHeight = end.height - currWin.ui.titleBar.clientHeight;
+				if (currWin.ui.statusBar) {
+					bodyHeight = bodyHeight - currWin.ui.statusBar.clientHeight;
+				}
+				currWin.ui.windowBody.style.height = `${bodyHeight - WIN_BODY_PADDING}px`;
+				currWin.ui.windowBody.style.width  = `${end.width  - WIN_BODY_PADDING}px`;
 			}
 		});
 	},
@@ -683,11 +676,10 @@ export abstract class UIWindowAdapter implements UIObj {
 		if (cfg) {
 			if (cfg.bindWinOpt) { this.cfg.bindWinOpt = cfg.bindWinOpt; }
 			if (cfg.icons) { this.cfg.icons = cfg.icons; }
-			if (cfg.scalable != undefined) { this.cfg.scalable = cfg.scalable; }
-			if (cfg.body) { 
-				if (cfg.body.overflow) { this.cfg.body.overflow = cfg.body.overflow; }
-				if (cfg.body.initSize) { this.cfg.body.initSize = cfg.body.initSize; }
-			 }
+			if (cfg.scalable !== undefined) { this.cfg.scalable = cfg.scalable; }
+			if (cfg.body) {
+				this.cfg.body = { ...this.cfg.body, ...cfg.body };
+			}
 		}
 	}
 
@@ -827,17 +819,16 @@ export class DockBar {
 	private layout(sizeCurve: (x: number) => number, opacityCurve: (x: number) => number) {
 		let items = this.barDiv.children;
 		for (let i = 0; i < items.length; i++) {
-			let item: Element | null = items.item(i);
+			let item = items.item(i) as HTMLElement | null;
 			if (item != null) {
-				let elm: any = item;
 				let rect = item.getBoundingClientRect();
 				let x = rect.left + rect.width / 2;
 				// 图标的大小
 				let scale = sizeCurve(x);
-				elm.style.setProperty('--i', `${scale}`);
+				item.style.setProperty('--i', `${scale}`);
 				// 图标的透明度
-				let opacity = opacityCurve(x)
-				elm.style.opacity = `${opacity}%`;
+				let opacity = opacityCurve(x);
+				item.style.opacity = `${opacity}%`;
 			}
 		}
 	}
@@ -868,23 +859,22 @@ export class DockBar {
 	removeIcon(win: UIObj) {
 		let iconId = this.genAppIconId(win.id);
 		let items = this.barDiv.children;
-		if (items.length > 0) {
-			for (let i = 0; i < items.length; i++) {
-				if (iconId === items.item(i)?.id) {
-					let gap : Element | null = null;
-					let icon: Element | null = items.item(i);
-					if (items.length == 0) {
-						// 最后一个，没有间隔符
-					} else if (i == 0 && items.item(i + 1)?.classList.contains("gap")) {
-						// 如果是第一个元素，删除右边的间隔
-						gap = items.item(i + 1);
-					} else if (items.item(i - 1)?.classList.contains("gap")) {
-						// 其他的元素默认删除左边的间隔
-						gap = items.item(i - 1);
-					}
-					if (icon) { this.barDiv.removeChild(icon); }
-					if (gap ) { this.barDiv.removeChild(gap ); }
+		for (let i = 0; i < items.length; i++) {
+			if (iconId === items.item(i)?.id) {
+				let gap : Element | null = null;
+				let icon: Element | null = items.item(i);
+				if (items.length == 1) {
+					// 最后一个元素，没有间隔符
+				} else if (i == 0 && items.item(i + 1)?.classList.contains("gap")) {
+					// 如果是第一个元素，删除右边的间隔
+					gap = items.item(i + 1);
+				} else if (items.item(i - 1)?.classList.contains("gap")) {
+					// 其他的元素默认删除左边的间隔
+					gap = items.item(i - 1);
 				}
+				if (icon) { this.barDiv.removeChild(icon); }
+				if (gap ) { this.barDiv.removeChild(gap ); }
+				break;
 			}
 		}
 	}
@@ -894,7 +884,8 @@ export class DockBar {
 
 export namespace JadeWindowUI {
 
-	export function genWinId(id: string): string { return `${id}-${(new Date()).getTime()}`; }
+	let winIdCounter = 0;
+	export function genWinId(id: string): string { return `${id}-${Date.now()}-${winIdCounter++}`; }
 
 	export function genWinTitleBarId(id: string): string { return `titBar-${id}`; }
 
@@ -916,7 +907,7 @@ export namespace JadeWindowUI {
 		let titleBarText = document.createElement("div");
 		titleBarText.id = genWinTitleTextId(win.id);
 		titleBarText.classList.add("title-bar-text", "cannot-select");
-		titleBarText.innerHTML = win.title;
+		titleBarText.textContent = win.title;
 		return titleBarText;
 	}
 	let renderTitleBarIconText = (win: UIObj): HTMLDivElement => {

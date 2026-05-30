@@ -98,8 +98,8 @@ class TestBasicUtil {
 	static testStr() {
 		//
 		testFunc("aaaa"          === StrUtil.trim     ("   \t   aaaa   \t   "), (msg, sty, mk) => { console.log(msg, "StrUtil.trim()"     , sty, mk); });
-		testFunc("aaaa   	   " === StrUtil.trimLeft ("   \t   aaaa   \t   "), (msg, sty, mk) => { console.log(msg, "StrUtil.trimLeft()" , sty, mk); });
-		testFunc("   	   aaaa" === StrUtil.trimRight("   \t   aaaa   \t   "), (msg, sty, mk) => { console.log(msg, "StrUtil.trimRight()", sty, mk); });
+		testFunc("aaaa   	   " === "   \t   aaaa   \t   ".trimStart(), (msg, sty, mk) => { console.log(msg, "String.trimStart()" , sty, mk); });
+		testFunc("   	   aaaa" === "   \t   aaaa   \t   ".trimEnd()  , (msg, sty, mk) => { console.log(msg, "String.trimEnd()"   , sty, mk); });
 		//
 		testFunc("0123456789abcdefg" === StrUtil.utf8to16("0123456789abcdefg"), (msg, sty, mk) => { console.log(msg, "StrUtil.utf8to16()", sty, mk); });
 		testFunc("0123456789abcdefg" === StrUtil.utf16to8("0123456789abcdefg"), (msg, sty, mk) => { console.log(msg, "StrUtil.utf16to8()", sty, mk); });
