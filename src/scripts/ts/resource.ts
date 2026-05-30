@@ -1,10 +1,13 @@
 import { SimpleMap } from "./dataStructure.js";
 import { IconSize, IBase64Img, Base64ImgType } from "./web.js";
 
+/** 默认图标组枚举 */
 export enum DefaultIconGroup { ELEC_FACE, ELEC_BUG, CAMERA };
 
+/** 图标组：包含五种尺寸的 Base64 图片 */
 export type IconGroup = { x12: IBase64Img, x16: IBase64Img, x24: IBase64Img, x32: IBase64Img, x48: IBase64Img };
 
+/** 默认错误图片（50x50 JPG），未使用 */
 let defaultErrImg50x50 = {
 	format: Base64ImgType.BASE64_JPG, data:
 		"/9j/4AAQSkZJRgABAQEASABIAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc" +
@@ -24,6 +27,7 @@ let defaultErrImg50x50 = {
 		"18N8f/2Q=="
 };
 
+/** 默认图标组：ELEC_FACE（电子脸） */
 const iconDefault01: IconGroup = {
 	x12: {
 		format: Base64ImgType.BASE64_PNG, data:
@@ -89,6 +93,7 @@ const iconDefault01: IconGroup = {
 			"OUFSJBCFQBTHMHC4nylFx/LNPXJ1AAAAAElFTkSuQmCC"
 	}
 };
+/** 默认图标组：ELEC_BUG（电子虫） */
 const iconDefault02: IconGroup = {
 	x12: {
 		format: Base64ImgType.BASE64_PNG, data:
@@ -155,6 +160,7 @@ const iconDefault02: IconGroup = {
 			"jAeOAAAAAElFTkSuQmCC"
 	}
 };
+/** 默认图标组：CAMERA（相机） */
 const iconDefault03: IconGroup = {
 	x12: {
 		format: Base64ImgType.BASE64_PNG, data:
@@ -262,6 +268,7 @@ const iconDefault03: IconGroup = {
 	}
 };
 
+/** 默认桌面背景图片 */
 const imgDesktopBg: IBase64Img = {
 	format: Base64ImgType.BASE64_JPG, data:
 		'/9j/4AAQSkZJRgABAQEAYABgAAD/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAEAAAAAAAD/7AARRHVja3kAAQAEAAAAUAAA/9sAQwACAQECAQECAgICAgICAgMFAwMDAwMGBAQDBQcGBwcHBgcH' +
@@ -313,6 +320,11 @@ const imgDesktopBg: IBase64Img = {
 		'gCrIxaKJjksy8kn0JH8gP5dMCiiigD//2Q=='
 };
 
+/**
+ * Jade UI 资源管理
+ *
+ * 提供默认图标组的注册与查询，支持按尺寸获取 Base64 图片。
+ */
 export namespace JadeUIResource {
 
 	let iconGroupMap = new SimpleMap<DefaultIconGroup, IconGroup>();
@@ -320,6 +332,11 @@ export namespace JadeUIResource {
 	iconGroupMap.put(DefaultIconGroup.ELEC_BUG, iconDefault02);
 	iconGroupMap.put(DefaultIconGroup.CAMERA, iconDefault03);
 
+	/**
+	 * 按名称获取默认图标组
+	 * @param name - 图标组名称
+	 * @returns {IconGroup} 图标组，未知名称时回退到 ELEC_FACE
+	 */
 	export function getDefaultIcon(name: DefaultIconGroup): IconGroup {
 		const grp = iconGroupMap.get(name);
 		if (!grp) {
@@ -337,6 +354,12 @@ export namespace JadeUIResource {
 		[IconSize.x48]: "x48",
 	};
 
+	/**
+	 * 按名称和尺寸获取默认图标的 Base64 字符串
+	 * @param name - 图标组名称
+	 * @param size - 图标尺寸
+	 * @returns {string} Base64 格式的图片数据 URI，未找到时返回空字符串
+	 */
 	export function getDefaultIconBase64(name: DefaultIconGroup, size: IconSize): string {
 		const grp = getDefaultIcon(name);
 		const key = sizeKeyMap[size];
@@ -347,6 +370,7 @@ export namespace JadeUIResource {
 		return "";
 	}
 
+	/** 默认桌面背景图片 */
 	export const defaultDesktopBackground = imgDesktopBg;
 
 }
