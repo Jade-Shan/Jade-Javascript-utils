@@ -1,7 +1,13 @@
 import { NumUtil } from "./basic.js";
 
+/** 2D 几何图形基础接口（空标记接口） */
 export interface IGeo2D { }
 
+/**
+ * 2D 几何形状接口
+ *
+ * 所有具体几何图形（点、线、圆、矩形、多边形等）均实现此接口。
+ */
 export interface GeoShape2D extends IGeo2D {
 
 	/**
@@ -31,16 +37,32 @@ export interface GeoShape2D extends IGeo2D {
 
 }
 
+/** 2D 曲线接口（圆、弧等） */
 export interface GeoCurve2D extends GeoShape2D { }
 
 
+/**
+ * 2D 多边形接口
+ *
+ * 具有离散顶点的几何图形（点、线段、矩形等）实现此接口。
+ */
 export interface GeoPolygon2D extends GeoShape2D {
 
+	/**
+	 * 获取图形的所有顶点
+	 * @returns {Array<Point2D>} 顶点数组
+	 */
 	getVertex(): Array<Point2D>;
 
 }
 
+/** 圆的只读类型：圆心 c 与半径 radius */
 export type ICircle2D = { readonly c: Point2D, readonly radius: number }
+/**
+ * 2D 圆形
+ *
+ * 实现 GeoCurve2D 接口，提供最近点计算和切线求解。
+ */
 export class Circle2D implements GeoCurve2D, ICircle2D {
 	readonly c     : Point2D;
 	readonly radius: number;
@@ -104,7 +126,13 @@ export class Circle2D implements GeoCurve2D, ICircle2D {
 
 }
 
+/** 2D 点的只读类型 */
 export type IPoint2D = { readonly x: number, readonly y: number };
+/**
+ * 2D 点
+ *
+ * 同时是一个单顶点的多边形，实现 GeoPolygon2D 接口。
+ */
 export class Point2D implements GeoPolygon2D, IPoint2D {
 	readonly x    : number;
 	readonly y    : number;
@@ -145,7 +173,13 @@ export class Point2D implements GeoPolygon2D, IPoint2D {
 
 }
 
+/** 2D 线段的只读类型 */
 export type ILine2D = { readonly a: IPoint2D, readonly b: IPoint2D }
+/**
+ * 2D 线段
+ *
+ * 由两个端点定义，实现 GeoPolygon2D 接口。
+ */
 export class Line2D implements GeoPolygon2D, ILine2D {
 	readonly a: Point2D;
 	readonly b: Point2D;
@@ -173,14 +207,26 @@ export class Line2D implements GeoPolygon2D, ILine2D {
 
 }
 
+/**
+ * 2D 射线的只读类型
+ *
+ * 射线由起点 start 和经过的点 mid 定义。
+ * angle 为弧度，cAngle 为规范到 [0, 2π) 的弧度。
+ */
 export type IRay2D = {
 	readonly start   : IPoint2D, // 起点
 	readonly mid     : IPoint2D, // 经过的点
-	readonly angle   : number,  // 角度
-	readonly cAngle  : number, // 规范后的角度
-	readonly angleStr: string, //
-	readonly length  : number, // start 到 end 的距离
+	readonly angle   : number,  // 角度（弧度）
+	readonly cAngle  : number, // 规范后的角度 [0, 2π)
+	readonly angleStr: string, // 角度的格式化字符串
+	readonly length  : number, // start 到 mid 的距离
 }
+/**
+ * 2D 射线
+ *
+ * 由起点和经过点定义，实现 GeoPolygon2D 接口。
+ * 构造时自动计算角度、规范角度和长度。
+ */
 export class Ray2D implements GeoPolygon2D, IRay2D {
 	readonly start   : IPoint2D; // 起点
 	readonly mid     : IPoint2D; // 经过的点
@@ -216,7 +262,17 @@ export class Ray2D implements GeoPolygon2D, IRay2D {
 
 }
 
+/**
+ * 2D 矩形的只读类型
+ *
+ * (x, y) 为左上角坐标，(width, height) 为宽高。
+ */
 export type IRectangle2D = { readonly x: number, readonly y: number, readonly width: number, readonly height: number }
+/**
+ * 2D 矩形
+ *
+ * 实现 GeoPolygon2D 接口。构造时自动计算中心点、四个顶点和四条边。
+ */
 export class Rectangle2D implements GeoPolygon2D, IRectangle2D {
 	readonly x      : number;
 	readonly y      : number;
@@ -287,25 +343,56 @@ export enum QuadPos {
 	/** Y轴负   */ AXIS_Y_NAG = 0b1100,
 }
 
+/**
+ * 角度信息
+ *
+ * 同时包含弧度和角度两种表示，以及原始值和规范化值。
+ */
 export interface IAngle {
+	/** 原始弧度（可能为负） */
 	oriAgl: number;
+	/** 规范化弧度 [0, 2π) */
 	fmtAgl: number;
+	/** 原始度数 */
 	oriDgr: number;
+	/** 规范化度数 [0, 360) */
 	fmtDgr: number;
 
 }
 
+/**
+ * 旋转参数
+ *
+ * 表示从起始角度旋转到结束角度的过程。
+ */
 export interface IRevolveOption {
+	/** 起始角度（弧度） */
 	start: number;
+	/** 结束角度（弧度） */
 	end  : number;
+	/** 角度差（弧度） */
 	diff : number;
 }
 
+/**
+ * 2D 几何计算工具集
+ *
+ * 提供距离计算、碰撞检测、象限判断、射线生成等纯函数。
+ */
 export namespace Geo2DUtils {
+	/** π / 2（90°） */
 	export const PI_HALF     = Math.PI / 2;
+	/** 1.5π（270°） */
 	export const PI_ONE_HALF = Math.PI + PI_HALF;
+	/** 2π（360°） */
 	export const PI_DOUBLE   = Math.PI * 2;
 
+	/**
+	 * 格式化角度，返回原始/规范化后的弧度和度数
+	 *
+	 * @param angle - 弧度值（可为负）
+	 * @returns {IAngle} 角度信息对象
+	 */
 	export function formatAngle(angle: number): IAngle {
 		let fmtAgl = angle < 0 ? Geo2DUtils.PI_DOUBLE + angle : angle;
 		let oriDgr = angle * 180 / Math.PI;
@@ -313,6 +400,12 @@ export namespace Geo2DUtils {
 		return { oriAgl: angle, fmtAgl: fmtAgl, oriDgr: oriDgr, fmtDgr: fmtDgr };
 	}
 
+	/**
+	 * 格式化角度为可读字符串
+	 *
+	 * @param angle - 弧度值
+	 * @returns {string} 格式化的角度字符串
+	 */
 	export function formatAngleStr(angle: number): string {
 		let agl = formatAngle(angle);
 		return `angle: ${NumUtil.toFixed(agl.oriAgl, 3)} = ${NumUtil.toFixed(agl.fmtAgl, 3)} = ` +
@@ -482,23 +575,38 @@ export namespace Geo2DUtils {
 		return quad as QuadPos;
 	}
 
+	/**
+	 * 根据指定长度重新计算射线的终点
+	 *
+	 * @param ray - 原始射线
+	 * @param length - 新的长度
+	 * @returns {Ray2D} 长度调整后的新射线
+	 */
 	export function setRayLength(ray: IRay2D, length: number): Ray2D {
 		let x = Math.cos(ray.angle + Math.PI) * length + ray.start.x;
 		let y = Math.sin(ray.angle + Math.PI) * length + ray.start.y;
 		return new Ray2D(ray.start, { x: x, y: y });
 	}
 
+	/**
+	 * 根据起点和经过点创建射线
+	 *
+	 * @param start - 射线起点
+	 * @param mid - 射线经过的点
+	 * @returns {Ray2D} 新射线
+	 */
 	export function calRayByPoints(start: IPoint2D, mid: IPoint2D): Ray2D {
 		return new Ray2D(start, mid);
 	}
 
 	/**
-	 * 
-	 * @param x 
-	 * @param y 
-	 * @param shape 
-	 * @param length 
-	 * @returns 
+	 * 生成从外部点到图形各顶点的射线数组
+	 *
+	 * @param x - 外部点的 X 坐标
+	 * @param y - 外部点的 Y 坐标
+	 * @param shape - 目标几何图形
+	 * @param length - 射线长度，不指定时使用原始距离
+	 * @returns {Array<{ vertex: Point2D, ray: Ray2D }>} 顶点与射线对的数组
 	 */
 	export function genVertexRaysFrom(x: number, y: number, shape: GeoShape2D, length?: number): 
 		Array<{ vertex: Point2D, ray: Ray2D }> //
@@ -582,6 +690,13 @@ export namespace Geo2DUtils {
 		return { start: startAngle, end: endAngle, diff: diffAngle };
 	}
 
+	/**
+	 * 判断点在直线的哪一侧
+	 *
+	 * @param line - 参考线段
+	 * @param p - 待判断的点
+	 * @returns {number} 正值表示点在一侧，负值表示在另一侧，0 表示在线上
+	 */
 	export function checkPointLineSide(line: ILine2D, p: IPoint2D): number {
 		let side = 0;
 		let ll = line.b.y < line.a.y ? { a: line.b, b: line.a } : line;

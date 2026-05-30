@@ -28,36 +28,76 @@ export enum Base64ImgType {
  */
 export type IBase64Img = { format: Base64ImgType, data: string };
 
+/**
+ * HTTP 请求选项
+ */
 export interface HttpRequestOption {
+	/** 是否忽略缓存 */
 	ignoreCache    ?: boolean;
+	/** 自定义请求头 */
 	headers        ?: SimpleMap<string, string>;
+	/** 超时时间（毫秒），默认 30000 */
 	timeout        ?: number;
+	/** 是否携带跨域凭证 */
 	withCredentials?: boolean;
 }
 
+/**
+ * HTTP 请求定义
+ * @typeParam T - 请求体类型
+ */
 export interface HttpRequest<T> {
+	/** HTTP 方法，默认 GET */
 	method ?: ("GET" | "POST");
+	/** 请求 URL */
 	url     : string;
+	/** 请求选项 */
 	opt    ?: HttpRequestOption;
+	/** 请求体 */
 	body   ?: T;
 }
 
+/**
+ * HTTP 响应
+ * @typeParam T - 响应体类型
+ */
 export interface HttpResponse<T> {
+	/** HTTP 状态码 */
 	statusCode: number;
+	/** HTTP 状态消息 */
 	statusMsg : string;
+	/** 响应头 */
 	headers  ?: SimpleMap<string, string>;
+	/** 响应体，失败时为 null */
 	body      : T | null;
 }
 
+/**
+ * HTTP 请求事件处理器
+ * @typeParam T - 请求体类型
+ * @typeParam R - 响应体类型
+ */
 export interface HttpRequestHandler<T, R> {
+	/** 请求成功回调 */
 	onLoad    ?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;
+	/** 进度回调 */
 	onProgress?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;
+	/** 超时回调 */
 	onTimeout ?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;
+	/** 中止回调 */
 	onAbort   ?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;
+	/** 错误回调 */
 	onError   ?: (evt: ProgressEvent, xhr: XMLHttpRequest, req: HttpRequest<T>) => HttpResponse<R>;
 }
 
 
+/**
+ * 内部 HTTP 请求执行函数
+ *
+ * @param req - HTTP 请求定义
+ * @param hdl - 可选的事件处理器
+ * @returns {Promise<HttpResponse<R>>} 响应 Promise
+ */
 function doHttp<T, R>(req: HttpRequest<T>, //
 	hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
 {
@@ -98,6 +138,7 @@ function doHttp<T, R>(req: HttpRequest<T>, //
 	});
 }
 
+/** 默认占位图片（Base64 编码的 1x1 灰色 JPEG） */
 let defaultImgData = 'data:image/jpeg;base64,' +
 	'/9j/4AAQSkZJRgABAQEASABIAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc' +
 	'4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2' +
@@ -115,18 +156,29 @@ let defaultImgData = 'data:image/jpeg;base64,' +
 	'PcBERbSP3AAUHFCFoRshUeovIE8dfhE5nBas2LuI2cBxLiWTKBWkBOoiFCP3KJmwGUyDua4I8TSNM9uhtMRg2r2yick' +
 	'18N8f/2Q==';
 
+/**
+ * 图片代理配置
+ */
 export interface ImageProxyConfig {
+	/** 代理服务器 URL */
 	proxyUrl  ?: string, 
+	/** 自定义代理 URL 生成函数 */
 	proxyFunc ?: (url: string) => string 
 };
 
+/**
+ * Web 工具类
+ *
+ * 提供 HTTP 请求、Cookie 操作、图片处理、文件下载、表单验证等通用功能。
+ */
 export class WebUtil {
 
 	/**
-	 * 
-	 * @param req 
-	 * @param hdl 
-	 * @returns 
+	 * 发送 HTTP 请求
+	 *
+	 * @param req - 请求定义
+	 * @param hdl - 可选的事件处理器
+	 * @returns {Promise<HttpResponse<R>>} 响应 Promise
 	 */
 	static async requestHttp<T, R>(req: HttpRequest<T>, //
 		hdl?: HttpRequestHandler<T, R>): Promise<HttpResponse<R>> // 
@@ -134,6 +186,14 @@ export class WebUtil {
 		return await doHttp<T, R>(req, hdl);
 	}
 
+		/**
+	 * 通过代理加载图片，加载失败时使用默认占位图
+	 *
+	 * @param imageElem - 图片元素
+	 * @param oriImageUrl - 原始图片 URL
+	 * @param cfg - 代理配置
+	 * @returns {Promise<void>}
+	 */
 	static async loadImageByProxy(imageElem: HTMLImageElement, oriImageUrl: string, //
 		cfg?: ImageProxyConfig): Promise<void> // 
 	{
@@ -172,8 +232,9 @@ export class WebUtil {
 
 	/**
 	 * 以16进制显示字符的Unicode编码
-	 * @param  c 
-	 * @returns 
+	 *
+	 * @param c - 要转换的字符
+	 * @returns {string} HTML 标签字符串
 	 */
 	static transUnicodeWikiInHex(c: string): string {
 		// `page.transUnicodeWikiInHex('⛵')`
@@ -183,8 +244,9 @@ export class WebUtil {
 
 	/**
 	 * 以10进制显示字符的Unicode编码
-	 * @param  c 
-	 * @returns 
+	 *
+	 * @param c - 要转换的字符
+	 * @returns {string} HTML 标签字符串
 	 */
 	static transUnicodeWikiInDec(c: string): string {
 		// `page.transUnicodeWikiInDec('⛵')`
@@ -207,8 +269,11 @@ export class WebUtil {
 	static transBase64ImgURL(base64Img: IBase64Img): string { return `url('${this.transBase64ImgSrc(base64Img)}')` }
 
 	/**
-	 * 
-	 * @param  url 
+	 * 通过动态创建 <a> 标签实现页面导航
+	 *
+	 * @param url - 目标 URL
+	 * @param target - 打开方式（如 _blank），不指定时在当前窗口打开
+	 * @returns {void}
 	 */
 	private static navigateUrl(url: string, target?: string): void {
 		let el = document.createElement("a");
@@ -222,26 +287,31 @@ export class WebUtil {
 	}
 
 	/**
+	 * 在当前窗口跳转到指定 URL
 	 *
-	 * @param  url
+	 * @param url - 目标 URL
+	 * @returns {void}
 	 */
 	static goUrl(url: string): void {
 		this.navigateUrl(url);
 	}
 
 	/**
+	 * 在新窗口打开指定 URL
 	 *
-	 * @param url
+	 * @param url - 目标 URL
+	 * @returns {void}
 	 */
 	static openWindow(url: string): void {
 		this.navigateUrl(url, '_blank');
 	}
 
 	/**
-	 * 
-	 * @param username 
-	 * @param password 
-	 * @returns 
+	 * 生成 HTTP Basic 认证头
+	 *
+	 * @param username - 用户名
+	 * @param password - 密码
+	 * @returns {string} Authorization 头的值，如 "Basic xxx"
 	 */
 	static webAuthBasic(username: string, password: string): string {
 		let encodeStr = StrUtil.base64encode(StrUtil.utf16to8(`${username}:${password}`));
@@ -250,8 +320,10 @@ export class WebUtil {
 
 
 	/**
-	 * cookie操作
-	 * 
+	 * 读取指定名称的 Cookie 值
+	 *
+	 * @param name - Cookie 名称
+	 * @returns {string} Cookie 值，不存在时返回空字符串
 	 */
 	static loadCookieValue(name: string): string {
 		let cookieValue: string = "";
@@ -269,8 +341,10 @@ export class WebUtil {
 	}
 
 	/**
-	 * 
-	 * @param name 
+	 * 删除指定名称的 Cookie
+	 *
+	 * @param name - Cookie 名称
+	 * @returns {void}
 	 */
 	static deleteCookie(name: string): void {
 		let d = new Date();
@@ -279,10 +353,12 @@ export class WebUtil {
 	}
 
 	/**
-	 * 
-	 * @param name 
-	 * @param rec 
-	 * @returns 
+	 * 设置 Cookie
+	 *
+	 * @param name - Cookie 名称
+	 * @param value - Cookie 值
+	 * @param rec - Cookie 属性配置（过期天数、路径、域名、SameSite、Secure）
+	 * @returns {void}
 	 */
 	static setCookieValue(name: string, value: string, rec: {
 		expireDays?: number,
@@ -314,20 +390,20 @@ export class WebUtil {
 	}
 
 	/**
-	 * 验证姓名 中文字、英文字母、数字
-	 * 
-	 * @param username 
-	 * @returns 
+	 * 验证用户名：中文字、英文字母、数字，以中文或字母开头
+	 *
+	 * @param username - 用户名字符串
+	 * @returns {boolean} 格式正确时返回 true
 	 */
 	static checkUsername(username: string): boolean {
 		return /^[\u4e00-\u9fa5a-z][\u4e00-\u9fa5a-z0-9 ]+$/i.test(username);
 	}
 
 	/**
-	 * 验证手机号
-	 * 
-	 * @param  phoneno 
-	 * @returns 
+	 * 验证中国大陆手机号（1[3-9]xxxxxxxxx）
+	 *
+	 * @param phoneno - 手机号字符串
+	 * @returns {boolean} 格式正确时返回 true
 	 */
 	static checkMobile_zh_CN(phoneno: string): boolean {
 		return /^1[3-9]\d{9}$/.test(phoneno);
@@ -335,10 +411,10 @@ export class WebUtil {
 
 
 	/**
-	 * 按文件扩展名检查是否是图片
-	 * 
-	 * @param postfix 
-	 * @returns 
+	 * 按文件扩展名检查是否是图片（jpg/jpeg/gif/png/bmp/webp/svg）
+	 *
+	 * @param postfix - 文件名或扩展名字符串
+	 * @returns {boolean} 是图片扩展名时返回 true
 	 */
 	static checkImageFilePostfix(postfix: string): boolean {
 		return /\.(jpg|jpeg|gif|png|bmp|webp|svg)$/i.test(postfix);
@@ -346,11 +422,12 @@ export class WebUtil {
 
 
 	/**
-	 * 验证图片大小
-	 * 
-	 * @param {*} fileInput 
-	 * @param {Number} imgMaxSize 
-	 * @returns 
+	 * 验证上传图片的文件大小
+	 *
+	 * @param fileInput - 文件上传 input 元素
+	 * @param imgMaxSize - 最大允许的文件大小（字节）
+	 * @param onOversize - 超限时的回调
+	 * @returns {boolean} 未超限时返回 true
 	 */
 	static checkImageFileSize(fileInput: HTMLInputElement, imgMaxSize: number,
 		onOversize?: (file: File, maxSize: number) => void): boolean {
@@ -374,10 +451,11 @@ export class WebUtil {
 	}
 
 	/**
-	 * 
-	 * @param  msgMap 
-	 * @param  key 
-	 * @returns 
+	 * 从国际化消息映射中获取指定 key 的文本
+	 *
+	 * @param msgMap - 国际化消息 Map
+	 * @param key - 消息键
+	 * @returns {string | undefined} 对应的消息文本，不存在时返回 undefined
 	 */
 	static getI18n(msgMap: Map<string, string>, key: string): (string | undefined) {
 		return msgMap.get(key);
@@ -428,9 +506,11 @@ export class WebUtil {
 	}
 
 	/**
-	 * 
-	 * @param uploader 上传图片的HTMLInput
-	 * @param images 显示上传图片的HTMLImage
+	 * 预览本地选择的图片
+	 *
+	 * @param uploader - 文件上传 input 元素
+	 * @param images - 用于显示预览的 Image 元素数组
+	 * @returns {void}
 	 */
 	static previewLocalImage(uploader: HTMLInputElement, images: Array<HTMLImageElement>) {
 		uploader.onchange = (ev: Event) => {
@@ -450,9 +530,11 @@ export class WebUtil {
 	}
 
 	/**
-	 * 预览远程的图片
-	 * @param url 图片URL
-	 * @param image 显示图片的HTMLImage
+	 * 预览远程图片（通过 fetch 加载并转为 blob URL）
+	 *
+	 * @param url - 图片 URL
+	 * @param image - 显示图片的 Image 元素
+	 * @returns {void}
 	 */
 	static previewRemoteImage(url: string, image: HTMLImageElement) {
 		fetch(url, { mode: 'cors' }).then(resp => resp.blob()).then(blob => {
