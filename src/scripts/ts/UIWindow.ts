@@ -3,9 +3,13 @@ import { IPoint2D } from "./geo2d.js";
 import { JadeUIResource, IconGroup, DefaultIconGroup } from "./resource.js";
 import { WebUtil } from "./web.js";
 
+/** 窗口初始 z-index 最小值 */
 const WIN_Z_IDX_MIN = 2000;
+/** 窗口边框厚度（像素） */
 const WIN_BORDER_SIZE = 6;
+/** 窗口内容区内边距（像素） */
 const WIN_BODY_PADDING = 25;
+/** Dock 栏与桌面边缘间距 */
 const DOCK_BAR_MARGIN = 10;
 
 /**
@@ -16,22 +20,41 @@ interface IDesktopConfig {
 	dockBar?: DockBarParam
 }
 
+/**
+ * 拖动中的窗口状态
+ */
 interface DraggingWindow {
+	/** 被拖动的窗口 */
 	win?: UIObj,
+	/** 鼠标起始位置 */
 	moveStart?: { x: number, y: number },
+	/** 窗口起始位置 */
 	winStart?: { left: number, top: number }
 }
 
+/**
+ * 缩放中的窗口状态
+ */
 interface ScalingWindow {
+	/** 被缩放的窗口 */
 	win?: UIObj,
+	/** 缩放方向（小键盘方位：5=中心） */
 	direction?: 1|2|3|4|5|6|7|8|9,
+	/** 鼠标起始位置 */
 	moveStart?: { x: number, y: number },
+	/** 窗口起始信息（位置与大小） */
 	winStart?: { left: number, top: number, width: number, height: number }
 }
 
+/**
+ * 当前窗口状态（顶层、拖动中、缩放中）
+ */
 interface CurrentWindow {
+	/** 当前顶层窗口 */
 	top?: UIObj,
+	/** 拖动状态 */
 	dragging: DraggingWindow,
+	/** 缩放状态 */
 	scaling: ScalingWindow,
 }
 
@@ -45,15 +68,21 @@ export class UIDesktop {
 	private dockBar?: DockBar; // 程序栏
 	private readonly currWin: CurrentWindow = {dragging:{}, scaling:{}};
 
+	/** 获取当前顶层窗口 */
 	getCurrTopWin(): UIObj | undefined { return this.currWin.top; }
+	/** @param win - 要设为顶层的窗口 */
 	setCurrTopWin(win: UIObj): void { this.currWin.top = win; }
 
+	/** 获取当前拖动状态 */
 	getCurrDragging() { return this.currWin.dragging; }
+	/** @param dragging - 拖动状态 */
 	setCurrDragging(dragging: DraggingWindow) {
 		this.currWin.dragging = dragging;
 	}
 
+	/** 获取当前缩放状态 */
 	getCurrScaling() { return this.currWin.scaling; }
+	/** @param scaling - 缩放状态 */
 	setCurrScaling(scaling: ScalingWindow) {
 		this.currWin.scaling= scaling;
 	}
@@ -160,6 +189,11 @@ export class UIDesktop {
 		}
 	}
 
+	/**
+	 * 重新排列窗口 z-index（排除指定窗口），被排除窗口之后会追加到末尾成为顶层
+	 * @param excludeId - 要排除的窗口 ID
+	 * @returns {Array<UIObj>} 重排后的窗口数组
+	 */
 	private reorderWindows(excludeId: string): Array<UIObj> {
 		let newIndex: Array<UIObj> = [];
 		for (let i = 0; i < this.windowZIndex.length; i++) {
@@ -256,6 +290,7 @@ export interface IBindWinOpt {
 	bindWindowScaleMoving: (desktop: UIDesktop) => any,
 
 }
+/** 清除缩放状态，恢复默认光标 */
 let cleanScaling = (desktop: UIDesktop) => {
 	desktop.desktopDiv.style.cursor = "default";
 	desktop.setCurrScaling({});
@@ -385,6 +420,11 @@ export let defaultWinOption = {
 		})
 	},
 
+	/**
+	 * 绑定窗口缩放选中事件
+	 * 在窗口边缘 7px 范围内检测鼠标，确定缩放方向
+	 * @param win - 窗口对象
+	 */
 	bindWindowScaleSelect: (win: UIObj): any=> {
 		let desktop = win.desktop;
 		let winDiv = win.ui.win;
@@ -435,6 +475,10 @@ export let defaultWinOption = {
 	},
 
 
+	/**
+	 * 绑定窗口缩放拖动事件（全局桌面监听）
+	 * @param desktop - 桌面实例
+	 */
 	bindWindowScaleMoving: (desktop: UIDesktop): any => {
 		let desktopDiv = desktop.desktopDiv;
 		//
@@ -503,6 +547,12 @@ export let defaultWinOption = {
 		});
 	},
 
+	/**
+	 * 绑定窗口拖动选中事件（标题栏 mousedown）
+	 * @param win - 窗口对象
+	 * @param titleBar - 标题栏元素
+	 * @param titleBarControl - 标题栏控件区域
+	 */
 	bindWindowDragSelect: (win: UIObj, titleBar: HTMLElement, titleBarControl: HTMLElement): any => {
 		let desktop = win.desktop;
 		titleBar.addEventListener("mousedown" , (e) => {
@@ -513,7 +563,11 @@ export let defaultWinOption = {
 		});
 	},
 
-	bindWindowDragMoving: (desktop: UIDesktop): any => { /* 拖动窗口 */
+	/**
+	 * 绑定窗口拖动移动事件（全局桌面监听）
+	 * @param desktop - 桌面实例
+	 */
+	bindWindowDragMoving: (desktop: UIDesktop): any => {
 		let desktopDiv = desktop.desktopDiv;
 		//
 		let cleanDragging = () => {
@@ -572,12 +626,21 @@ interface WinCfg {
 	},
 }
 
+/**
+ * 窗口构造参数（可选配置）
+ */
 export interface WinParam {
-	icons?: IconGroup, // 窗口的图标
-	bindWinOpt?: IBindWinOpt, // 绑定窗口的操作
-	scalable?: boolean, // 是否可以调整大小
+	/** 窗口的图标组 */
+	icons?: IconGroup,
+	/** 绑定窗口的操作（关闭/最大化/最小化/拖动/缩放） */
+	bindWinOpt?: IBindWinOpt,
+	/** 是否可以调整大小 */
+	scalable?: boolean,
+	/** 窗口主体配置 */
 	body?: {
+		/** 初始大小 */
 		initSize?: {width: number, height: number},
+		/** 溢出处理 */
 		overflow?: string
 	},
 }
@@ -631,6 +694,10 @@ export interface UIObj {
 	 */
 	setZIndex(zIdx: number): void;
 
+	/**
+	 * 检查窗口是否处于拖动状态
+	 * @returns {boolean}
+	 */
 	checkDragging(): boolean;
 
 }
@@ -717,6 +784,10 @@ export abstract class UIWindowAdapter implements UIObj {
 		this.ui.win.style.zIndex = `${zIndex}`;
 	}
 
+	/**
+	 * 检查窗口是否处于拖动状态
+	 * @returns {boolean}
+	 */
 	checkDragging(): boolean { return this.status.isDragging; }
 
 } 
@@ -734,22 +805,43 @@ export abstract class UIWindowAdapter implements UIObj {
 //}
 
 
+/**
+ * Dock 栏内部配置
+ */
 interface DockBarCfg {
+	/** Dock 栏背景颜色 */
 	dockColor: string,
+	/** 图标颜色 */
 	iconColor: string,
+	/** 透明度：normal=默认, hover=悬停 */
 	opacity: {normal: number, hover: number},
+	/** 图标缩放响应范围 */
 	range: number,
+	/** 图标最大缩放倍数 */
 	maxScale: number,
 }
 
+/**
+ * Dock 栏构造参数
+ */
 interface DockBarParam {
+	/** Dock 栏背景颜色 */
 	dockColor?: string,
+	/** 图标颜色 */
 	iconColor?: string,
+	/** 透明度 */
 	opacity?: {normal: number, hover: number},
+	/** 图标缩放响应范围 */
 	range?: number,
+	/** 图标最大缩放倍数 */
 	maxScale?: number,
 }
 
+/**
+ * Dock 任务栏
+ *
+ * 桌面底部的程序坞，支持图标缩放动画和透明度响应。
+ */
 export class DockBar {
 
 	private barDiv: HTMLDivElement;
@@ -763,6 +855,10 @@ export class DockBar {
 	};
 
 
+	/**
+	 * @param desktop - 桌面实例
+	 * @param cfg - Dock 栏配置
+	 */
 	constructor(desktop: UIDesktop, cfg?: DockBarParam) {
 		if (cfg) {
 			if (cfg.dockColor  ) { this.cfg.dockColor = cfg.dockColor; }
@@ -801,6 +897,14 @@ export class DockBar {
 	}
 
 	// 生成一个曲线函数
+	/**
+	 * 生成图标缩放曲线函数（基于 sin 曲线）
+	 * @param totalDis - 缩放响应总范围
+	 * @param topX - 曲线峰值对应的 X 坐标
+	 * @param minY - 最小缩放倍数
+	 * @param maxY - 最大缩放倍数
+	 * @returns 缩放曲线函数
+	 */
 	private createCurve(totalDis: number, topX: number,  //
 		minY: number, maxY: number): (x: number) => number //
 	{
@@ -816,6 +920,11 @@ export class DockBar {
 		return curve;
 	}
 
+	/**
+	 * 根据曲线函数布局所有图标的大小和透明度
+	 * @param sizeCurve - 缩放曲线函数
+	 * @param opacityCurve - 透明度曲线函数
+	 */
 	private layout(sizeCurve: (x: number) => number, opacityCurve: (x: number) => number) {
 		let items = this.barDiv.children;
 		for (let i = 0; i < items.length; i++) {
@@ -833,10 +942,16 @@ export class DockBar {
 		}
 	}
 
+	/** 生成图标间隔元素的 ID */
 	genAppGrapId(winId: string): string { return `appGrp-${winId}`; };
 
+	/** 生成图标元素的 ID */
 	genAppIconId(winId: string): string { return `appIco-${winId}`; };
 
+	/**
+	 * 向 Dock 栏添加窗口图标
+	 * @param win - 窗口对象
+	 */
 	addIcon(win: UIObj) {
 		let items = this.barDiv.children;
 		if (items.length > 0) {
@@ -856,6 +971,10 @@ export class DockBar {
 		win.cfg.bindWinOpt.bindWinOptMin(win, icon);
 	}
 
+	/**
+	 * 从 Dock 栏移除窗口图标
+	 * @param win - 窗口对象
+	 */
 	removeIcon(win: UIObj) {
 		let iconId = this.genAppIconId(win.id);
 		let items = this.barDiv.children;
@@ -882,15 +1001,24 @@ export class DockBar {
 }
 
 
+/**
+ * Jade 窗口 UI 工具集
+ *
+ * 提供窗口 ID 生成、标题栏渲染、窗口模板渲染、最大化/最小化动画等功能。
+ */
 export namespace JadeWindowUI {
 
 	let winIdCounter = 0;
+	/** 生成唯一窗口 ID */
 	export function genWinId(id: string): string { return `${id}-${Date.now()}-${winIdCounter++}`; }
 
+	/** 生成窗口标题栏 ID */
 	export function genWinTitleBarId(id: string): string { return `titBar-${id}`; }
 
+	/** 生成窗口标题图标 ID */
 	export function genWinTitleIconId(id: string): string { return `titIcon-${id}`; }
 
+	/** 生成窗口标题文本 ID */
 	export function genWinTitleTextId(id: string): string { return `titText-${id}`; }
 
 	let renderTitleBarIcon = (win: UIObj): HTMLDivElement => {
@@ -961,6 +1089,11 @@ export namespace JadeWindowUI {
 
 
 
+	/**
+	 * 计算一组 DIV 元素的总高度
+	 * @param divs - DIV 元素数组
+	 * @returns {number} 总高度
+	 */
 	export function countWindowHeight(divs: Array<HTMLDivElement>): number {
 		let totalHeight = 0;
 		for (let i = 0; i < divs.length; i++) {
@@ -969,6 +1102,11 @@ export namespace JadeWindowUI {
 		return totalHeight;
 	}
 
+	/**
+	 * 计算一组 DIV 元素的总宽度
+	 * @param divs - DIV 元素数组
+	 * @returns {number} 总宽度
+	 */
 	export function countWindowWidth(divs: Array<HTMLDivElement>): number {
 		let totalWidth = 0;
 		for (let i = 0; i < divs.length; i++) {
@@ -977,6 +1115,13 @@ export namespace JadeWindowUI {
 		return totalWidth;
 	}
 
+	/**
+	 * 渲染窗口完整模板（标题栏 + Body + 状态栏）并添加到桌面
+	 * @param win - 窗口对象
+	 * @param renderWindowBody - 可选的窗口主体渲染函数
+	 * @param renderStatusBar - 可选的状态栏渲染函数
+	 * @returns {HTMLDivElement} 窗口 DIV 元素
+	 */
 	export function renderWindowTplt(win: UIObj, renderWindowBody?: () => HTMLDivElement, renderStatusBar?: () => HTMLDivElement): HTMLDivElement {
 
 		let parent = win.desktop.desktopDiv;
@@ -1033,6 +1178,14 @@ export namespace JadeWindowUI {
 		return winDiv;
 	};
 
+	/**
+	 * 显示窗口最大化/最小化的过渡动画
+	 * @param win - 窗口对象
+	 * @param zoomMilSec - 缩放动画时长（毫秒）
+	 * @param deleMilSec - 动画结束后延迟移除时间（毫秒）
+	 * @param start - 动画起始位置和大小
+	 * @param end - 动画结束位置和大小
+	 */
 	export function showWinMaxMinAnima(win: UIObj, zoomMilSec: number, deleMilSec: number,
 		start: { left: number, top: number, width: number, height: number },
 		end  : { left: number, top: number, width: number, height: number }) //

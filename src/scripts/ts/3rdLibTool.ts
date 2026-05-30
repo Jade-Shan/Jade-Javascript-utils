@@ -1,18 +1,35 @@
 
+/**
+ * SyntaxHighlighter 代码高亮库的声明
+ * 参考：https://github.com/syntaxhighlighter/syntaxhighlighter/blob/master/scripts/shCore.js
+ */
 declare namespace SyntaxHighlighter {
+	/**
+	 * 对所有 pre 元素执行语法高亮
+	 * @returns {void}
+	 */
 	function all(): void;
 	namespace autoloader {
-		function apply(arg1: any, arg2: any): any;
+		/**
+		 * 批量注册语言别名与对应的高亮脚本路径
+		 * @param args - 动态参数列表，每两个参数为一组：语言别名和对应脚本路径
+		 * @returns {any}
+		 */
+		function apply(...args: any[]): any;
 	}
 }
 
+/**
+ * SyntaxHighlighterHelper 代码高亮库的工具类
+ */
 export class SyntaxHighlighterHelper {
 
 	/**
-	 * 各语言高亮脚本的路径
-	 * 
-	 * @param hlRootPath 
-	 * @param hlCodePath 
+	 * 加载 SyntaxHighlighter 各语言高亮脚本并执行高亮
+	 *
+	 * @param hlRootPath - 站点根路径前缀，默认为空字符串
+	 * @param hlCodePath - 高亮脚本所在目录路径，默认为 ../../vimwiki-theme/3rd/SyntaxHighlighter/2.1.364/scripts
+	 * @returns {void}
 	 */
 	static loadCodeHightlight(hlRootPath?: string, hlCodePath?: string) {
 		hlRootPath = hlRootPath ? hlRootPath : "";
@@ -61,24 +78,64 @@ export class SyntaxHighlighterHelper {
 	};
 
 }
+
+/**
+ * MathJax 数学公式库的声明
+ * 参考：https://github.com/mathjax/MathJax/blob/master/unpacked/jax/output/HTML-CSS/fonts/STIX-Web/woff2/STIXWeb-Regular.woff2
+ */
 declare class MathJaxNode {
+	/** 父节点引用 */
 	parentNode: MathJaxNode;
+	/** CSS 类名 */
 	className: string;
 }
+/**
+ * MathJaxRec 数学公式库的记录
+ * 参考：https://github.com/mathjax/MathJax/blob/master/unpacked/jax/output/HTML-CSS/fonts/STIX-Web/woff2/STIXWeb-Regular.woff2
+ */
 declare class MathJaxRec {
+	/**
+	 * 获取该公式渲染元素的源 DOM 节点
+	 * @returns {MathJaxNode} 源元素节点
+	 */
 	SourceElement(): MathJaxNode;
 }
 
+/**
+ * MathJax 数学公式库的声明
+ * 参考：https://github.com/mathjax/MathJax/blob/master/unpacked/jax/output/HTML-CSS/fonts/STIX-Web/woff2/STIXWeb-Regular.woff2
+ */
 declare namespace MathJax {
 	namespace Hub {
+		/**
+		 * 配置 MathJax 渲染参数
+		 * @param config - MathJax 配置对象
+		 * @returns {void}
+		 */
 		function Config(config: any): void;
+		/**
+		 * 将回调函数加入 MathJax 执行队列
+		 * @param func - 回调函数
+		 * @returns {void}
+		 */
 		function Queue(func: () => void): void;
+		/**
+		 * 获取页面中所有已渲染公式的记录
+		 * @returns {Array<MathJaxRec>} 公式记录数组
+		 */
 		function getAllJax(): Array<MathJaxRec>;
 	}
 }
 
+/**
+ * MathJaxHelper 数学公式库的工具类
+ */
 export class MathJaxHelper {
 
+	/**
+	 * 默认的 MathJax 配置
+	 * 包含 TeX 公式编号、扩展列表、tex2jax 转换规则以及 HTML-CSS / SVG 输出选项
+	 */
 	private static defaultMathJaxCfg = {
 		TeX: { equationNumbers: { autoNumber: ["AMS"], useLabelIds: true }, extensions: ["color.js", "enclose.js"] },
 		extensions: ["tex2jax.js", "TeX/AMSmath.js", "TeX/AMSsymbols.js"],
@@ -91,9 +148,13 @@ export class MathJaxHelper {
 		SVG: { linebreaks: { automatic: false } }
 	};
 
-	// Fix <code> tags after MathJax finishes running. This is a
-	// hack to overcome a shortcoming of Markdown. Discussion at
-	// https://github.com/mojombo/jekyll/issues/199
+	/**
+	 * MathJax 渲染完成后的默认回调：为公式源元素的父节点添加 CSS 类标记
+	 *
+	 * 修复 MathJax 执行完后 &lt;code&gt; 标签的问题，用于克服 Markdown 的局限。
+	 * @see https://github.com/mojombo/jekyll/issues/199
+	 * @returns {void}
+	 */
 	static defaultQueue() {
 		let all = MathJax.Hub.getAllJax();
 		for (let i = 0; i < all.length; i += 1) {
@@ -106,6 +167,13 @@ export class MathJaxHelper {
 		}
 	}
 
+	/**
+	 * 初始化数学公式库
+	 *
+	 * @param config - MathJax 配置对象，未提供时使用默认配置
+	 * @param queueFunc - MathJax 执行队列回调，未提供时使用默认回调
+	 * @returns {void}
+	 */
 	static initMathJax(config?: any, queueFunc?: () => void) {
 		MathJax.Hub.Config(config ? config : MathJaxHelper.defaultMathJaxCfg);
 		MathJax.Hub.Queue(queueFunc ? queueFunc : MathJaxHelper.defaultQueue);
@@ -116,16 +184,29 @@ export class MathJaxHelper {
 // import jQuery from '@types/jquery'
 // import $ from 'jquery';
 // declare type $ = any;
+/**
+ * jQuery 的声明
+ * 参考：https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/jquery/index.d.ts
+ * @param selector - CSS 选择器字符串或 DOM 元素
+ * @returns {any} jQuery 对象
+ */
 declare function $(cc: any): any;
 
+/**
+ * BootStrapHelper 的工具类
+ * 参考：https://getbootstrap.com/docs/3.4/javascript/
+ */
 export class BootStrapHelper {
 
 	/**
+	 * 初始化 Bootstrap 图片查看模态框
+	 *
 	 * 必须要在页面上加上：
 	 * `<div id="photo-frame" class="modal fade photo-frame" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"></div>`
-	 * 因为bootstrap的导入在是最前面。如果bootstrap.js已经导入了，再添加`div`就没有用了。
-	 * 
-	 * @param photoFrameId 
+	 * 因为 bootstrap 的导入在最前面。如果 bootstrap.js 已经导入了再添加 div 就没有用了。
+	 *
+	 * @param photoFrameId - 模态框容器 ID，默认为 "photo-frame"
+	 * @returns {void}
 	 */
 	static initPhotoFrame(photoFrameId?: string): void {
 		let photoElem = document.querySelector(`#${photoFrameId ? photoFrameId : "photo-frame"}`);
@@ -145,9 +226,12 @@ export class BootStrapHelper {
 	};
 
 	/**
-	 * 依赖bootstrap与JQuery 
-	 * 
-	 * @param elemSlt 
+	 * 在 Bootstrap 模态框中查看图片
+	 *
+	 * @param title - 图片标题，显示在模态框标题栏和 img alt 属性
+	 * @param url - 图片 URL
+	 * @param photoFrameId - 模态框容器 ID，默认为 "photo-frame"
+	 * @returns {void}
 	 */
 	static viewPic(title: string, url: string, photoFrameId?: string): void {
 		photoFrameId = photoFrameId ? photoFrameId : "photo-frame";
@@ -164,8 +248,11 @@ export class BootStrapHelper {
 	};
 
 	/**
-	 * 
-	 * @param elemSlt 
+	 * 为指定图片元素绑定点击查看事件
+	 *
+	 * @param elemSlt - 图片元素的 CSS 选择器，默认为 "img.atc-img"
+	 * @param photoFrameId - 模态框容器 ID，默认为 "photo-frame"
+	 * @returns {void}
 	 */
 	static bindImageFrame(elemSlt?: string, photoFrameId?: string): void {
 		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt ? elemSlt : 'img.atc-img');
@@ -180,12 +267,20 @@ export class BootStrapHelper {
 
 }
 
-
+/**
+ * DataTableHelper 的工具类
+ * 参考：https://datatables.net/
+ * 参考：https://github.com/DataTables/DataTables/blob/master/media/js/dataTables.js
+ * 参考：https://github.com/DataTables/DataTables/blob/master/media/js/dataTables.bootstrap.js
+ */
 export class DataTableHelper {
 
 	/**
-	 * 
-	 * @param elemSlt 
+	 * 初始化 DataTable 表格插件
+	 *
+	 * 将 &lt;thead&gt; 从 &lt;tbody&gt; 中提取出来，并根据行数决定是否启用搜索和分页。
+	 * @param elemSlt - 表格的 CSS 选择器，默认为 `div.content>table`
+	 * @returns {void}
 	 */
 	static bindInitDataTable(elemSlt?: string): void {
 		$(elemSlt ? elemSlt : 'div.content>table').each((n: any, t: any) => {
@@ -219,18 +314,43 @@ export class DataTableHelper {
 
 }
 
-// showdown.js
+/**
+ * showdown.js 的声明
+ * 基础的markdown转html的库
+ * 参考：https://github.com/showdownjs/showdown/blob/master/dist/showdown.js
+ */
 declare namespace showdown {
 
 	class Converter {
+		/**
+		 * 将 Markdown 文本转换为 HTML
+		 * @param markdownStr - Markdown 格式的字符串
+		 * @returns {string} 转换后的 HTML 字符串
+		 */
 		makeHtml(markdownStr: string): string;
 	}
 
 }
-
+/**
+ * ShowdownUtils 的工具类
+ * 基础的markdown转html的库
+ * 参考：https://github.com/showdownjs/showdown/blob/master/dist/showdown.js
+ */
 let showdownConverter: showdown.Converter | null = null; // new showdown.Converter();
+
+/**
+ * ShowdownUtils 的工具类
+ * 基础的markdown转html的库
+ * 参考：https://github.com/showdownjs/showdown/blob/master/dist/showdown.js
+ */
 export class ShowdownUtils {
 
+	/**
+	 * 将 Markdown 文本转换为 HTML
+	 *
+	 * @param markdown - Markdown 格式的字符串
+	 * @returns {string} 转换后的 HTML 字符串
+	 */
 	static makeHtml(markdown: string): string {
 		showdownConverter = showdownConverter != null ? showdownConverter : new showdown.Converter();
 		return showdownConverter.makeHtml(markdown);

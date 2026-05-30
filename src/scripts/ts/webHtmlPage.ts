@@ -2,27 +2,48 @@ import { StrUtil } from './basic.js';
 import { WebUtil } from './web.js';
 
 
+/**
+ * 页面配置
+ */
 export interface PageConfig {
+	/** API 根路径 */
 	apiRoot: string;
+	/** 页面标题 */
 	pageTitle: string;
+	/** 副标题 */
 	subTitle: string;
+	/** AJAX 超时时间（毫秒） */
 	ajaxTimeout: number;
 
 }
 
+/**
+ * 导航树节点
+ */
 export interface NavTreeNode {
+	/** 元素 ID */
 	id?: string;
+	/** 显示标题 */
 	title: string;
+	/** 链接地址 */
 	link?: string;
+	/** 是否在新窗口打开 */
 	isNewWin?: boolean;
+	/** 子节点列表 */
 	subs?: Array<NavTreeNode>;
 }
 
+/**
+ * 主题绑定：CSS 选择器与主题名的映射
+ */
 export interface ThemeBinding {
+	/** 触发元素的选择器 */
 	elemSlt: string;
+	/** 主题名称 */
 	themeName: string;
 }
 
+/** 站点默认导航菜单配置 */
 export const SITE_NAV_ITEMS: Array<NavTreeNode> = [
 	{ title: "Journal", link: "/" },
 	{ title: "Gallery", link: "/gallery.html" },
@@ -41,6 +62,7 @@ export const SITE_NAV_ITEMS: Array<NavTreeNode> = [
 	}
 ];
 
+/** 站点默认主题列表 */
 export const SITE_THEMES: Array<ThemeBinding> = [
 	{ elemSlt: "#switch-theme-hobbit"     , themeName: "hobbit"      },
 	{ elemSlt: "#switch-theme-lo-fi"      , themeName: "lo-fi"       },
@@ -48,18 +70,29 @@ export const SITE_THEMES: Array<ThemeBinding> = [
 ];
 
 
+/**
+ * 通用 HTML 页面框架
+ *
+ * 提供导航栏渲染、分页、主题切换、目录面板等页面级功能。
+ */
 export class WebHtmlPage {
 
+	/** 页面配置 */
 	cfg: PageConfig;
 
+	/**
+	 * @param cfg - 页面配置
+	 */
 	constructor(cfg: PageConfig) {
 		this.cfg = cfg;
 	}
 
 	/**
-	 * @param cfg 页面配置
-	 * @param items 导航节点列表
-	 * @param elemSlt 目标元素选择器
+	 * 渲染页首导航栏
+	 *
+	 * @param items - 导航节点列表
+	 * @param elemSlt - 目标元素选择器，默认 "#topnav"
+	 * @returns {void}
 	 */
 	renderTopNav(items: Array<NavTreeNode>, elemSlt: string = "#topnav"): void {
 		let navhtml = '<div class="navbar-header"> <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#example-navbar-collapse"> <span class="sr-only">切换导航</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button> <a class="navbar-brand" href="/">Jade Dungeon</a> </div> <div class="collapse navbar-collapse" id="example-navbar-collapse"> <ul class="nav navbar-nav">';
@@ -99,12 +132,26 @@ export class WebHtmlPage {
 		}
 	}
 
+	/**
+	 * 将 HTML 字符串解析为 DocumentFragment
+	 *
+	 * @param html - HTML 字符串
+	 * @returns {DocumentFragment} 解析后的文档片段
+	 */
 	static parseHTML(html: string): DocumentFragment {
 		let t = document.createElement('template');
 		t.innerHTML = html;
 		return t.content;
 	}
 
+	/**
+	 * 渲染分页导航
+	 *
+	 * @param pageNo - 当前页码
+	 * @param count - 总页数
+	 * @param callBack - 页码点击回调
+	 * @returns {HTMLUListElement} 分页 ul 元素
+	 */
 	static renderPaging(pageNo: number, count: number, callBack?: (n: number) => void): HTMLUListElement //
 	{
 		pageNo = pageNo && pageNo > 0 ? pageNo : 1;
@@ -222,8 +269,10 @@ export class WebHtmlPage {
 	// };
 
 	/**
-	 * @param cfg 页面配置
-	 * @param elemSlt 目标元素选择器
+	 * 渲染副标题
+	 *
+	 * @param elemSlt - 目标元素选择器，默认 "#subTitle"
+	 * @returns {void}
 	 */
 	renderSubTitle(elemSlt: string = "#subTitle"): void {
 		let elem = document.querySelector(elemSlt);
@@ -233,8 +282,10 @@ export class WebHtmlPage {
 	};
 
 	/**
-	 * 
-	 * @param elemSlt 
+	 * 为图片绑定新标签页打开事件
+	 *
+	 * @param elemSlt - 图片元素的 CSS 选择器，默认 "img.atc-img"
+	 * @returns {void}
 	 */
 	bindImageNewTab(elemSlt: string = 'img.atc-img'): void {
 		let elemArr = document.querySelectorAll<HTMLImageElement>(elemSlt);
@@ -245,6 +296,9 @@ export class WebHtmlPage {
 		});
 	} 
 
+	/**
+	 * 移除指定元素的 CSS 类（支持选择器或 NodeList）
+	 */
 	static removeElemClass(selector: string, ...className: string[]): void;
 	static removeElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void;
 	static removeElemClass<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, ...className: string[]): void {
@@ -259,6 +313,9 @@ export class WebHtmlPage {
 		}
 	}
 
+	/**
+	 * 为指定元素添加 CSS 类（支持选择器或 NodeList）
+	 */
 	static addElemClass(selector: string, ...className: string[]): void;
 	static addElemClass<T extends HTMLElement>(elemList: NodeListOf<T>, ...className: string[]): void;
 	static addElemClass<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, ...className: string[]): void {
@@ -273,6 +330,9 @@ export class WebHtmlPage {
 		}
 	}
 
+	/**
+	 * 设置元素的 innerHTML（支持选择器或 NodeList）
+	 */
 	static setElemHtml(selector: string, html: string): void;
 	static setElemHtml<T extends HTMLElement>(elemList: NodeListOf<T>, html: string): void;
 	static setElemHtml<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, html: string): void {
@@ -287,6 +347,9 @@ export class WebHtmlPage {
 		}
 	}
 
+	/**
+	 * 为元素绑定点击事件（支持选择器或 NodeList）
+	 */
 	static bindOnClick(selector: string, func: () => void): void;
 	static bindOnClick<T extends HTMLElement>(elemList: NodeListOf<T>, func: () => void): void;
 	static bindOnClick<T extends HTMLElement>(selectorOrList: string | NodeListOf<T>, func: () => void): void {
@@ -302,9 +365,11 @@ export class WebHtmlPage {
 	}
 
 	/**
-	 * 大窗口时用的固定边栏目录
-	 * @param srcSlt 
-	 * @param tagSlt 
+	 * 准备侧栏目录索引（大窗口固定边栏）
+	 *
+	 * @param html - 目录 HTML 字符串
+	 * @param tagSlt - 目标容器选择器，默认 "div.sideTocIdx"
+	 * @returns {void}
 	 */
 	static prepareTocIndex(html: string, tagSlt: string = "div.sideTocIdx"): void {
 		// document.querySelectorAll
@@ -322,9 +387,9 @@ export class WebHtmlPage {
 
 	/**
 	 * 计算边栏目录的高度
-	 * 
-	 * @param margin 
-	 * @returns 
+	 *
+	 * @param margin - 上下留白边距
+	 * @returns {number} 计算后的高度
 	 */
 	static caculateSideTocBoxHeight(margin: number): number {
 		return document.documentElement.clientHeight - margin - margin -1;
@@ -332,9 +397,11 @@ export class WebHtmlPage {
 
 
 	/**
-	 * 大窗口时用的固定调整边栏目录的高度
-	 * 
-	 * @param elemSlt 
+	 * 调整目录面板尺寸（大窗口固定边栏）
+	 *
+	 * @param elemSlt - 目标元素选择器，默认 "div.sideTocIdx"
+	 * @param margin - 上下留白边距，默认 80
+	 * @returns {void}
 	 */
 	changeTocPanelSize(elemSlt: string = "div.sideTocIdx", margin: number = 80): void {
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
@@ -353,6 +420,11 @@ export class WebHtmlPage {
 
 	/**
 	 * 展开与折叠目录面板
+	 *
+	 * @param elemSlt - 目标元素选择器，默认 "div.sideTocIdx"
+	 * @param margin - 边距，默认 80
+	 * @param innerSlt - 内部容器选择器，默认 "div.sideToc"
+	 * @returns {void}
 	 */
 	toggleSideTocWrap(elemSlt: string = "div.sideTocIdx", margin: number = 80, innerSlt: string = "div.sideToc"): void {
 		let elemList = document.querySelectorAll<HTMLElement>(elemSlt);
@@ -387,6 +459,9 @@ export class WebHtmlPage {
 
 	/**
 	 * 展开与折叠目录树
+	 *
+	 * @param elemSlt - 目标元素选择器，默认 "div.sideTocIdx"
+	 * @returns {void}
 	 */
 	toggleSideTocContract(elemSlt: string = "div.sideTocIdx"): void {
 		let effect = (elem: HTMLElement, elemSlt: string) => {
@@ -413,10 +488,12 @@ export class WebHtmlPage {
 
 
 	/**
-	 * 
-	 * @param themeName 
-	 * @param cookieKey 
-	 * @param elemSlt 
+	 * 切换页面主题
+	 *
+	 * @param themeName - 主题名称
+	 * @param cookieKey - 持久化主题的 Cookie 键，默认 "ui.theme"
+	 * @param elemSlt - 样式 link 元素选择器，默认 "link[title]"
+	 * @returns {void}
 	 */
 	changeTheme(themeName: string, cookieKey: string = "ui.theme", elemSlt: string = 'link[title]'): void {
 		let styles = document.querySelectorAll<HTMLLinkElement>(elemSlt);
@@ -436,8 +513,10 @@ export class WebHtmlPage {
 	};
 
 	/**
-	 * 
-	 * @param cookieKey 
+	 * 从 Cookie 恢复用户之前选择的主题
+	 *
+	 * @param cookieKey - Cookie 键名，默认 "ui.theme"
+	 * @returns {void}
 	 */
 	initUITheme(cookieKey: string = "ui.theme"): void {
 		let currUITheme = WebUtil.loadCookieValue(cookieKey);
@@ -447,8 +526,10 @@ export class WebHtmlPage {
 	};
 
 	/**
-	 * 
-	 * @param themes 
+	 * 绑定主题切换事件到指定元素
+	 *
+	 * @param themes - 主题绑定列表
+	 * @returns {void}
 	 */
 	bindChangeTheme(themes: Array<ThemeBinding>): void {
 		let self = this;
