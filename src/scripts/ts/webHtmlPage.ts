@@ -18,6 +18,35 @@ export interface NavTreeNode {
 	subs?: Array<NavTreeNode>;
 }
 
+export interface ThemeBinding {
+	elemSlt: string;
+	themeName: string;
+}
+
+export const SITE_NAV_ITEMS: Array<NavTreeNode> = [
+	{ title: "Journal", link: "/" },
+	{ title: "Gallery", link: "/gallery.html" },
+	{ title: "Note", link: "//118.178.197.156/study/study/wiki_html" },
+	{
+		title: "About Me", subs: [
+			{ title: "Github", link: "//github.com/Jade-Shan/", isNewWin: true },
+			{ title: "", link: "" },
+			{ title: "Resume", link: "/resume.html" }]
+	},
+	{
+		title: "Themes", subs: [
+			{ title: "hobbit", id: "switch-theme-hobbit"     , link: "#" },
+			{ title: "lo-fi" , id: "switch-theme-lo-fi"      , link: "#" },
+			{ title: "paper" , id: "switch-theme-paper-print", link: "#" }]
+	}
+];
+
+export const SITE_THEMES: Array<ThemeBinding> = [
+	{ elemSlt: "#switch-theme-hobbit"     , themeName: "hobbit"      },
+	{ elemSlt: "#switch-theme-lo-fi"      , themeName: "lo-fi"       },
+	{ elemSlt: "#switch-theme-paper-print", themeName: "paper-print" },
+];
+
 
 export class WebHtmlPage {
 
@@ -87,7 +116,7 @@ export class WebHtmlPage {
 			if (callBack && typeof callBack === 'function') {
 				a.onclick = (ev: MouseEvent) => { callBack(n0) };
 			} else {
-				return (ev: MouseEvent) => { console.log(`link-not-bind:(${n0})`) };
+				a.onclick = () => { console.log(`link-not-bind:(${n0})`) };
 			}
 			let li = document.createElement("li");
 			if (addClass && addClass.length > 0) {
@@ -199,7 +228,7 @@ export class WebHtmlPage {
 	renderSubTitle(elemSlt: string = "#subTitle"): void {
 		let elem = document.querySelector(elemSlt);
 		if (elem) {
-			elem.innerHTML = this.cfg.subTitle;
+			elem.textContent = this.cfg.subTitle;
 		}
 	};
 
@@ -421,7 +450,7 @@ export class WebHtmlPage {
 	 * 
 	 * @param themes 
 	 */
-	bindChangeTheme(themes: Array<{elemSlt: string, themeName: string}>): void {
+	bindChangeTheme(themes: Array<ThemeBinding>): void {
 		let self = this;
 		for(let theme of themes) {
 			let elem = document.querySelector<HTMLElement>(theme.elemSlt);

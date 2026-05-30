@@ -111,7 +111,7 @@ export class NumUtil {
 		let r1 = this.getDecimalPlaces(n1);
 		let r2 = this.getDecimalPlaces(n2);
 		let m = Math.pow(10, Math.max(r1, r2));
-		let value = (n1 * m + n2 * m) / m;
+		let value = (Math.round(n1 * m) + Math.round(n2 * m)) / m;
 		return value;
 	}
 
@@ -125,7 +125,7 @@ export class NumUtil {
 		let r1 = this.getDecimalPlaces(n1);
 		let r2 = this.getDecimalPlaces(n2);
 		let m = Math.pow(10, Math.max(r1, r2));
-		const value = (n1 * m - n2 * m) / m;
+		const value = (Math.round(n1 * m) - Math.round(n2 * m)) / m;
 		return value;
 	}
 
@@ -149,13 +149,11 @@ export class NumUtil {
 	 * @returns 精确的除法结果
 	 */
 	static div(n1: number, n2: number): number {
-		let t1 = this.getDecimalPlaces(n1);
-		let t2 = this.getDecimalPlaces(n2);
-		let m = t2 - t1;
-		let r1 = Number(n1.toString().replace(".", ""));
-		let r2 = Number(n2.toString().replace(".", ""));
-		let value = (r1 / r2) * Math.pow(10, m + 1);
-		return value / 10;
+		if (n2 === 0) return n1 >= 0 ? Infinity : -Infinity;
+		let r1 = this.getDecimalPlaces(n1);
+		let r2 = this.getDecimalPlaces(n2);
+		let m = Math.pow(10, Math.max(r1, r2));
+		return (Math.round(n1 * m) / Math.round(n2 * m));
 	}
 
 	/**
@@ -206,23 +204,6 @@ export class StrUtil {
 		return s.trim();
 	}
 
-	/**
-	 * 去除字符串左侧的空白字符。
-	 * @param s 输入字符串
-	 * @returns 去除左侧空白后的字符串
-	 */
-	static trimLeft(s: string): string {
-		return s.trimLeft();
-	}
-
-	/**
-	 * 去除字符串右侧的空白字符。
-	 * @param s 输入字符串
-	 * @returns 去除右侧空白后的字符串
-	 */
-	static trimRight(s: string): string {
-		return s.trimRight();
-	}
 
 	/**
 	 * 转义 HTML 特殊字符，防止 XSS 注入。

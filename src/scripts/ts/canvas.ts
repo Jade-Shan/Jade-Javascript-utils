@@ -7,13 +7,13 @@ import { WebUtil } from './web.js';
  * 从图片中截取一部分
  */
 export interface ImageClip {
-	imgKey    : string, // 对应的图片ID
-	sx        : number, // 左上角X
-	sy        : number, // 左上角Y
-	width     : number, // 宽度
-	height    : number, // 高度
+	imgKey    : string; // 对应的图片ID
+	sx        : number; // 左上角X
+	sy        : number; // 左上角Y
+	width     : number; // 宽度
+	height    : number; // 高度
 	imageElem?: HTMLImageElement;
-};
+}
 
 export interface ICanvasStyle {
 	lineWidth  ?: number;
@@ -41,47 +41,36 @@ export namespace CanvasUtils {
 	}
 
 
-	function drawWithCanvas(cvsCtx: CanvasRenderingContext2D, // 
+	let drawWithCanvas = (cvsCtx: CanvasRenderingContext2D, // 
 		func: (cvs: CanvasRenderingContext2D) => void, style?: ICanvasStyle //
-	): void //
-	{
+	): void => {
 		cvsCtx.save();
 		if (style?.lineWidth  ) { cvsCtx.lineWidth   = style.lineWidth  ; }
 		if (style?.strokeStyle) { cvsCtx.strokeStyle = style.strokeStyle; }
 		if (style?.fillStyle  ) { cvsCtx.fillStyle   = style.fillStyle  ; }
 		cvsCtx.beginPath();
 		func(cvsCtx);
-		if (style?.lineWidth && style.lineWidth > 0) { cvsCtx.stroke(); }
-		if (style?.fillStyle) { cvsCtx.fill(); }
 		if (style?.imgClip?.imageElem) {
-			cvsCtx.stroke();
+			if (style?.lineWidth && style.lineWidth > 0) { cvsCtx.stroke(); }
 			cvsCtx.clip();
-			cvsCtx.drawImage(style.imgClip.imageElem, 
+			cvsCtx.drawImage(style.imgClip.imageElem,
 				style.imgClip.sx, style.imgClip.sy, //
 				style.imgClip.width, style.imgClip.height, //
 				style.imgClip.sx, style.imgClip.sy, //
 				style.imgClip.width, style.imgClip.height);
+		} else {
+			if (style?.lineWidth && style.lineWidth > 0) { cvsCtx.stroke(); }
+			if (style?.fillStyle) { cvsCtx.fill(); }
 		}
 		cvsCtx.restore();
 	}
 
-	export function drawArc(cvsCtx: CanvasRenderingContext2D, // 
-		center: IPoint2D, radius: number, revole: IRevolveOption, style?: ICanvasStyle // 
-	): void //
-	{
-		//drawWithCanvas(cvsCtx, (cvsCtx) => {
-		//	// 因为Canvas的原点坐标是在左上角，所以顺时钟和逆时钟的方向和笛卡尔坐标系是反的
-		//	cvsCtx.arc(center.x, center.y, radius, revole.start, revole.end, revole.diff < 0);
-		//}, style);
-		cvsCtx.save();
-		if (style?.lineWidth) { cvsCtx.lineWidth = style.lineWidth; }
-		if (style?.strokeStyle) { cvsCtx.strokeStyle = style.strokeStyle; }
-		if (style?.fillStyle) { cvsCtx.fillStyle = style.fillStyle; }
-		cvsCtx.beginPath();
-		cvsCtx.arc(center.x, center.y, radius, revole.start, revole.end, revole.diff < 0);
-		if (style?.lineWidth && style.lineWidth > 0) { cvsCtx.stroke(); }
-		if (style?.fillStyle) { cvsCtx.fill(); }
-		cvsCtx.restore();
+	export let drawArc = (cvsCtx: CanvasRenderingContext2D, //
+		center: IPoint2D, radius: number, revole: IRevolveOption, style?: ICanvasStyle //
+	): void => {
+		drawWithCanvas(cvsCtx, (cvsCtx) => {
+			cvsCtx.arc(center.x, center.y, radius, revole.start, revole.end, revole.diff < 0);
+		}, style);
 	}
 
 	/**
@@ -92,10 +81,12 @@ export namespace CanvasUtils {
 	 * @param width 
 	 * @param style 
 	 */
-	export function drawLine(cvsCtx: CanvasRenderingContext2D, line: ICanvasLine2D): void {
+	export let drawLine = (cvsCtx: CanvasRenderingContext2D, line: ICanvasLine2D): void => {
 		cvsCtx.save();
 		cvsCtx.strokeStyle = line.strokeStyle;
 		cvsCtx.lineWidth = line.lineWidth;
+		if (line.lineCap ) { cvsCtx.lineCap  = line.lineCap ; }
+		if (line.lineJoin) { cvsCtx.lineJoin = line.lineJoin; }
 		cvsCtx.beginPath();
 		cvsCtx.moveTo(line.a.x, line.a.y);
 		cvsCtx.lineTo(line.b.x, line.b.y);
@@ -108,7 +99,7 @@ export namespace CanvasUtils {
 	 * @param cvsCtx 
 	 * @param lines 
 	 */
-	export function drawLines(cvsCtx: CanvasRenderingContext2D, lines: Array<ICanvasLine2D>): void {
+	export let drawLines = (cvsCtx: CanvasRenderingContext2D, lines: Array<ICanvasLine2D>): void => {
 		if (lines && lines.length > 0) {
 			for (let i = 0; i < lines.length; i++) {
 				drawLine(cvsCtx, lines[i]);
@@ -116,15 +107,15 @@ export namespace CanvasUtils {
 		}
 	}
 
-	export function drawRay(cvsCtx: CanvasRenderingContext2D, ray: ICanvasRay2D): void {
+	export let drawRay = (cvsCtx: CanvasRenderingContext2D, ray: ICanvasRay2D): void => {
 		drawLine(cvsCtx, {
-			a: ray.start, b: ray.mid, // 
+			a: ray.start, b: ray.mid, //
 			lineWidth: ray.lineWidth, strokeStyle: ray.strokeStyle, //
 			lineCap: ray.lineCap, lineJoin: ray.lineJoin
 		})
 	}
 
-	export function drawRays(cvsCtx: CanvasRenderingContext2D, rays: Array<ICanvasRay2D>): void {
+	export let drawRays = (cvsCtx: CanvasRenderingContext2D, rays: Array<ICanvasRay2D>): void => {
 		if (rays && rays.length > 0) {
 			for (let i = 0; i < rays.length; i++) {
 				drawRay(cvsCtx, rays[i]);
@@ -132,7 +123,7 @@ export namespace CanvasUtils {
 		}
 	}
 
-	export function drawPoint(cvsCtx: CanvasRenderingContext2D, point: ICanvasPoint2D): void {
+	export let drawPoint = (cvsCtx: CanvasRenderingContext2D, point: ICanvasPoint2D): void => {
 		cvsCtx.save();
 		cvsCtx.fillStyle = point.fillStyle;
 		cvsCtx.beginPath();
@@ -141,7 +132,7 @@ export namespace CanvasUtils {
 		cvsCtx.restore();
 	}
 
-	export function drawPoints(cvsCtx: CanvasRenderingContext2D, points: Array<ICanvasPoint2D>): void  {
+	export let drawPoints = (cvsCtx: CanvasRenderingContext2D, points: Array<ICanvasPoint2D>): void => {
 		if (points && points.length > 0) {
 			for (let i = 0; i < points.length; i++) {
 				drawPoint(cvsCtx, points[i]);
@@ -149,40 +140,36 @@ export namespace CanvasUtils {
 		}
 	}
 
-	export function drawRectangle(cvsCtx: CanvasRenderingContext2D, rect: ICanvasRectangle2D): void {
+	export let drawRectangle = (cvsCtx: CanvasRenderingContext2D, rect: ICanvasRectangle2D): void => {
 		cvsCtx.save();
 		if (rect.fillStyle && rect.fillStyle.length > 0) {
-			cvsCtx.beginPath();
 			cvsCtx.fillStyle = rect.fillStyle;
 			cvsCtx.fillRect(rect.x, rect.y, rect.width, rect.height);
 		}
 		if (rect.lineWidth > 0) {
-			cvsCtx.beginPath();
 			cvsCtx.strokeStyle = rect.strokeStyle;
 			cvsCtx.strokeRect(rect.x, rect.y, rect.width, rect.height);
 		}
 		cvsCtx.restore();
 	}
 
-	export function drawCircle(cvsCtx: CanvasRenderingContext2D, circle: ICanvasCircle2D): void {
+	export let drawCircle = (cvsCtx: CanvasRenderingContext2D, circle: ICanvasCircle2D): void => {
 		cvsCtx.save();
+		cvsCtx.beginPath();
+		cvsCtx.arc(circle.c.x, circle.c.y, circle.radius, 0, Geo2DUtils.PI_DOUBLE, false);
 		if (circle.fillStyle && circle.fillStyle.length > 0) {
-			cvsCtx.beginPath();
 			cvsCtx.fillStyle = circle.fillStyle;
-			cvsCtx.arc(circle.c.x, circle.c.y, circle.radius, 0, Geo2DUtils.PI_DOUBLE, false);
 			cvsCtx.fill();
 		}
 		if (circle.lineWidth > 0) {
-			cvsCtx.beginPath();
 			cvsCtx.strokeStyle = circle.strokeStyle;
-			cvsCtx.arc(circle.c.x, circle.c.y, circle.radius, 0, Geo2DUtils.PI_DOUBLE, false);
 			cvsCtx.stroke();
 		}
 		cvsCtx.restore();
 	}
 
-	export function genVertexes(shape: CanvasPolygon2D, radius: number, fillStyle: string): //
-		Array<CanvasPoint2D> //
+	export let genVertexes = (shape: CanvasPolygon2D, radius: number, fillStyle: string): //
+		Array<CanvasPoint2D> => //
 	{
 		let result: Array<CanvasPoint2D> = [];
 		let vtxs = shape.getVertex();
@@ -195,30 +182,30 @@ export namespace CanvasUtils {
 		return result;
 	}
 
-	export function drawShapeVertexes(cvsCtx: CanvasRenderingContext2D, // 
-		shape: CanvasPolygon2D, radius: number, fillStyle: string): void //
+	export let drawShapeVertexes = (cvsCtx: CanvasRenderingContext2D, //
+		shape: CanvasPolygon2D, radius: number, fillStyle: string): void => //
 	{
 		let vtxs: Array<CanvasPoint2D> = genVertexes(shape, radius, fillStyle);
 		drawPoints(cvsCtx, vtxs);
 	}
 
-	export function drawVertexRaysFrom(cvsCtx: CanvasRenderingContext2D, x: number, y: number, shape: GeoShape2D, // 
-		length: number, lineWidth: number, strokeStyle: string) // 
+	export let drawVertexRaysFrom = (cvsCtx: CanvasRenderingContext2D, x: number, y: number, shape: GeoShape2D, //
+		length: number, lineWidth: number, strokeStyle: string) => //
 	{
 		let vtxRays: Array<{ vertex: Point2D, ray: Ray2D }> = Geo2DUtils.genVertexRaysFrom(x, y, shape, length);
 		if (vtxRays && vtxRays.length > 0) {
 			for (let i = 0; i < vtxRays.length; i++) {
 				let ray = vtxRays[i].ray;
 				drawLine(cvsCtx, {
-					a: { x: ray.start.x, y: ray.start.y }, b: { x: ray.mid.x, y: ray.mid.y },  //
+					a: ray.start, b: ray.mid,
 					lineWidth, strokeStyle
 				});
 			}
 		}
 	}
 
-	export function drawVertexShadowFrom(cvsCtx: CanvasRenderingContext2D, x: number, y: number, shape: GeoShape2D, //
-		length: number, style: ICanvasStyle) //
+	export let drawVertexShadowFrom = (cvsCtx: CanvasRenderingContext2D, x: number, y: number, shape: GeoShape2D, //
+		length: number, style: ICanvasStyle) => //
 	{
 		let vtxRays: Array<{ vertex: Point2D, ray: Ray2D }> = Geo2DUtils.genVertexRaysFrom(x, y, shape, length);
 		if (vtxRays && vtxRays.length < 2) {
@@ -230,21 +217,10 @@ export namespace CanvasUtils {
 		drawFanByRays(cvsCtx, vtxRays[vtxRays.length - 1], vtxRays[0], style);
 	}
 
-	export function drawFanByRays(cvsCtx: CanvasRenderingContext2D, //  
-		start: { vertex: Point2D, ray: Ray2D }, end: { vertex: Point2D, ray: Ray2D }, style?: ICanvasStyle) //
+	export let drawFanByRays = (cvsCtx: CanvasRenderingContext2D, //
+		start: { vertex: Point2D, ray: Ray2D }, end: { vertex: Point2D, ray: Ray2D }, style?: ICanvasStyle) => //
 	{
 		let revole = Geo2DUtils.revolveRay(start.ray.start, start.ray.mid, end.ray.mid);
-		// let a1 = Geo2DUtils.formatAngle(revole.start);
-		// let a2 = Geo2DUtils.formatAngle(revole.end);
-		// let a3 = Geo2DUtils.formatAngle(revole.diff);
-		// console.log(` 
-		//=================================================================================	${(new Date()).getUTCMilliseconds()}
-		//		 c: (${start.ray.start.x},${start.ray.start.y}), radius ${start.ray.length}, 
-		//		 from: ${NumUtil.toFixed(a1.oriAgl, 3)} = ${NumUtil.toFixed(a1.fmtAgl, 3)} = ${NumUtil.toFixed(a1.oriDgr, 2)}° = ${NumUtil.toFixed(a1.fmtDgr, 2)}°
-		//		   to: ${NumUtil.toFixed(a2.oriAgl, 3)} = ${NumUtil.toFixed(a2.fmtAgl, 3)} = ${NumUtil.toFixed(a2.oriDgr, 2)}° = ${NumUtil.toFixed(a2.fmtDgr, 2)}°
-		//		 diff: ${NumUtil.toFixed(a3.oriAgl, 3)} = ${NumUtil.toFixed(a3.fmtAgl, 3)} = ${NumUtil.toFixed(a3.oriDgr, 2)}° = ${NumUtil.toFixed(a3.fmtDgr, 2)}°
-		//=================================================================================	
-		//`);
 
 		drawWithCanvas(cvsCtx, (cvsCtx) => {
 			// 因为Canvas的原点坐标是在左上角，所以顺时钟和逆时钟的方向和笛卡尔坐标系是反的
@@ -254,27 +230,6 @@ export namespace CanvasUtils {
 		}, style);
 	}
 
-	export function genShapeTangentLine(x: number, y: number, shape: CanvasShape2D, //
-		length: number, lineWidth: number, strokeStyle: string): Array<CanvasRay2D> //
-	{
-		let result: Array<CanvasRay2D> = [];
-		// TODO:
-		//let rays: Array<Ray2D> = Geo2DUtils.genTangentRays(x, y, shape, length);
-		//if (rays && rays.length > 0) {
-		//	for (let i = 0; i < rays.length; i++) {
-		//		let ray = rays[i];
-		//		result.push(new CanvasRay2D(ray.start, ray.mid, lineWidth, strokeStyle));
-		//	}
-		//}
-		return result;
-	}
-
-	export function drawShapeTangentRays(cvsCtx: CanvasRenderingContext2D, x: number, y: number, //
-		shape: CanvasShape2D, length: number, lineWidth: number, strokeStyle: string) //
-	{
-		let rays: Array<CanvasRay2D> = genShapeTangentLine(x, y, shape, length, lineWidth, strokeStyle);
-		drawRays(cvsCtx, rays);
-	}
 }
 
 

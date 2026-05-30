@@ -1,4 +1,4 @@
-import { PageConfig, WebHtmlPage } from './webHtmlPage.js';
+import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from './webHtmlPage.js';
 
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from './3rdLibTool.js';
 
@@ -10,23 +10,7 @@ export class WikiPage {
 		let page = new WebHtmlPage(cfg);
 		page.renderSubTitle();
 		//
-		page.renderTopNav([
-			{ title: "Journal", link: "/" },
-			{ title: "Gallery", link: "/gallery.html" },
-			{ title: "Note", link: "//118.178.197.156/study/study/wiki_html" },
-			{
-				title: "About Me", subs: [
-					{ title: "Github", link: "//github.com/Jade-Shan/", isNewWin: true },
-					{ title: "", link: "" },
-					{ title: "Resume", link: "/resume.html" }]
-			},
-			{
-				title: "Themes", subs: [
-					{ title: "hobbit", id: "switch-theme-hobbit"     , link: "#" },
-					{ title: "lo-fi" , id: "switch-theme-lo-fi"      , link: "#" },
-					{ title: "paper" , id: "switch-theme-paper-print", link: "#" }]
-			}
-		]);
+		page.renderTopNav(SITE_NAV_ITEMS);
 
 		//
 		DataTableHelper.bindInitDataTable();
@@ -34,7 +18,7 @@ export class WikiPage {
 		//
 		page.bindImageNewTab("img.img-newwin");
 
-		// 
+		//
 		BootStrapHelper.initPhotoFrame("photo-frame");
 		//
 		BootStrapHelper.bindImageFrame("img.img-frame");
@@ -59,17 +43,10 @@ export class WikiPage {
 			page.changeTocPanelSize("div#floatTocIdxTree", 90);
 		};
 
-		// $(window).resize(changeTocWithWindow);
-
-		window.onresize = changeTocWithWindow;
+		window.addEventListener('resize', changeTocWithWindow);
 
 		page.initUITheme();
-		let themes = [
-			{ elemSlt: "#switch-theme-hobbit"     , themeName: "hobbit"      },
-			{ elemSlt: "#switch-theme-lo-fi"      , themeName: "lo-fi"       },
-			{ elemSlt: "#switch-theme-paper-print", themeName: "paper-print" },
-		]
-		page.bindChangeTheme(themes);
+		page.bindChangeTheme(SITE_THEMES);
 
 		// 调整一下目录列表的大小
 		changeTocWithWindow();

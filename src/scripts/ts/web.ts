@@ -77,7 +77,7 @@ function doHttp<T, R>(req: HttpRequest<T>, //
 				}
 			}
 		}
-		xhr.timeout = req.opt?.timeout ? req.opt.timeout : 1_000;
+		xhr.timeout = req.opt?.timeout ? req.opt.timeout : 30_000;
 		//
 		let onload     = hdl?.onLoad;
 		let onprogress = hdl?.onProgress;
@@ -217,17 +217,8 @@ export class WebUtil {
 		if (target) {
 			el.target = target;
 		}
-		if (el.click) {
-			el.click();
-		} else { // safari 浏览器click事件处理
-			try {
-				let evt = document.createEvent('Event');
-				evt.initEvent('click', true, true);
-				el.dispatchEvent(evt);
-			} catch (e) {
-				// new PointOut(e, 2)
-			}
-		}
+		el.click();
+		el.remove();
 	}
 
 	/**
@@ -268,7 +259,7 @@ export class WebUtil {
 			let cookies = document.cookie.split(';');
 			for (let i = 0; i < cookies.length; i++) {
 				let cookie = cookies[i].trim();
-				if (cookie.substring(0, name.length + 1) == (name + '=')) {
+				if (cookie.substring(0, name.length + 1) === (name + '=')) {
 					cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
 					break;
 				}
@@ -339,7 +330,7 @@ export class WebUtil {
 	 * @returns 
 	 */
 	static checkMobile_zh_CN(phoneno: string): boolean {
-		return /^1[3458][0-9]\d{8}$/.test(phoneno);
+		return /^1[3-9]\d{9}$/.test(phoneno);
 	}
 
 
@@ -350,7 +341,7 @@ export class WebUtil {
 	 * @returns 
 	 */
 	static checkImageFilePostfix(postfix: string): boolean {
-		return /\.jpg|\.gif|\.png|\.bmp/i.test(postfix);
+		return /\.(jpg|jpeg|gif|png|bmp|webp|svg)$/i.test(postfix);
 	}
 
 
@@ -361,40 +352,23 @@ export class WebUtil {
 	 * @param {Number} imgMaxSize 
 	 * @returns 
 	 */
-	static checkImageFileSize(fileInput: HTMLInputElement, imgMaxSize: number): boolean {
-		let filePath = fileInput.value;
+	static checkImageFileSize(fileInput: HTMLInputElement, imgMaxSize: number,
+		onOversize?: (file: File, maxSize: number) => void): boolean {
+		const handleOversize = onOversize ?? ((file: File, max: number) => {
+			alert(`图片大于${Math.round(max / 1024)}K，请压缩后上传`);
+		});
 		if (fileInput.files && fileInput.files[0]) {
-			// alert(fileInput);
-			// alert(fileInput.files[0]);
-			console.log(fileInput.files[0].size);
-			if (fileInput.files[0].size > imgMaxSize) {
-				alert("图片大于500K，请压缩后上传");
-				return false;
-			}
 			let fileList: FileList = fileInput.files;
 			for (let i = 0; i < fileList.length; i++) {
 				let file: (File | null) = fileList.item(i);
 				if (file && file.size > imgMaxSize) {
-					alert("图片大于500K，请压缩后上传");
+					handleOversize(file, imgMaxSize);
 					return false;
 				}
-
 			}
 		} else {
 			console.error("browser version too old");
 			return false;
-			//fileInput.select();
-			//let url = document.selection.createRange().text;
-			//try {
-			//	let fso = new ActiveXObject("Scripting.FileSystemObject");
-			//	console.log(fso.GetFile(url).size);
-			//	if (fso.GetFile(url).size) {
-			//		alert("图片大于500K，请压缩后上传");
-			//		return false;
-			//	}
-			//} catch (e) {
-			//	alert('如果你用的是ie 请将安全级别调低！');
-			//}
 		}
 		return true;
 	}
