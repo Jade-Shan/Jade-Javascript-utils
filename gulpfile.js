@@ -45,20 +45,23 @@ themes.forEach((theme) => {
 	themeTasks.push(imageTsk)
 
 	const styleTsk = 'process-style-' + theme;
-	const styleSrc = 'src/themes/';
-	const styleThemesSrc = 'src/themes/' + theme + '/styles/';
-	const styleDst = 'webroot/themes/' + theme + '/styles/';
+	const styleCommSrc = 'src/themes/';
+	const styleThemesSrc = 'src/themes/' + theme;
+	const styleThemesDst = 'webroot/themes/' + theme;
 	gulp.task(styleTsk,  gulp.series(
 		() => {
-			return gulp.src([styleDst+ '*'], {read: false, allowEmpty: true})
+			return gulp.src([styleThemesDst + '/styles/*'], {read: false, allowEmpty: true})
 				.pipe(clean()); }, 
 		() => {
-			return gulp.src([styleThemesSrc + '**/*.less', styleSrc + 'comm.less'])
+			return gulp.src([styleThemesSrc + '/images/**/*']).pipe(gulp.dest(styleThemesDst + '/images/'))
+		},
+		() => {
+			return gulp.src([styleThemesSrc + '/styles/**/*.less', styleCommSrc + 'comm.less'])
 				.pipe(concat('all.less'))
 				.pipe(less({compress: false})).on('error', (e) => {console.log(e)})
-				.pipe(gulp.dest(styleDst))
+				.pipe(gulp.dest(styleThemesDst + '/styles/'))
 				.pipe(minifycss()).pipe(rename({suffix: '.min'}))
-				.pipe(gulp.dest(styleDst))
+				.pipe(gulp.dest(styleThemesDst + '/styles/'))
 		}
 	));
 	themeTasks.push(styleTsk)
