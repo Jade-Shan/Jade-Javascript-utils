@@ -91,4 +91,6 @@
 # cp -r  docs/* webroot/docs/
 # echo '--- finish: copy doc ---'
 
+cp -r webroot/* ~/workspace/nginx/jadecdn/webroot/jade-javascript-utils/
+
 sleep 3 && sync
