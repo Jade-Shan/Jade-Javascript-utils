@@ -1,5 +1,7 @@
 #!/bin/bash
 
+nvm use && sleep 3
+
 # ========================================
 # copy 3rd lib
 # ========================================
@@ -52,6 +54,7 @@
 # npx gulp 'process-style-lo-fi' 
 # npx gulp 'process-style-paper-print' 
 # npx gulp 'process-style-window-ui' 
+  npx gulp 'process-style-workout' 
 # npx gulp 'process-style-trpg' 
 # echo '--- finish : build css ---'
 
