@@ -97,6 +97,33 @@ gulp.task("process-style-window-ui", gulp.series(
 themeTasks.push("process-style-window-ui");
 
 // =======================
+// css for workout
+// =======================
+gulp.task("process-style-workout", gulp.series(
+	() => {
+		return gulp.src(['webroot/themes/workout/images/*'], { read: false, allowEmpty: true })
+			.pipe(clean());
+	}, 
+	() => {
+		return gulp.src(['src/themes/workout/images/**/*']).pipe(gulp.dest('webroot/themes/workout/images/'))
+	},
+	() => {
+		return gulp.src(
+			["webroot/themes/workout/styles/**/*.less"], 
+			{read: false, allowEmpty: true}).pipe(clean());
+	},
+	() => {
+			return gulp.src(['src/themes/workout/styles/**/*.less'])
+				.pipe(concat('all.less'))
+				.pipe(less({compress: false})).on('error', (e) => {console.log(e)})
+				.pipe(gulp.dest("webroot/themes/workout/styles/"))
+				.pipe(minifycss()).pipe(rename({suffix: '.min'}))
+				.pipe(gulp.dest("webroot/themes/workout/styles/"))
+	},
+));
+themeTasks.push("process-style-workout");
+
+// =======================
 // css for TRPG
 // =======================
 gulp.task("process-style-trpg", gulp.series(
@@ -109,7 +136,6 @@ gulp.task("process-style-trpg", gulp.series(
 	},
 ));
 themeTasks.push("process-style-trpg");
-
 
 // =======================
 // javascript
@@ -171,9 +197,11 @@ gulp.task('process-typescript', gulp.series('clean-typescript', () => {
 		scriptTsSrc + 'blog.ts',
 		scriptTsSrc + 'UIWindow.ts',
 		scriptTsSrc + 'sandtable.ts',
+		scriptTsSrc + 'workout.ts',
 		scriptTsSrc + 'testJadeTRPG.ts',
 		scriptTsSrc + 'testJadeUtils.ts',
 		scriptTsSrc + 'testJadeUI.ts',
+		scriptTsSrc + 'testWorkout.ts',
 	]).pipe(sourcemaps.init()).pipe(ts({
 		target: "es6",
 		module: "es6",

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+nvm use && sleep 3
+
 # ========================================
 # copy 3rd lib
 # ========================================
@@ -52,6 +54,7 @@
 # npx gulp 'process-style-lo-fi' 
 # npx gulp 'process-style-paper-print' 
 # npx gulp 'process-style-window-ui' 
+#  npx gulp 'process-style-workout' 
 # npx gulp 'process-style-trpg' 
 # echo '--- finish : build css ---'
 
@@ -59,9 +62,9 @@
 # ========================================
 # compile javascript
 # ========================================
-# echo '--- start : compile javascript ---'
-# npx gulp compress-typescript
-# echo '--- finish : compile javascript ---'
+echo '--- start : compile javascript ---'
+npx gulp compress-typescript
+echo '--- finish : compile javascript ---'
 # 
 # echo '--- start : compile typescript ---'
 # rm -rf webroot/scripts/ts/*
@@ -78,10 +81,10 @@
 # ========================================
 # html
 # ========================================
-# echo '--- start : copy html ---'
-# mkdir -p webroot/html/
-# cp -r  src/html/* webroot/html/
-# echo '--- finish: copy html ---'
+echo '--- start : copy html ---'
+mkdir -p webroot/html/
+cp -r  src/html/* webroot/html/
+echo '--- finish: copy html ---'
 
 # ========================================
 # docs
@@ -91,6 +94,6 @@
 # cp -r  docs/* webroot/docs/
 # echo '--- finish: copy doc ---'
 
-cp -r webroot/* ~/workspace/nginx/jadecdn/webroot/jade-javascript-utils/
+cp -r webroot/* ~/workspace/nginx/jadecdn/webroot/jadeutils.v3   
 
 sleep 3 && sync
