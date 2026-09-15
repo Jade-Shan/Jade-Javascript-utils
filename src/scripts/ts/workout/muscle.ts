@@ -263,7 +263,16 @@ const backMuscleArr:Array<IMuscleCsvPath> = [
 /*
 加载肌肉的SVG图片
 */
+// 缓存第一次构建的 SVG 模板，key 为参数组合，避免重复遍历 pathArr 求值
+let muscleSvgCache: Map<string, SVGSVGElement> = new Map<string, SVGSVGElement>();
+
 let loadMuscleSvg = (imgId: string, width: string, height: string, scale: string, pathArr: Array<IMuscleCsvPath>): SVGSVGElement => {
+	const cacheKey: string = `${imgId}|${width}|${height}|${scale}`;
+	const cachedSvg: SVGSVGElement | undefined = muscleSvgCache.get(cacheKey);
+	if (cachedSvg) {
+		// 返回克隆，避免多个调用方共用同一个 DOM 节点（重复 append 会移动节点）
+		return cachedSvg.cloneNode(true) as SVGSVGElement;
+	}
 	const SVG_NS = "http://www.w3.org/2000/svg";
 	const svg: SVGSVGElement = document.createElementNS(SVG_NS, "svg");
 	svg.setAttribute("id", imgId);
@@ -283,6 +292,7 @@ let loadMuscleSvg = (imgId: string, width: string, height: string, scale: string
 			g.appendChild(path);
 		}
 	}
+	muscleSvgCache.set(cacheKey, svg);
 	return svg;
 };
 
