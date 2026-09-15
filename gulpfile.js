@@ -197,9 +197,11 @@ gulp.task('process-typescript', gulp.series('clean-typescript', () => {
 		scriptTsSrc + 'blog.ts',
 		scriptTsSrc + 'UIWindow.ts',
 		scriptTsSrc + 'sandtable.ts',
+		scriptTsSrc + 'workout.ts',
 		scriptTsSrc + 'testJadeTRPG.ts',
 		scriptTsSrc + 'testJadeUtils.ts',
 		scriptTsSrc + 'testJadeUI.ts',
+		scriptTsSrc + 'testWorkout.ts',
 	]).pipe(sourcemaps.init()).pipe(ts({
 		target: "es6",
 		module: "es6",

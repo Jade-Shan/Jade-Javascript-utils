@@ -1,4 +1,4 @@
-import { SimpleMap } from "../dataStructure";
+import { SimpleMap } from "./dataStructure.js";
 
 
 interface IMuscleRec { readonly id: string, readonly name: string, readonly chs: string, readonly subs: Array<IMuscleRec>};
@@ -106,7 +106,7 @@ let initMuscleMap = (recs: Array<IMuscleRec>) => {
 	addMuscle2Map(map, recs);
 	return map;
 }
-let muscleMap: SimpleMap<string, IMuscleRec> = initMuscleMap(muscleJsonArr);
+// let muscleMap: SimpleMap<string, IMuscleRec> = initMuscleMap(muscleJsonArr);
 
 interface IMuscleCsvPath { readonly id: string, readonly muscle: string, readonly style: string, readonly d: string };
 
@@ -268,7 +268,7 @@ let loadMuscleSvg = (imgId: string, width: string, height: string, scale: string
 	svg.setAttribute("width", width);
 	svg.setAttribute("height", height);
 	const g: SVGGElement = document.createElementNS(SVG_NS, "g");
-	g.setAttribute("transform", `scale('${scale}')`);
+	g.setAttribute("transform", scale);
 	svg.appendChild(g);
 	if (pathArr && pathArr.length) {
 		for (let i = 0; i < pathArr.length; i++) {
@@ -307,8 +307,8 @@ let loadMuscleSvg = (imgId: string, width: string, height: string, scale: string
 // 			});
 // };
 
-interface IStrengthWorkoutPoseSvg { readonly id: string, readonly style: string, readonly d: string };
-let strengthPoseSvgArr:Array<{id: string, path: Array<IStrengthWorkoutPoseSvg>}> = [{
+interface IStrengthPoseSvg { readonly id: string, readonly style: string, readonly d: string };
+let strengthPoseSvgArr:Array<{id: string, path: Array<IStrengthPoseSvg>}> = [{
 		id: "aero-1-1",
 		path: [
 			{id: "path7365", style: "equipment", d: "m 178.92695,249.68383 0.73429,-3.79914 0,-58.88695 -18.35715,0.6332 -0.73429,-77.88267 -54.33715,0.63319 0,-12.030662 54.33715,0 0.73429,-24.694495 52.13429,0 0,25.960885 58.74287,1e-5 1.46858,13.297032 -59.47716,-0.63319 0,75.3499 -19.82572,0 -0.73428,63.3193 z"},
@@ -641,7 +641,7 @@ let strengthPoseSvgArr:Array<{id: string, path: Array<IStrengthWorkoutPoseSvg>}>
 	},
 ]
 
-interface StrenghtWorkout {
+export interface StrenghtWorkout {
 	readonly id   : string,
 	readonly part : string,
 	readonly epart: string,
@@ -691,6 +691,30 @@ let loadWorkoutMuscleSvg = (workout: StrenghtWorkout, imgId: string, width: stri
 	path02 = mergePathWithStyle(path02, "muscle-extra", workout.ext);
 	let svg02 = loadMuscleSvg(imgId, width, height, scale, path02);
 	//
-	return {font: svg01, back: svg02};
+	const SVG_NS = "http://www.w3.org/2000/svg";
+	const pose: SVGSVGElement = document.createElementNS(SVG_NS, "svg");
+	pose.setAttribute("id", workout.id);
+	pose.setAttribute("width", "650");
+	pose.setAttribute("height", "270");
+	for (let i = 0; i < strengthPoseSvgArr.length; i++) {
+		let rec: { id: string, path: Array<IStrengthPoseSvg> } = strengthPoseSvgArr[i];
+		if (rec.id === workout.id && rec.path) {
+			for (let j = 0; j < rec.path.length; j++) {
+				let p = rec.path[j];
+				let path: SVGPathElement = document.createElementNS(SVG_NS, "path");
+				path.setAttribute("id", p.id);
+				path.setAttribute("d", p.d);
+				path.setAttribute("class", p.style);
+				pose.appendChild(path);
+			}
+		}
+	}
+	return {info: workout, pose: pose, font: svg01, back: svg02 };
 };
 
+export let workItems: Array<{ info: StrenghtWorkout, pose: SVGSVGElement, font: SVGSVGElement, back: SVGSVGElement }> = [];
+for (let i=0;i<strenghtWorkoutArr.length;i++){
+	let rec = strenghtWorkoutArr[i];
+	let info = loadWorkoutMuscleSvg(rec, rec.id,'270','500','scale(0.5)');
+	workItems.push(info);
+}
