@@ -258,21 +258,10 @@ const backMuscleArr:Array<IMuscleCsvPath> = [
 	{id:"b-b-8-r"  , muscle:"b-8"  , "style":"muscle-outline", d:"m 356.07877,938.72002 0,0 -7.25942,48.86403 4.24817,5.83414 12.10263,-62.27431 z" }
 ];
 
-// let markMuscleSvg = (path: SVGPathElement, className: string) => { path.setAttribute("class", className); };
-
 /*
 加载肌肉的SVG图片
 */
-// 缓存第一次构建的 SVG 模板，key 为参数组合，避免重复遍历 pathArr 求值
-let muscleSvgCache: Map<string, SVGSVGElement> = new Map<string, SVGSVGElement>();
-
 let loadMuscleSvg = (imgId: string, width: string, height: string, scale: string, pathArr: Array<IMuscleCsvPath>): SVGSVGElement => {
-	const cacheKey: string = `${imgId}|${width}|${height}|${scale}`;
-	const cachedSvg: SVGSVGElement | undefined = muscleSvgCache.get(cacheKey);
-	if (cachedSvg) {
-		// 返回克隆，避免多个调用方共用同一个 DOM 节点（重复 append 会移动节点）
-		return cachedSvg.cloneNode(true) as SVGSVGElement;
-	}
 	const SVG_NS = "http://www.w3.org/2000/svg";
 	const svg: SVGSVGElement = document.createElementNS(SVG_NS, "svg");
 	svg.setAttribute("id", imgId);
@@ -292,12 +281,9 @@ let loadMuscleSvg = (imgId: string, width: string, height: string, scale: string
 			g.appendChild(path);
 		}
 	}
-	muscleSvgCache.set(cacheKey, svg);
 	return svg;
 };
 
-export const loadMuscleSvgFont = (imgId: string, width: string, height: string, scale: string) => loadMuscleSvg(imgId, width, height, scale, fontMuscleArr);
-export const loadMuscleSvgBack = (imgId: string, width: string, height: string, scale: string) => loadMuscleSvg(imgId, width, height, scale, backMuscleArr);
 
 
 
@@ -320,3 +306,78 @@ export const loadMuscleSvgBack = (imgId: string, width: string, height: string, 
 // 			$("." + item).attr("class","muscle-extra");
 // 			});
 // };
+
+let strengthPoseSvgArr:Array<{id: string, path: string}> = [{
+		id: "aero-1-1", path:`
+		<path id="path7365" class="equipment" d="m 178.92695,249.68383 0.73429,-3.79914 0,-58.88695 -18.35715,0.6332 -0.73429,-77.88267 -54.33715,0.63319 0,-12.030662 54.33715,0 0.73429,-24.694495 52.13429,0 0,25.960885 58.74287,1e-5 1.46858,13.297032 -59.47716,-0.63319 0,75.3499 -19.82572,0 -0.73428,63.3193 z" />
+		<path id="path7367" class="equipment" d="m 282.46126,105.94911 5.13999,8.8647 -0.73428,17.09619 11.01429,0 -1.46857,-27.86047 -8.81143,-9.497879 -16.88858,-6.331926 -55.07144,5.69873 -50.66573,1.266384 -43.32286,-5.698731 -13.95143,2.532767 -11.014288,6.331923 -8.811431,10.764282 0,18.99577 11.748574,1.26638 1.468575,-18.36257 5.14,-8.8647 21.29429,-0.63319 39.65143,7.59831 48.46287,0 30.10572,-9.497892 20.56001,-1.89957 12.48286,3.799152 z" />
+		<path id="path7369" class="equipment" d="m 251.62125,98.350798 3.67143,-5.698726 41.12001,17.096198 -5.87429,6.96512 z" />
+		<path id="path7371" class="equipment" d="m 95.218359,110.38146 30.840011,-16.463005 5.87428,6.331915 -31.57429,15.82982 z" />
+		<path id="path7373" class="body" d="m 211.89185,72.168876 a 20.560004,17.096196 0 1 1 -0.009,-0.08767" />
+		<path id="path7375" class="body" d="m 169.38123,102.78315 8.07715,-9.497882 8.07714,-1.266393 9.54572,-0.633187 9.54571,6.96511 5.87429,6.331932 -4.40572,58.88689 9.54572,1.89958 13.95144,24.69451 -4.40572,58.25371 -11.01429,7.59837 -10.28,-2.53282 -2.20286,-10.76422 5.14,-54.45462 -14.68571,-20.26216 -11.74858,0 -15.42001,19.62897 2.20286,58.25375 -8.81143,6.33187 -9.54571,0 -7.34286,-6.33187 0,-60.78653 16.88857,-22.16173 9.54572,-2.53277 z" />
+		<path id="path7365-3" class="equipment" d="m 474.84416,253.48297 0.73429,-3.79914 0,-58.88695 -18.35715,0.63319 -0.73429,-77.88267 -54.33715,0.63319 0,-12.03065 54.33715,0 0.73429,-24.694504 52.13429,0 0,25.960884 58.74287,1e-5 1.46857,13.29703 -59.47715,-0.63319 0,75.3499 -19.82572,0 -0.73428,63.31931 z" />
+		<path id="path7406" class="equipment" d="m 490.99844,33.765181 -63.14858,72.817129 -15.42001,-1.89958 73.42859,-79.149056 -13.95144,-3.165954 -23.49714,8.864693 -13.21714,0 2.93714,-21.5285472 11.01429,0.6331962 -4.40572,13.930228 29.37144,-10.131077 7.34286,0 10.28,5.698731 9.54571,-5.698731 16.15429,-1.89958 29.37144,14.563433 -5.14,-12.663853 7.34285,-1.89958 7.34286,17.096201 -8.81143,5.065534 -32.30858,-11.397461 -16.15428,3.799159 52.86858,81.048624 -11.01429,0.63319 z" />
+		<path id="path7408" class="equipment" d="m 438.12986,9.0706788 -1.46857,6.3319182 41.12001,12.663853 4.40571,-8.231506 z" />
+		<path id="path7410" class="equipment" d="m 547.53845,12.236633 -38.91715,8.231507 5.87429,8.864694 37.44858,-10.764274 z" />
+		<path id="path7373-7" class="body" d="m 507.07477,71.535662 a 20.560004,17.096196 0 1 1 -0.009,-0.08767" />
+		<path id="path7375-7" class="body" d="m 464.56414,103.41632 8.07714,-9.497883 8.07716,-1.266392 9.54571,-0.633187 9.54571,6.96511 5.87429,6.331932 -4.40571,58.88689 9.54571,1.89958 13.95144,24.69451 -4.40573,58.25375 -11.01428,7.59837 -10.28,-2.53282 -2.20285,-10.76422 5.14,-54.45466 -14.68571,-20.26216 -11.74858,0 -15.42001,19.62897 2.20285,58.25378 -8.81143,6.33188 -9.54571,0 -7.34286,-6.33188 0,-60.78656 16.88857,-22.16173 9.54572,-2.53277 z" />
+		<path id="path7448" class="body" d="m 145.88409,117.34658 -21.2943,-17.729392 -8.81143,0 -5.14,6.331922 2.93715,7.59831 24.96572,25.3277 14.68571,0.63319 16.88857,-27.86047 2.20286,-8.86469 -11.74857,-7.598311 -8.07714,3.799159 z" />
+		<path id="path7450" class="body" d="m 209.03267,100.25038 -4.40572,10.13108 17.62286,30.39323 12.48287,1.89958 33.77714,-28.49366 -2.20286,-13.93023 -7.34285,-1.266382 -25.7,19.628962 -7.34286,-17.72939 -10.28001,-5.065535 z" />
+		<path id="path7452" class="body" d="m 462.36129,107.84869 -9.54571,-3.79916 -18.35715,-28.493647 -2.20285,-10.131087 23.49714,-40.524309 8.07714,-3.79916 9.54573,2.532776 1.46857,8.231498 -21.2943,37.358355 21.2943,27.227262 -2.20286,6.331932 z" />
+		<path id="path7454" class="body" d="m 499.07559,95.184839 0,7.598311 6.60857,5.06554 11.01428,-1.26638 24.96573,-31.026427 2.20285,-7.598311 -19.09142,-43.057085 -10.28001,-1.89958 -7.34286,3.799159 -0.73429,7.598302 13.95143,37.358355 z" />`
+	},
+]
+
+interface StrenghtWorkout {
+	readonly id   : string,
+	readonly part : string,
+	readonly epart: string,
+	readonly type : string,
+	readonly name : string,
+	readonly ename: string,
+	readonly pim  : Array<string>,
+	readonly min  : Array<string>,
+	readonly ext  : Array<string>,
+};
+
+let strenghtWorkoutArr: Array<StrenghtWorkout> = [
+	{part: "肩部", epart: "Shoulder",   type: "fixed", id: "sth-1-1", name: "肩部推举", ename: "Shoulder Press"     , pim: ["4-1", "4-2", "4-3"], min: ["3-1-1", "5-5-1", "5-5-2", "5-5-3"], ext: []},
+	{part: "肩部", epart: "Shoulder",   type: "fixed", id: "sth-1-2", name: "肩部推举", ename: "Shoulder Press"     , pim: ["4-1", "4-2", "4-3"], min: ["5-5-1", "5-5-2", "5-5-3"], ext: []},
+	{part: "胸部", epart: "Chest",      type: "fixed", id: "sth-2-1", name: "胸部推举", ename: "Chest Press"        , pim: ["2-1", "2-2"], min: ["4-1", "4-2", "5-5-1", "5-5-2", "5-5-3"], ext: []},
+	{part: "胸部", epart: "Chest",      type: "fixed", id: "sth-2-2", name: "宽距胸推", ename: "Wide Chest Press"   , pim: ["2-1", "2-2", "5-5-1", "5-5-2", "5-5-3"], min: [], ext: []},
+	{part: "胸部", epart: "Chest",      type: "fixed", id: "sth-2-3", name: "上斜胸推", ename: "Incline Chest Press", pim: ["2-1", "2-2", "4-1", "5-5-1", "5-5-2", "5-5-3"], min: [], ext: []},
+	{part: "背部", epart: "Back",       type: "fixed", id: "sth-3-1", name: "低位划船", ename: "Low Row"            , pim: ["3-6"], min: ["3-1-1", "3-1-2", "5-2-1", "5-2-2"], ext: []},
+	{part: "背部", epart: "Back",       type: "fixed", id: "sth-3-2", name: "高位下拉", ename: "Height pull"        , pim: ["3-6", "5-2-1", "5-2-2"], min: [], ext: []},
+	{part: "背部", epart: "Back",       type: "fixed", id: "sth-3-3", name: "划船"    , ename: "Row"                , pim: ["3-1-1", "3-1-2", "4-3", "3-6", "5-2-1", "5-2-2"], min: [], ext: []},
+	{part: "腰部", epart: "Waist",      type: "fixed", id: "sth-4-1", name: "下背"    , ename: "Lower Back"         , pim: ["8-1"], min: [], ext: []},
+	{part: "大臂", epart: "Upper Arms", type: "fixed", id: "sth-5-1", name: "弯举"    , ename: "Arm Curl"           , pim: ["5-2-1", "5-2-2"], min: [], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-1", name: "腿举"    , ename: "Leg Press"          , pim: ["a-6", "a-7", "a-8", "9-1"], min: ["a-9-2", "a-9-3", "a-1", "a-5"], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-2", name: "腿内收"  , ename: "Adductor"           , pim: ["a-1", "a-5"], min: [], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-3", name: "腿屈伸"  , ename: "Leg Extension"      , pim: ["a-6", "a-7", "a-8"], min: [], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-4", name: "腿外展"  , ename: "Abductor"           , pim: ["9-1"], min: [], ext: []}
+ ];
+
+/* 加载运动的肌肉图 */
+let loadWorkoutMuscleSvg = (workout: StrenghtWorkout, imgId: string, width: string, height: string, scale: string) => {
+	let mergePathWithStyle = (oldArr: Array<IMuscleCsvPath>, style: string, muscleArr: Array<string>) => {
+		let newArr: Array<IMuscleCsvPath> = [];
+		for (let i = 0; i < oldArr.length; i++) {
+			let rec: IMuscleCsvPath = oldArr[i];
+			let newStyle = muscleArr && muscleArr.indexOf(rec.muscle) >= 0 ? style : rec.style;
+			newArr.push({ id: rec.id, muscle: rec.muscle, style: newStyle, d: rec.d });
+		}
+		return newArr;
+	};
+	//
+	let path01 = mergePathWithStyle(fontMuscleArr, "muscle-primary", workout.pim);
+	path01 = mergePathWithStyle(path01, "muscle-minor", workout.min);
+	path01 = mergePathWithStyle(path01, "muscle-extra", workout.ext);
+	let svg01 = loadMuscleSvg(imgId, width, height, scale, path01);
+	let path02 = mergePathWithStyle(backMuscleArr, "muscle-primary", workout.pim);
+	path02 = mergePathWithStyle(path02, "muscle-minor", workout.min);
+	path02 = mergePathWithStyle(path02, "muscle-extra", workout.ext);
+	let svg02 = loadMuscleSvg(imgId, width, height, scale, path02);
+	//
+	return {font: svg01, back: svg02};
+};
+
