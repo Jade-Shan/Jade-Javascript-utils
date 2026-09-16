@@ -67,12 +67,13 @@
 
 echo '--- start : compile typescript ---'
 rm -rf webroot/scripts/ts/*
+cp -r src/scripts/ts webroot/scripts/
 npx tsc -p tsconfig.json
 echo '--- finish : compile typescript ---'
 
 echo '--- start : minify javascript ---'
-for f in resource basic dataStructure geo2d canvas web webHtmlPage 3rdLibTool wiki blog UIWindow sandtable testJadeTRPG testJadeUtils testJadeUI; do
-  npx terser "webroot/scripts/ts/${f}.js" -o "webroot/scripts/ts/${f}.min.js"
+for f in $(find webroot/scripts/ts -type f -name '*.js' ! -name '*.min.js'); do
+  npx terser "$f" -o "${f%.js}.min.js"
 done
 echo '--- finish : minify javascript ---'
 
