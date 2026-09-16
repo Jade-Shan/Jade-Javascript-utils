@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. 语言使用简体中文
 2. 加载skill `moe-kira`
-3. 切换 node 版本为 v22.22.2
+3. 切换 node 版本为 `.nvmrc`中的版本。应该是： v22.22.2
+4. 根据 `package.json` 文件确定引用的包的版本。
 
 ## 项目概览
 

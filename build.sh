@@ -63,16 +63,16 @@
 # 有两种方法：gulp工具和手动编译并压缩。选一种构建就可以
 # ========================================
 
-echo '--- start : clean old typescript ---'
-rm -rf webroot/scripts/ts/*
-echo '---   end : clean old typescript ---'
+# echo '--- start : clean old typescript ---'
+# rm -rf webroot/scripts/ts/*
+# echo '---   end : clean old typescript ---'
+# 
+# # 方法一：通过GULP
+# echo '--- start : compile typescript by gulp ---'
+# npx gulp compress-typescript
+# echo '--- end: compile typescript by gulp ---'
 
-# 方法一：通过GULP
-echo '--- start : compile typescript by gulp ---'
-npx gulp compress-typescript
-echo '--- end: compile typescript by gulp ---'
-
-# # 方法二：通过 tsc 与 terser
+# 方法二：通过 tsc 与 terser
 # echo '--- start : compile typescript ---'
 # npx tsc -p tsconfig.json
 # echo '--- finish : compile typescript ---'
@@ -86,11 +86,11 @@ echo '--- end: compile typescript by gulp ---'
 # ========================================
 # html
 # ========================================
-echo '--- start : copy html ---'
-mkdir -p webroot/html/
-rm -rf webroot/html/*
-cp -r  src/html/* webroot/html/
-echo '--- finish: copy html ---'
+# echo '--- start : copy html ---'
+# mkdir -p webroot/html/
+# rm -rf webroot/html/*
+# cp -r  src/html/* webroot/html/
+# echo '--- finish: copy html ---'
 
 # ========================================
 # docs
