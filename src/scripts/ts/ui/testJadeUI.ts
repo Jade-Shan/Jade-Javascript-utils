@@ -1,5 +1,5 @@
-import { CanvasCircle2D, CanvasRectangle2D, CanvasUtils } from "./canvas.js";
-import { JadeUIResource, DefaultIconGroup } from "./resource.js";
+import { CanvasCircle2D, CanvasRectangle2D, CanvasUtils } from "../canvas.js";
+import { JadeUIResource, DefaultIconGroup } from "../resource.js";
 import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "./UIWindow.js";
 
 export namespace TestJadeUI {

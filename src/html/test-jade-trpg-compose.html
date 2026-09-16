@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<title>test-trpg-compose</title>
-	<link rel="icon" type="image/x-icon" href="../themes/window-ui/images/favicon.ico">
+	<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 </head>
 
 <body>
@@ -51,7 +51,7 @@
 
 </body>
 <script type="module">
-	import { TestJadeTRPG } from '../scripts/ts/testJadeTRPG.js';
+	import { TestJadeTRPG } from "@@staticRoot/scripts/ts/trpg/testJadeTRPG.js";
 	window.onload = function () { TestJadeTRPG.testTrpgCompose(); }
 </script>
 

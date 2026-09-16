@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>test canvas</title>
-		<link rel="icon" type="image/x-icon" href="../themes/window-ui/images/favicon.ico">
+		<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 
 	</head>
 	<body>
@@ -51,7 +51,7 @@
 
 	</body>
 	<script type="module">
-		import { TestJadeUtils } from '../scripts/ts/testJadeUtils.js';
+		import { TestJadeUtils } from "@@staticRoot/scripts/ts/testJadeUtils.js";
 		// $(window).load(function() { TestJadeUtils.testCanvas(); });
 		window.onload = function () { TestJadeUtils.testCanvas(); }
 	</script> 

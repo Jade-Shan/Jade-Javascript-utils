@@ -15,6 +15,9 @@ const uglify    = require('gulp-uglify-es').default;      //js压缩
 const rename    = require('gulp-rename');      //重命名
 const concat    = require('gulp-concat');      //合并文件
 const clean     = require('gulp-clean');       //清空文件夹
+const fileinclude = require('gulp-file-include');    //html模板
+const processhtml = require('gulp-processhtml');     // html引用替换
+const envs        = require("./envs"); // 加载配置中的envs.js文件
 
 const themes = ['hobbit', 'lo-fi', 'paper-print'];
 
@@ -172,66 +175,30 @@ themeTasks.push("process-style-trpg");
 //}));
 //themeTasks.push('process-javascript')
 
-const scriptTsRef = 'src/scripts/include/';
-const scriptTsSrc = 'src/scripts/ts/';
 const scriptTsTag = 'webroot/scripts/ts/';
 
+// TypeScript 编译配置统一以 tsconfig.json 为准
+const tsProject = ts.createProject('tsconfig.json');
+
 gulp.task('clean-typescript', () => {
-	return gulp.src([scriptTsTag + '*'], 
+	return gulp.src([scriptTsTag + '**/*'], 
 		{read: false, allowEmpty: true}).pipe(clean());
 });
 
-// 合并、压缩、重命名typescript
+// 编译 typescript：源文件由 tsconfig.json 的 include 决定，自动包含子目录
 gulp.task('process-typescript', gulp.series('clean-typescript', () => {
-	return gulp.src([
-		scriptTsRef + 'refTypes.d.ts',
-		scriptTsSrc + 'resource.ts',
-		scriptTsSrc + 'basic.ts',
-		scriptTsSrc + 'dataStructure.ts',
-		scriptTsSrc + 'geo2d.ts',
-		scriptTsSrc + 'canvas.ts',
-		scriptTsSrc + 'web.ts',
-		scriptTsSrc + 'webHtmlPage.ts',
-		scriptTsSrc + '3rdLibTool.ts',
-		scriptTsSrc + 'wiki.ts',
-		scriptTsSrc + 'blog.ts',
-		scriptTsSrc + 'UIWindow.ts',
-		scriptTsSrc + 'sandtable.ts',
-		scriptTsSrc + 'workout.ts',
-		scriptTsSrc + 'testJadeTRPG.ts',
-		scriptTsSrc + 'testJadeUtils.ts',
-		scriptTsSrc + 'testJadeUI.ts',
-		scriptTsSrc + 'testWorkout.ts',
-	]).pipe(sourcemaps.init()).pipe(ts({
-		target: "es6",
-		module: "es6",
-		noImplicitAny: true,
-		strict: true,
-		declaration: true,
-		lib: ["ES6", "DOM", "ES2019.String"]
-	})).pipe(sourcemaps.write('.'))
-		//.pipe(concat('all.js'))
-		.pipe(gulp.dest(scriptTsTag))
+	return tsProject.src()
+		.pipe(sourcemaps.init())
+		.pipe(tsProject())
+		.pipe(sourcemaps.write('.'))
+		.pipe(gulp.dest(scriptTsTag));
 }));
 themeTasks.push('process-typescript');
 
 gulp.task('compress-typescript', gulp.series('process-typescript', () => {
 	return gulp.src([
-		scriptTsTag + 'resource.js',
-		scriptTsTag + 'basic.js',
-		scriptTsTag + 'dataStructure.js',
-		scriptTsTag + 'geo2d.js',
-		scriptTsTag + 'canvas.js',
-		scriptTsTag + 'web.js', 
-		scriptTsTag + 'webHtmlPage.js',
-		scriptTsTag + '3rdLibTool.js',
-		scriptTsTag + 'wiki.js',
-		scriptTsTag + 'blog.js',
-		scriptTsTag + 'UIWindow.js',
-		scriptTsTag + 'sandtable.js',
-		scriptTsTag + 'testJadeTRPG.js',
-		scriptTsTag + 'testJadeUtils.js',
-		scriptTsTag + 'testJadeUI.js',
+		scriptTsTag + '**/*.js',
+		'!' + scriptTsTag + '**/*.min.js',
 	]).pipe(rename({ suffix: '.min' }))
 		.pipe(uglify())
 		.pipe(gulp.dest(scriptTsTag))
@@ -239,6 +206,48 @@ gulp.task('compress-typescript', gulp.series('process-typescript', () => {
 themeTasks.push('compress-typescript');
 
 
+// ==================
+// html
+// ==================
 
-gulp.task('default', gulp.parallel(themeTasks))
+let initCurrEnv = (env) => {
+	env.buildversion = env.buildversion + (new Date()).getTime();
+	console.log("buildversion : " + env.buildversion);
+	console.log("webRoot      : " + env.webRoot     );
+	console.log("apiRoot      : " + env.apiRoot     );
+	console.log("cdnRoot      : " + env.cdnRoot     );
+	console.log("cdn3rd       : " + env.cdn3rd      );
+};
+
+const htmlSrc = "src/html/"
+const htmlDst = "webroot/html/"
+const devEnv = envs.deployEnvs.dev;
+const rlsEnv = envs.deployEnvs.rls;
+
+
+const allTaskDev = [];
+gulp.task('clean-html-dev', () => {
+	initCurrEnv(devEnv);
+	return gulp.src([htmlDst + '**/*.html'], {read: false}).pipe(clean());
+});
+gulp.task('include-html-dev', gulp.series('clean-html-dev', async (callback) => {
+	return gulp.src([htmlSrc + "**/*.html"])
+		.pipe(fileinclude({prefix: '@@', basepath: '@root', context: devEnv}))
+		.pipe(gulp.dest(htmlDst));
+}));
+
+const allTaskRls = [];
+gulp.task('clean-html-rls', () => {
+	initCurrEnv(rlsEnv);
+	return gulp.src([htmlDst + '**/*.html'], {read: false}).pipe(clean());
+});
+gulp.task('process-html-rls', gulp.series('clean-html-rls', async (callback) => {
+	return gulp.src([htmlSrc + "**/*.html"])
+		.pipe(fileinclude({prefix: '@@', basepath: '@root', context: rlsEnv}))
+		.pipe(processhtml())
+		.pipe(gulp.dest(htmlDst));
+}));
+
+gulp.task('default', gulp.parallel(themeTasks));
+
 

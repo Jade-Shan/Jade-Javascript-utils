@@ -3,4 +3,5 @@ node_modules/
 node_modules_20260513/
 package-lock.json
 deploy-test.sh
-
+envs.js
+node_modules.backup.20260916.tar.gz 

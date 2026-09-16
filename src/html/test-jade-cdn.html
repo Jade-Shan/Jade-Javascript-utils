@@ -3,24 +3,24 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>test es module</title>
-		<link rel="icon" type="image/x-icon" href="../themes/window-ui/images/favicon.ico">
+		<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 
-		<script type="text/javascript"            src="http://www.jade-dungeon.cn:8081/3rd/jquery/3.5.1/jquery.min.js"                ></script>
+		<script type="text/javascript"            src="@@cdn3rd/jquery/3.5.1/jquery.min.js"                ></script>
 
-		<link   type="text/css" rel="stylesheet" href="http://www.jade-dungeon.cn:8081/3rd/datatable/1.10.21/jq-1.5/datatables.min.css"/>
-		<script type="text/javascript"            src="http://www.jade-dungeon.cn:8081/3rd/datatable/1.10.21/jq-1.5/datatables.min.js"></script>
+		<link   type="text/css" rel="stylesheet" href="@@cdn3rd/datatable/1.10.21/jq-1.5/datatables.min.css"/>
+		<script type="text/javascript"            src="@@cdn3rd/datatable/1.10.21/jq-1.5/datatables.min.js"></script>
 
-		<link   type="text/css" rel="stylesheet" href="http://www.jade-dungeon.cn:8081/3rd/bootstrap/3.4.1/css/bootstrap.min.css"      />
-		<link   type="text/css" rel="stylesheet" href="http://www.jade-dungeon.cn:8081/3rd/bootstrap/3.4.1/css/bootstrap-theme.min.css"/>
-		<script type="text/javascript"            src="http://www.jade-dungeon.cn:8081/3rd/bootstrap/3.4.1/js/bootstrap.min.js"       ></script>
+		<link   type="text/css" rel="stylesheet" href="@@cdn3rd/bootstrap/3.4.1/css/bootstrap.min.css"      />
+		<link   type="text/css" rel="stylesheet" href="@@cdn3rd/bootstrap/3.4.1/css/bootstrap-theme.min.css"/>
+		<script type="text/javascript"            src="@@cdn3rd/bootstrap/3.4.1/js/bootstrap.min.js"       ></script>
 
-		<link   type="text/css" rel="stylesheet" href="http://www.jade-dungeon.cn:8081/3rd/SyntaxHighlighter/2.1.364/styles/shCore.css"          />
-		<script type="text/javascript"            src="http://www.jade-dungeon.cn:8081/3rd/SyntaxHighlighter/2.1.364/scripts/shCore.js"         ></script>
-		<script type="text/javascript"            src="http://www.jade-dungeon.cn:8081/3rd/SyntaxHighlighter/2.1.364/scripts/shAutoloader.js"   ></script>
+		<link   type="text/css" rel="stylesheet" href="@@cdn3rd/SyntaxHighlighter/2.1.364/styles/shCore.css"          />
+		<script type="text/javascript"            src="@@cdn3rd/SyntaxHighlighter/2.1.364/scripts/shCore.js"         ></script>
+		<script type="text/javascript"            src="@@cdn3rd/SyntaxHighlighter/2.1.364/scripts/shAutoloader.js"   ></script>
 
-		<script type="text/javascript" src="http://www.jade-dungeon.cn:8081/3rd/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+		<script type="text/javascript" src="@@cdn3rd/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-		<script type="text/javascript"            src="http://www.jade-dungeon.cn:8081/3rd/showdown/1.3.0/showdown.min.js"            ></script>
+		<script type="text/javascript"            src="@@cdn3rd/showdown/1.3.0/showdown.min.js"            ></script>
 
 
 	</head>
@@ -97,7 +97,7 @@
 
 						<h1 id="test-image-001">Test image</h1>
 
-						<img class="atc-img" alt="test" src="../themes/hobbit/images/bg.jpg">
+						<img class="atc-img" alt="test" src="@@staticRoot/themes/hobbit/images/bg.jpg">
 
 
 
@@ -105,7 +105,7 @@
 						<br/>
 						<br/>
 
-						<img class="img-frame" alt="test" src="../themes/hobbit/images/bg.jpg">
+						<img class="img-frame" alt="test" src="@@staticRoot/themes/hobbit/images/bg.jpg">
 
 						<br/>
 
@@ -126,6 +126,18 @@ fi
 $JAVA -jar appJarFIle.jar ${@}
 </pre>
 
+			<div id="test-font" class="content">
+				<h1>测试字体</h1>
+				<p style="font-family:&quot;凤凰点阵体 12px&quot;">凤凰点阵宋12px</p>
+				<p style="font-family:&quot;凤凰点阵体 16px&quot;">凤凰点阵体 16px</p>
+				<p style="font-family:文泉驿点阵宋体12px">文泉驿点阵宋体12px</p>
+				<p style="font-family:文泉驿点阵宋体13px">文泉驿点阵宋体13px</p>
+				<p style="font-family:文泉驿点阵宋体14px">文泉驿点阵宋体14px</p>
+				<p style="font-family:文泉驿点阵宋体15px">文泉驿点阵宋体15px</p>
+				<p style="font-family:文泉驿点阵宋体16px">文泉驿点阵宋体16px</p>
+				<p style="font-family:NanoDyongSong">纳米点宋 NanoDyongSong</p>
+			</div>
+
 
 					</div>
 					<!-- contents end -->
@@ -144,7 +156,7 @@ $JAVA -jar appJarFIle.jar ${@}
 	</body>
 
 	<script type="module">
-		import { TestJadeUtils } from '../scripts/ts/testJadeUtils.js';
+		import { TestJadeUtils } from "@@staticRoot/scripts/ts/testJadeUtils.js";
 		$(window).load(function() {
 				TestJadeUtils.testAll();
 		});
