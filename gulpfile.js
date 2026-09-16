@@ -223,18 +223,31 @@ const htmlSrc = "src/html/"
 const htmlDst = "webroot/html/"
 const devEnv = envs.deployEnvs.dev;
 const rlsEnv = envs.deployEnvs.rls;
+
+
+const allTaskDev = [];
 gulp.task('clean-html-dev', () => {
 	initCurrEnv(devEnv);
 	return gulp.src([htmlDst + '**/*.html'], {read: false}).pipe(clean());
 });
-
-gulp.task('include-html', gulp.series('clean-html-dev', async (callback) => {
+gulp.task('include-html-dev', gulp.series('clean-html-dev', async (callback) => {
 	return gulp.src([htmlSrc + "**/*.html"])
 		.pipe(fileinclude({prefix: '@@', basepath: '@root', context: devEnv}))
 		.pipe(gulp.dest(htmlDst));
 }));
 
+const allTaskRls = [];
+gulp.task('clean-html-rls', () => {
+	initCurrEnv(rlsEnv);
+	return gulp.src([htmlDst + '**/*.html'], {read: false}).pipe(clean());
+});
+gulp.task('process-html-rls', gulp.series('clean-html-rls', async (callback) => {
+	return gulp.src([htmlSrc + "**/*.html"])
+		.pipe(fileinclude({prefix: '@@', basepath: '@root', context: rlsEnv}))
+		.pipe(processhtml())
+		.pipe(gulp.dest(htmlDst));
+}));
 
-gulp.task('default', gulp.parallel(themeTasks))
+gulp.task('default', gulp.parallel(themeTasks));
 
 
