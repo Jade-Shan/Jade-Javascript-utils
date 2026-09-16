@@ -1,6 +1,6 @@
-import { SimpleMap } from "./dataStructure.js";
+import { SimpleMap } from "../dataStructure.js";
 
-import { muscleInfo, fontMuscleImgs, backMuscleimgs } from "./workout/workoutData.js"
+import { muscleInfo, fontMuscleImgs, backMuscleimgs } from "./workoutData.js"
 
 interface IMuscleRec     { readonly id: string, readonly name  : string, readonly chs  : string, readonly subs: Array<IMuscleRec>};
 interface IMuscleCsvPath { readonly id: string, readonly muscle: string, readonly style: string, readonly d   : string           };

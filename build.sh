@@ -60,21 +60,22 @@
 
 # ========================================
 # compile javascript
+# 有两种方法：gulp工具和手动编译并压缩。选一种构建就可以
 # ========================================
-
 
 echo '--- start : clean old typescript ---'
 rm -rf webroot/scripts/ts/*
 echo '---   end : clean old typescript ---'
 
-echo '--- start : compile javascript ---'
+# 方法一：通过GULP
+echo '--- start : compile typescript by gulp ---'
 npx gulp compress-typescript
-echo '--- finish : compile javascript ---'
+echo '--- end: compile typescript by gulp ---'
 
+# # 方法二：通过 tsc 与 terser
 # echo '--- start : compile typescript ---'
 # npx tsc -p tsconfig.json
 # echo '--- finish : compile typescript ---'
-# 
 # echo '--- start : minify javascript ---'
 # for f in $(find webroot/scripts/ts -type f -name '*.js' ! -name '*.min.js'); do
 #   npx terser "$f" -o "${f%.js}.min.js"
@@ -85,10 +86,11 @@ echo '--- finish : compile javascript ---'
 # ========================================
 # html
 # ========================================
-# echo '--- start : copy html ---'
-# mkdir -p webroot/html/
-# cp -r  src/html/* webroot/html/
-# echo '--- finish: copy html ---'
+echo '--- start : copy html ---'
+mkdir -p webroot/html/
+rm -rf webroot/html/*
+cp -r  src/html/* webroot/html/
+echo '--- finish: copy html ---'
 
 # ========================================
 # docs
@@ -97,7 +99,6 @@ echo '--- finish : compile javascript ---'
 # mkdir -p webroot/docs/
 # cp -r  docs/* webroot/docs/
 # echo '--- finish: copy doc ---'
-
 
 rm -rf ~/workspace/nginx/jadecdn/webroot/jadeutils.v3/*
 cp -r webroot/* ~/workspace/nginx/jadecdn/webroot/jadeutils.v3   
