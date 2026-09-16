@@ -61,20 +61,25 @@
 # ========================================
 # compile javascript
 # ========================================
-# echo '--- start : compile javascript ---'
-# npx gulp compress-typescript
-# echo '--- finish : compile javascript ---'
 
-echo '--- start : compile typescript ---'
+
+echo '--- start : clean old typescript ---'
 rm -rf webroot/scripts/ts/*
-npx tsc -p tsconfig.json
-echo '--- finish : compile typescript ---'
+echo '---   end : clean old typescript ---'
 
-echo '--- start : minify javascript ---'
-for f in $(find webroot/scripts/ts -type f -name '*.js' ! -name '*.min.js'); do
-  npx terser "$f" -o "${f%.js}.min.js"
-done
-echo '--- finish : minify javascript ---'
+echo '--- start : compile javascript ---'
+npx gulp compress-typescript
+echo '--- finish : compile javascript ---'
+
+# echo '--- start : compile typescript ---'
+# npx tsc -p tsconfig.json
+# echo '--- finish : compile typescript ---'
+# 
+# echo '--- start : minify javascript ---'
+# for f in $(find webroot/scripts/ts -type f -name '*.js' ! -name '*.min.js'); do
+#   npx terser "$f" -o "${f%.js}.min.js"
+# done
+# echo '--- finish : minify javascript ---'
 
 
 # ========================================
