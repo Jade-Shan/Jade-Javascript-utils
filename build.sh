@@ -86,6 +86,10 @@
 # ========================================
 # html
 # ========================================
+echo '--- start : process-html ---'
+npx gulp include-html
+echo '--- end: process-html ---'
+
 # echo '--- start : copy html ---'
 # mkdir -p webroot/html/
 # rm -rf webroot/html/*

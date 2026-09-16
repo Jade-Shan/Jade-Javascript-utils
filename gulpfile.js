@@ -15,9 +15,9 @@ const uglify    = require('gulp-uglify-es').default;      //js压缩
 const rename    = require('gulp-rename');      //重命名
 const concat    = require('gulp-concat');      //合并文件
 const clean     = require('gulp-clean');       //清空文件夹
-// const fileinclude = require('gulp-file-include');    //html模板
-// const processhtml = require('gulp-processhtml');     // html引用替换
-// const envs        = require("./envs"); // 加载配置中的envs.js文件
+const fileinclude = require('gulp-file-include');    //html模板
+const processhtml = require('gulp-processhtml');     // html引用替换
+const envs        = require("./envs"); // 加载配置中的envs.js文件
 
 const themes = ['hobbit', 'lo-fi', 'paper-print'];
 
@@ -210,29 +210,29 @@ themeTasks.push('compress-typescript');
 // html
 // ==================
 
-// let initCurrEnv = (env) => {
-// 	env.buildversion = env.buildversion + (new Date()).getTime();
-// 	console.log("buildversion : " + cfg.env.buildversion);
-// 	console.log("webRoot      : " + cfg.env.webRoot     );
-// 	console.log("apiRoot      : " + cfg.env.apiRoot     );
-// 	console.log("cdnRoot      : " + cfg.env.cdnRoot     );
-// 	console.log("cdn3rd       : " + cfg.env.cdn3rd      );
-// };
-// 
-// const htmlSrc = "src/html"
-// const htmlDst = "webroot/html"
-// const devEnv = envs.deployEnvs.dev;
-// const rlsEnv = envs.deployEnvs.rls;
-// gulp.task('clean-html-dev', () => {
-// 	configEnv(devEnv);
-// 	return gulp.src([htmlDst + '**/*.html'], {read: false}).pipe(clean());
-// });
-// 
-// gulp.task('include-html', gulp.series('clean-html-dev', async (callback) => {
-// 	return gulp.src([htmlSrc + "**/*.html"])
-// 		.pipe(fileinclude({prefix: '@@', basepath: '@root', context: devEnv}))
-// 		.pipe(gulp.dest(htmlDst));
-// }));
+let initCurrEnv = (env) => {
+	env.buildversion = env.buildversion + (new Date()).getTime();
+	console.log("buildversion : " + env.buildversion);
+	console.log("webRoot      : " + env.webRoot     );
+	console.log("apiRoot      : " + env.apiRoot     );
+	console.log("cdnRoot      : " + env.cdnRoot     );
+	console.log("cdn3rd       : " + env.cdn3rd      );
+};
+
+const htmlSrc = "src/html/"
+const htmlDst = "webroot/html/"
+const devEnv = envs.deployEnvs.dev;
+const rlsEnv = envs.deployEnvs.rls;
+gulp.task('clean-html-dev', () => {
+	initCurrEnv(devEnv);
+	return gulp.src([htmlDst + '**/*.html'], {read: false}).pipe(clean());
+});
+
+gulp.task('include-html', gulp.series('clean-html-dev', async (callback) => {
+	return gulp.src([htmlSrc + "**/*.html"])
+		.pipe(fileinclude({prefix: '@@', basepath: '@root', context: devEnv}))
+		.pipe(gulp.dest(htmlDst));
+}));
 
 
 gulp.task('default', gulp.parallel(themeTasks))
