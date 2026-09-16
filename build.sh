@@ -67,7 +67,6 @@
 
 echo '--- start : compile typescript ---'
 rm -rf webroot/scripts/ts/*
-cp -r src/scripts/ts webroot/scripts/
 npx tsc -p tsconfig.json
 echo '--- finish : compile typescript ---'
 
