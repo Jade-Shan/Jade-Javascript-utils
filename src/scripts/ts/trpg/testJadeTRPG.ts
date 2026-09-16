@@ -1,8 +1,8 @@
-import { TimeUtil } from "./basic.js";
-import { CanvasUtils, ImageClip } from "./canvas.js";
-import { JadeUIResource, DefaultIconGroup } from "./resource.js";
+import { TimeUtil } from "../basic.js";
+import { CanvasUtils, ImageClip } from "../canvas.js";
+import { JadeUIResource, DefaultIconGroup } from "../resource.js";
 import { CircleToken, ICanvasFrame, ImageResource, LineToken, RectangleToken, SandTable, SandTableUtils, SceneDataResp } from "./sandtable.js";
-import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "./UIWindow.js";
+import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "../ui/UIWindow.js";
 
 export namespace TestJadeTRPG {
 

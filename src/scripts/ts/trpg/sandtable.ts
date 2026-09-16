@@ -1,7 +1,7 @@
-import { ColorRGB } from "./basic.js";
-import { CanvasCircle2D, CanvasLine2D, CanvasRectangle2D, CanvasShape2D, ICanvas2D, ICanvasCircle2D, ICanvasLine2D, ICanvasRectangle2D, ImageClip } from "./canvas.js";
-import { Geo2DUtils, IPoint2D} from "./geo2d.js";
-import { ImageProxyConfig, WebUtil } from "./web.js";
+import { ColorRGB } from "../basic.js";
+import { CanvasCircle2D, CanvasLine2D, CanvasRectangle2D, CanvasShape2D, ICanvas2D, ICanvasCircle2D, ICanvasLine2D, ICanvasRectangle2D, ImageClip } from "../canvas.js";
+import { Geo2DUtils, IPoint2D} from "../geo2d.js";
+import { ImageProxyConfig, WebUtil } from "../web.js";
 
 /** 可见性类型：default=默认, glimmer=微光, dark=黑暗 */
 export type VisibilityType = "default" | "glimmer" | "dark";

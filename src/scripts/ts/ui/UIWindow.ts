@@ -1,7 +1,7 @@
-import { SimpleMap } from "./dataStructure.js";
-import { IPoint2D } from "./geo2d.js";
-import { JadeUIResource, IconGroup, DefaultIconGroup } from "./resource.js";
-import { WebUtil } from "./web.js";
+import { SimpleMap } from "../dataStructure.js";
+import { IPoint2D } from "../geo2d.js";
+import { JadeUIResource, IconGroup, DefaultIconGroup } from "../resource.js";
+import { WebUtil } from "../web.js";
 
 /** 窗口初始 z-index 最小值 */
 const WIN_Z_IDX_MIN = 2000;
