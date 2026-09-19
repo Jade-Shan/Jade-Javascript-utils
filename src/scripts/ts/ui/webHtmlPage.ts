@@ -1,5 +1,5 @@
-import { StrUtil } from './basic.js';
-import { WebUtil } from './web.js';
+import { StrUtil } from '../basic.js';
+import { WebUtil } from '../web.js';
 
 
 /**

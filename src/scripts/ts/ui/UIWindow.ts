@@ -1,5 +1,5 @@
 import { SimpleMap } from "../dataStructure.js";
-import { IPoint2D } from "../geo2d.js";
+import { IPoint2D } from "./geo2d.js";
 import { JadeUIResource, IconGroup, DefaultIconGroup } from "../resource.js";
 import { WebUtil } from "../web.js";
 
