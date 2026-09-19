@@ -3,6 +3,20 @@ title window 桌面环境 —— 窗口状态流转时序图
 
 skinparam sequenceMessageAlign center
 
+skinparam defaultFontName "Noto Serif CJK SC"
+
+skinparam sequenceTitleFontName "Noto Sans CJK SC"
+skinparam sequenceTitleFontStyle bold
+
+skinparam sequenceParticipantFontName "Noto Sans CJK SC"
+skinparam sequenceParticipantFontStyle bold
+
+skinparam sequenceActorFontName "Noto Sans CJK SC"
+skinparam sequenceActorFontStyle bold
+
+skinparam sequenceDividerFontName "Noto Sans CJK SC"
+skinparam sequenceDividerFontStyle bold
+
 actor "User\n(MouseEvent)" as User
 participant "UIDesktop\nDesktop" as Desktop
 participant "UIObj\nWindow" as Win
