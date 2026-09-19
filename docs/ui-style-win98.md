@@ -176,7 +176,7 @@ else              → 仅激活置顶（窗口在底层时，点 dock 图标先"
 
 PlantUML 源文件已抽离到 [uml/src/ui-style-win98.plantuml](uml/src/ui-style-win98.plantuml)，汇总了窗口从创建到关闭的完整生命周期及各阶段状态流转：① 创建 → ② 激活/置顶 → ③ 拖动 → ④ 缩放 → ⑤ 最大化/还原 → ⑥ 最小化/恢复 → ⑦ 关闭。
 
-![ui-style-win98](uml/src/ui-style-win98.plantuml)
+![ui-style-win98](uml/out/ui-style-win98.svg)
 
 
 ---
