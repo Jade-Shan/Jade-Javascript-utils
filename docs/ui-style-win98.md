@@ -174,90 +174,10 @@ else              → 仅激活置顶（窗口在底层时，点 dock 图标先"
 
 ### 4.9 状态流转时序图
 
-下面这张 PlantUML 时序图汇总了窗口从创建到关闭的完整生命周期，以及各阶段消息触发的状态变化：
+PlantUML 源文件已抽离到 [uml/src/ui-style-win98.plantuml](uml/src/ui-style-win98.plantuml)，汇总了窗口从创建到关闭的完整生命周期及各阶段状态流转：① 创建 → ② 激活/置顶 → ③ 拖动 → ④ 缩放 → ⑤ 最大化/还原 → ⑥ 最小化/恢复 → ⑦ 关闭。
 
-```plantuml
-@startuml
-title window 桌面环境 —— 窗口状态流转时序图
+![ui-style-win98](uml/src/ui-style-win98.plantuml)
 
-skinparam sequenceMessageAlign center
-
-actor "用户\n(鼠标事件)" as User
-participant "UIDesktop\n桌面" as Desktop
-participant "UIObj\n窗口" as Win
-participant "DockBar\n任务栏" as Dock
-
-== ① 创建窗口 ==
-User -> Win : new + renderIn()\n(构造时仅建 win/titleBar/windowBody 空 div)
-Win -> Desktop : renderWindowTplt(win, body, statusBar)\n拼装标题栏图标/按钮/状态栏
-Win -> Win : bindWinOptActive/Close/Max/Min\nbindWindowDragSelect/ScaleSelect
-Desktop -> Win : getNewWindowPosition(w, h)
-Desktop -> Desktop : addWindow(win)\nallWindows.put + windowZIndex.push
-Desktop -> Dock : addIcon(win)
-Dock -> Win : bindWinOptMin(win, icon)\n(图标即最小化按钮)
-
-== ② 激活 / 置顶 ==
-User -> Win : mousedown (窗口任意位置)
-Win -> Desktop : optWinActive(win)
-Desktop -> Desktop : reorderWindows(win.id)\n其余窗口降层、重分配 z-index
-Desktop -> Win : activeWindow(true)  → isTop = true, 移除 inactive
-Desktop -> Win : setZIndex(2000 + n)
-
-== ③ 拖动窗口 ==
-User -> Win : titleBar mousedown (选中)
-Win -> Desktop : setCurrDragging({ win })\ndragging.win 就位
-User -> Desktop : desktopDiv mousedown (冒泡, setTimeout 10ms)
-Desktop -> Desktop : 记录 moveStart / winStart
-User -> Desktop : mousemove (全局)
-Desktop -> Win : style.left/top = winStart + (dx, dy)
-User -> Desktop : mouseup / mouseleave
-Desktop -> Desktop : cleanDragging()\n清空 dragging、恢复光标
-
-== ④ 缩放窗口 ==
-User -> Win : winDiv mousedown (边缘 7px 内)
-Win -> Desktop : setCurrScaling({ win, direction: 1-9 })\n设 resize 光标
-User -> Desktop : desktopDiv mousedown
-Desktop -> Desktop : 记录 moveStart / winStart
-User -> Desktop : mousemove
-Desktop -> Win : 按方向码增减 left/top/width/height\n重算 windowBody 尺寸
-User -> Desktop : mouseup / mouseleave
-Desktop -> Desktop : cleanScaling()
-
-== ⑤ 最大化 / 还原 ==
-User -> Win : btnMax mousedown
-alt isMax = false (未最大化)
-  Win -> Win : isMax = true\nlastPos/lastSize = 当前坐标尺寸
-  Win -> Desktop : showWinMaxMinAnima(当前 → 全屏)
-  Win -> Win : setTimeout(350ms) 写全屏样式
-else isMax = true (已最大化)
-  Win -> Win : isMax = false\nend = lastPos/lastSize
-  Win -> Desktop : showWinMaxMinAnima(全屏 → 原样)
-  Win -> Win : setTimeout(350ms) 恢复样式
-end
-
-== ⑥ 最小化 / 恢复 ==
-User -> Win : btnMin / Dock 图标 mousedown
-alt isMin = true
-  Win -> Desktop : showWinMaxMinAnima(min → 原样)
-  Win -> Win : isMin = false, visibility = visible
-  Win -> Desktop : optWinActive(win) (恢复为顶层)
-else isTop = true
-  Win -> Win : isMin = true, visibility = hidden
-  Win -> Desktop : showWinMaxMinAnima(原样 → 桌面底部)
-else isTop = false
-  Win -> Desktop : optWinActive(win) (仅唤起置顶)
-end
-
-== ⑦ 关闭窗口 ==
-User -> Win : btnClose mouseup
-Win -> Desktop : optWinClose(win)
-Desktop -> Desktop : allWindows.remove\nreorderWindows 排除自己
-Desktop -> Win : removeChild(win.ui.win) (删除 DOM)
-Desktop -> Win : 新末尾窗口 activeWindow(true)
-Desktop -> Dock : removeIcon(win)
-
-@enduml
-```
 
 ---
 
