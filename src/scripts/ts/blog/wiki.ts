@@ -1,6 +1,6 @@
-import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from './webHtmlPage.js';
+import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from '../ui/webHtmlPage.js';
 
-import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from './3rdLibTool.js';
+import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from '../3rdLibTool.js';
 
 /**
  * Wiki 页面

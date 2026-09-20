@@ -1,7 +1,7 @@
 import { GeoShape2D, GeoPolygon2D, Geo2DUtils, Point2D, Line2D, IRay2D, 
 	IPoint2D, ILine2D, IRectangle2D, Rectangle2D, Ray2D, IGeo2D, GeoCurve2D, 
 	IRevolveOption, ICircle2D, Circle2D } from './geo2d.js';
-import { WebUtil } from './web.js';
+import { WebUtil } from '../web.js';
 
 /**
  * 从图片中截取一部分

@@ -1,4 +1,4 @@
-import { NumUtil } from "./basic.js";
+import { NumUtil } from "../basic.js";
 
 /** 2D 几何图形基础接口（空标记接口） */
 export interface IGeo2D { }

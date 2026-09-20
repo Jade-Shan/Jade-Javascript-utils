@@ -48,14 +48,14 @@
 # ========================================
 # build css
 # ========================================
-echo '--- start : build css ---'
-npx gulp 'process-style-hobbit' 
-npx gulp 'process-style-lo-fi' 
-npx gulp 'process-style-paper-print' 
-npx gulp 'process-style-window-ui' 
-npx gulp 'process-style-workout' 
-npx gulp 'process-style-trpg' 
-echo '--- finish : build css ---'
+# echo '--- start : build css ---'
+# npx gulp 'process-style-hobbit' 
+# npx gulp 'process-style-lo-fi' 
+# npx gulp 'process-style-paper-print' 
+# npx gulp 'process-style-window-ui' 
+# npx gulp 'process-style-workout' 
+# npx gulp 'process-style-trpg' 
+# echo '--- finish : build css ---'
 
 
 # ========================================

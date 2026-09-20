@@ -1,5 +1,5 @@
 import { SimpleMap } from "../dataStructure.js";
-import { IPoint2D } from "../geo2d.js";
+import { IPoint2D } from "./geo2d.js";
 import { JadeUIResource, IconGroup, DefaultIconGroup } from "../resource.js";
 import { WebUtil } from "../web.js";
 
@@ -122,6 +122,16 @@ export class UIDesktop {
 	 * @returns 是否有
 	 */
 	hasDockBar(): boolean { return this.dockBar !== undefined; }
+
+	/**
+	 * 获取窗口对应 Dock 图标的中心位置（相对于桌面）
+	 * @param winId - 窗口 ID
+	 * @returns 图标中心坐标；Dock 不存在或不可见时返回 undefined
+	 */
+	getDockIconCenter(winId: string): IPoint2D | undefined {
+		if (!this.dockBar || !this.dockBar.isVisible()) { return undefined; }
+		return this.dockBar.getIconCenter(winId);
+	}
 
 	/**
 	 * 取得桌面上窗口的最大层数
@@ -393,7 +403,13 @@ export let defaultWinOption = {
 	bindWinOptMin: (win: UIObj, btn: HTMLElement): any => {
 		btn.addEventListener("mousedown", e => {
 			let winDiv = win.ui.win;
-			let min = {
+			// 最小化动画的终点：优先使用 Dock 图标中心，Dock 不存在或不可见时退回桌面底部中央
+			let dockIconPos = win.desktop.getDockIconCenter(win.id);
+			let min = dockIconPos ? {
+				left: dockIconPos.x,
+				top: dockIconPos.y,
+				width: 10, height: 1
+			} : {
 				left: win.desktop.desktopDiv.offsetWidth / 2,
 				top: win.desktop.desktopDiv.offsetHeight - 10,
 				width: 10, height: 1
@@ -947,6 +963,31 @@ export class DockBar {
 
 	/** 生成图标元素的 ID */
 	genAppIconId(winId: string): string { return `appIco-${winId}`; };
+
+	/**
+	 * Dock 栏当前是否可见
+	 * @returns 是否可见
+	 */
+	isVisible(): boolean {
+		let style = getComputedStyle(this.barDiv);
+		return style.display !== 'none' && style.visibility !== 'hidden';
+	}
+
+	/**
+	 * 获取指定窗口图标的中心位置（相对于桌面）
+	 * @param winId - 窗口 ID
+	 * @returns 图标中心坐标；找不到图标时返回 undefined
+	 */
+	getIconCenter(winId: string): IPoint2D | undefined {
+		let icon = document.getElementById(this.genAppIconId(winId));
+		if (!icon) { return undefined; }
+		let iconRect = icon.getBoundingClientRect();
+		let deskRect = this.parentElement.getBoundingClientRect();
+		return {
+			x: iconRect.left - deskRect.left + iconRect.width / 2,
+			y: iconRect.top  - deskRect.top  + iconRect.height / 2
+		};
+	}
 
 	/**
 	 * 向 Dock 栏添加窗口图标

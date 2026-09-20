@@ -1,8 +1,8 @@
-import { StrUtil } from './basic.js';
-import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from './webHtmlPage.js';
-import { ShowdownUtils, BootStrapHelper } from './3rdLibTool.js';
-import { WebUtil, HttpResponse } from "./web.js"
-import { SimpleMap } from './dataStructure.js'
+import { StrUtil } from '../basic.js';
+import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from '../ui/webHtmlPage.js';
+import { ShowdownUtils, BootStrapHelper } from '../3rdLibTool.js';
+import { WebUtil, HttpResponse } from "../web.js"
+import { SimpleMap } from '../dataStructure.js'
 
 
 /**
