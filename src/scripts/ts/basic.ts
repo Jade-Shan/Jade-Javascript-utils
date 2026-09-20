@@ -219,12 +219,8 @@ export class StrUtil {
 	 * @param place 填充字符，默认为空格
 	 * @returns 填充后的字符串
 	 */
-	static leftPad(str: string, max: number, place?: string): string {
-		place = place ? place : " ";
-		while (str.length < max) {
-			str = place + str;
-		}
-		return str;
+	static leftPad(str: string, max: number, place: string = " "): string {
+		return str.length < max ? place.repeat(max - str.length) + str : str;
 	}
 
 	/**
@@ -234,31 +230,23 @@ export class StrUtil {
 	 * @param place 填充字符，默认为空格
 	 * @returns 填充后的字符串
 	 */
-	static rightPad(str: string, max: number, place?: string): string {
-		place = place ? place : " ";
-		while (str.length < max) {
-			str = str + place;
-		}
-		return str;
+	static rightPad(str: string, max: number, place: string = " "): string {
+		return str.length < max ? str + place.repeat(max - str.length) : str;
 	}
 
 	/**
 	 * 字符串模板替换，用对象属性值替换 `{key}` 占位符。
 	 * 例：`"我是{name}，今年{age}了".format({name:"loogn",age:22})`
 	 * @param str 包含 `{key}` 占位符的模板字符串
-	 * @param arg 键值对对象（或数组），用于替换占位符
+	 * @param arg 键值对对象，用于替换占位符
 	 * @returns 替换后的字符串
 	 */
-	static format(str: string, arg: any): string {
-		let result = str;
-		// 如果模板参数是对象
-		if (typeof (arg) == "object") {
-			for (const key of Object.keys(arg)) {
-				const value = arg[key];
-				if (undefined !== value) { result = result.split("{" + key + "}").join(value); }
-			}
-		}
-		return result;
+	static format(str: string, arg: Record<string, string | number>): string {
+		// 用 replace 回调一次扫描完成，避免 split().join() 的多次遍历
+		return str.replace(/\{([^}]+)\}/g, (match, key: string) => {
+			const value = arg[key];
+			return undefined !== value ? String(value) : match;
+		});
 	}
 
 

@@ -181,7 +181,7 @@ const scriptTsTag = 'webroot/scripts/ts/';
 const tsProject = ts.createProject('tsconfig.json');
 
 gulp.task('clean-typescript', () => {
-	return gulp.src([scriptTsTag + '**/*'], 
+	return gulp.src([scriptTsTag + '*'], 
 		{read: false, allowEmpty: true}).pipe(clean());
 });
 
