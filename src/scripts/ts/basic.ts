@@ -245,7 +245,8 @@ export class StrUtil {
 		// 用 replace 回调一次扫描完成，避免 split().join() 的多次遍历
 		return str.replace(/\{([^}]+)\}/g, (match, key: string) => {
 			const value = arg[key];
-			return undefined !== value ? String(value) : match;
+			// != null 同时排除 null 和 undefined，避免 null 被转成字面量 "null"
+			return value != null ? String(value) : match;
 		});
 	}
 
@@ -258,7 +259,8 @@ export class StrUtil {
 	 * @returns 替换后的字符串
 	 */
 	static replaceByRegex(s: string, exp: string, newStr: string): string {
-		return s.replace(new RegExp(exp, "gm"), newStr);
+		// 用函数替换，避免 newStr 中的 $ 被 String.replace 特殊解释（$&、$1 等）
+		return s.replace(new RegExp(exp, "gm"), () => newStr);
 	}
 
 	/**
@@ -275,7 +277,7 @@ export class StrUtil {
 				let low = str.charCodeAt(++i);
 				c = ((c - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
 			}
-			if (c >= 0x0001 && c <= 0x007F) {
+			if (c <= 0x007F) {
 				out.push(str.charAt(i));
 			} else if (c > 0x07FF) {
 				if (c > 0xFFFF) {
@@ -331,27 +333,37 @@ export class StrUtil {
 					out.push(String.fromCharCode(0xD800 + ((code - 0x10000) >> 10)));
 					out.push(String.fromCharCode(0xDC00 + ((code - 0x10000) & 0x3FF)));
 					break;
+				default:
+					// 非法 UTF-8 首字节（如孤立的 continuation byte），原样保留避免静默丢弃
+					out.push(str.charAt(i - 1));
+					break;
 			}
 		}
 		return out.join("");
 	}
 
 	/**
-	 * 将字符串编码为 Base64 格式。
+	 * 将字符串编码为 Base64 格式（支持非 ASCII 字符）。
 	 * @param str 原始字符串
 	 * @returns Base64 编码后的字符串
 	 */
 	static base64encode(str: string): string {
-		return btoa(str);
+		// 先转 UTF-8 字节序列再编码，避免 btoa 对非 Latin-1 字符抛异常
+		return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+			String.fromCharCode(parseInt(p1, 16))
+		));
 	}
 
 	/**
-	 * 将 Base64 编码字符串解码为原始字符串。
+	 * 将 Base64 编码字符串解码为原始字符串（支持非 ASCII 字符）。
 	 * @param str Base64 编码的字符串
 	 * @returns 解码后的原始字符串
 	 */
 	static base64decode(str: string): string {
-		return atob(str);
+		// 将 atob 得到的字节序列还原为 UTF-8 字符串
+		return decodeURIComponent(atob(str).split("").map((c) =>
+			"%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
+		).join(""));
 	}
 
 }
