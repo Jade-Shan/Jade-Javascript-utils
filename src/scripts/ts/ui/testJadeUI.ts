@@ -9,6 +9,91 @@ export namespace TestJadeUI {
 	class TestWindow01 extends UIWindowAdapter {
 
 		renderIn(): void {
+			let renderWindowMenu = (): HTMLDivElement => {
+				let menuBar = document.createElement<'div'>("div");
+				menuBar.setAttribute("role", "menubar");
+				menuBar.innerHTML = `
+      <ul role="menubar">
+        <li role="menuitem" tabindex="0" aria-haspopup="true">
+          文件(F)
+          <ul role="menu">
+            <li role="menuitem"><a href="#">新建 <span>Ctrl+N</span></a></li>
+            <li role="menuitem"><a href="#">打开... <span>Ctrl+O</span></a></li>
+            <li role="menuitem" class="has-divider">
+              <a href="#">保存 <span>Ctrl+S</span></a>
+            </li>
+            <li role="menuitem"><a href="#">页面设置...</a></li>
+            <li role="menuitem" class="has-divider"><a href="#">打印...</a></li>
+            <li role="menuitem"><a href="#">退出</a></li>
+          </ul>
+        </li>
+
+        <li role="menuitem" tabindex="0" aria-haspopup="true">
+          编辑(E)
+          <ul role="menu">
+            <li role="menuitem"><a href="#">撤销 <span>Ctrl+Z</span></a></li>
+            <li role="menuitem" class="has-divider">
+              <a href="#">剪切 <span>Ctrl+X</span></a>
+            </li>
+            <!-- 禁用项：灰字 + 白色浮雕 -->
+            <li role="menuitem" aria-disabled="true">
+              <a href="#">粘贴 <span>Ctrl+V</span></a>
+            </li>
+            <li role="menuitem" aria-disabled="true" class="has-divider">
+              <a href="#">删除 <span>Del</span></a>
+            </li>
+            <li role="menuitem"><a href="#">全选 <span>Ctrl+A</span></a></li>
+          </ul>
+        </li>
+
+        <li role="menuitem" tabindex="0" aria-haspopup="true">
+          查看(V)
+          <ul role="menu">
+            <!-- 三级嵌套：验证 :focus-within 向上冒泡 -->
+            <!-- 同时带 aria-haspopup + has-divider：验证箭头(::before)
+                 与分隔线(::after)不抢同一个伪元素 -->
+            <li
+              role="menuitem"
+              tabindex="0"
+              aria-haspopup="true"
+              class="has-divider"
+            >
+              缩放
+              <ul role="menu">
+                <li role="menuitem"><button>放大</button></li>
+                <li role="menuitem"><button>缩小</button></li>
+                <li role="menuitem" tabindex="0" aria-haspopup="true">
+                  更多
+                  <ul role="menu">
+                    <li role="menuitem"><button>200%</button></li>
+                    <li role="menuitem"><button>400%</button></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <!-- 勾选项：checkbox 当勾号用 -->
+            <li role="menuitem">
+              <input type="checkbox" id="mi-statusbar" checked />
+              <label for="mi-statusbar">状态栏</label>
+            </li>
+            <li role="menuitem">
+              <input type="checkbox" id="mi-wrap" />
+              <label for="mi-wrap">自动换行</label>
+            </li>
+          </ul>
+        </li>
+
+        <li role="menuitem" tabindex="0" aria-haspopup="true">
+          帮助(H)
+          <ul role="menu">
+            <li role="menuitem"><a href="#">帮助主题</a></li>
+            <li role="menuitem"><a href="#">关于记事本</a></li>
+          </ul>
+        </li>
+      </ul>
+	  `;
+				return menuBar;
+			}
 			let renderWindowBody = (): HTMLDivElement => {
 				let windowBody = this.ui.windowBody;
 				windowBody.style.overflow = this.cfg.body.overflow;
@@ -53,7 +138,7 @@ export namespace TestJadeUI {
 		`;
 				return statusBar;
 			}
-			JadeWindowUI.renderWindowTplt(this, renderWindowBody, renderStatusBar);
+			JadeWindowUI.renderWindowTplt(this, renderWindowMenu, renderWindowBody, renderStatusBar);
 		}
 
 	}
@@ -125,7 +210,7 @@ export namespace TestJadeUI {
 				`;
 				return statusBar;
 			}
-			JadeWindowUI.renderWindowTplt(this, renderWindowBody, renderStatusBar);
+			JadeWindowUI.renderWindowTplt(this, undefined, renderWindowBody, renderStatusBar);
 		}
 
 	}

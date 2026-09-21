@@ -680,6 +680,7 @@ interface WinUIElement {
 	readonly titleBar: HTMLDivElement;   // 标题栏
 	readonly windowBody: HTMLDivElement; // 窗口主体
 	statusBar?: HTMLDivElement;          // 窗口状态栏
+	menuBar?: HTMLDivElement;          // 窗口状态栏
 }
 
 /**
@@ -1163,13 +1164,19 @@ export namespace JadeWindowUI {
 	 * @param renderStatusBar - 可选的状态栏渲染函数
 	 * @returns {HTMLDivElement} 窗口 DIV 元素
 	 */
-	export function renderWindowTplt(win: UIObj, renderWindowBody?: () => HTMLDivElement, renderStatusBar?: () => HTMLDivElement): HTMLDivElement {
+	export function renderWindowTplt(win: UIObj, renderWindowMenu?: () => HTMLDivElement, renderWindowBody?: () => HTMLDivElement, renderStatusBar?: () => HTMLDivElement): HTMLDivElement {
 
 		let parent = win.desktop.desktopDiv;
 		let winDiv: HTMLDivElement = win.ui.win;
 		//
 		let titleBar = renderTitleBar(win);
 		winDiv.appendChild(titleBar );
+		//
+		if (renderWindowMenu) {
+			let menuBar = renderWindowMenu();
+			win.ui.menuBar = menuBar;
+			winDiv.appendChild(menuBar);
+		}
 		//
 		if (renderWindowBody) { renderWindowBody(); }
 		let windowBody = win.ui.windowBody;
