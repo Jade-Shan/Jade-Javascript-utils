@@ -1,78 +1,29 @@
-.desktop {
-	overflow: hidden;
-}
-
-div.desktop>div.window>div.window-body {
-	user-select: auto;
-}
-
 /**
- * 与鼠标选择相关的控制。作为窗口元素有些是不能作为文本选中的。
+ * 98-menu.css —— 为 98.css 补上菜单栏 / 弹出菜单
+ *
+ * 开合机制照搬 7.css（tabindex + :focus-within + :has()，零 JavaScript），
+ * 外观全部换成 98.css 的视觉语言：silver 底、box-shadow 模拟凹凸边框、
+ * 无圆角、无渐变、navy 高亮条、浮雕式禁用文字。
+ *
+ * 用法（必须放在 98.css 之后，依赖它的 CSS 变量）：
+ *   <link rel="stylesheet" href="98.css" />
+ *   <link rel="stylesheet" href="98-menu.css" />
+ *
+ * HTML 约定（与 7.css 完全一致，容器必须是 <ul>）：
+ *   <ul role="menubar" class="can-hover">
+ *     <li role="menuitem" tabindex="0" aria-haspopup="true">
+ *       File
+ *       <ul role="menu">
+ *         <li role="menuitem"><a href="#">Open <span>Ctrl+O</span></a></li>
+ *         <li role="menuitem" class="has-divider"><a href="#">Save</a></li>
+ *         <li role="menuitem" aria-disabled="true"><a href="#">Paste</a></li>
+ *       </ul>
+ *     </li>
+ *   </ul>
+ *
+ * 浏览器要求：:has() —— Chrome 105+ / Safari 15.4+ / Firefox 121+
  */
-.cannot-select {
-	user-select: none;
-}
 
-.title-bar-icon-text {
-	display: flex;
-}
-
-.title-bar-icon {
-	font-weight: bold;
-	color: white;
-	letter-spacing: 0;
-	margin-right: 5px;
-}
-
-.title-bar-controls>button {
-	cursor: pointer;
-}
-
-.dock-content {
-	width: 100%;
-	height: 100%;
-	justify-content: center;
-	align-items: end;
-	display: flex;
-}
-
-.dock-bar {
-	margin-bottom: 0px;
-	padding: 6px 15px;
-	height: 24px;
-	display: flex;
-	justify-content: center;
-	align-items: end;
-	border-radius: 12px;
-	backdrop-filter: blur(20px);
-	--webkit-backdrop-filter: blur(20px);
-	opacity: 55;
-}
-
-.dock-bar:hover {
-	height: 56px;
-	opacity: 75%;
-}
-
-.dock-bar>.menu-item {
-	--i: 1;
-	border-radius: 10px;
-	width: calc(40px * var(--i));
-	height: calc(40px * var(--i));
-	margin-bottom: calc(var(--i) * 15px - 15px);
-	opacity: 55%;
-}
-
-.dock-bar>.menu-item:hover {
-	opacity: 75%;
-}
-
-.dock-bar>.gap {
-	--i: 1;
-	width: calc(15px * var(--i));
-}
-
-/* 增加menu功能 */
 :root {
   /* 菜单项左侧留给勾选标记 / 图标的宽度。
      注意：Win98 菜单没有 7.css 那条竖直凹槽分隔线，所以这里只留空白。 */
@@ -88,18 +39,7 @@ div.desktop>div.window>div.window-body {
 /* ------------------------------------------------------------------
  * 1. 基础重置
  * ------------------------------------------------------------------ */
- /*
-div.menubardiv {
-  box-shadow:
-    inset 0 8px var(--button-shadow),
-    inset 0 -8px var(--button-highlight);
-}
-	*/
-ul[role='menubar']{
-  box-shadow:
-    inset 0 -1px var(--button-highlight),
-    inset 0 -2px var(--button-shadow);
-}
+
 ul[role='menubar'],
 ul[role='menu'] {
   cursor: default;
@@ -380,4 +320,3 @@ ul.can-hover
   > ul[role='menu'] {
   display: none;
 }
-

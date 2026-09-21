@@ -398,7 +398,7 @@ export namespace TestJadeTRPG {
 				`;
 				return statusBar;
 			}
-			JadeWindowUI.renderWindowTplt(this, renderWindowBody, renderStatusBar);
+			JadeWindowUI.renderWindowTplt(this, undefined, renderWindowBody, renderStatusBar);
 		}
 
 	}

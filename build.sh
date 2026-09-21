@@ -48,14 +48,14 @@
 # ========================================
 # build css
 # ========================================
-# echo '--- start : build css ---'
+echo '--- start : build css ---'
 # npx gulp 'process-style-hobbit' 
 # npx gulp 'process-style-lo-fi' 
 # npx gulp 'process-style-paper-print' 
-# npx gulp 'process-style-window-ui' 
+npx gulp 'process-style-window-ui' 
 # npx gulp 'process-style-workout' 
 # npx gulp 'process-style-trpg' 
-# echo '--- finish : build css ---'
+echo '--- finish : build css ---'
 
 
 # ========================================
@@ -63,16 +63,15 @@
 # 有两种方法：gulp工具和手动编译并压缩。选一种构建就可以
 # ========================================
 
-echo '--- start : clean old typescript ---'
-rm -rf webroot/scripts/ts/*
-echo '---   end : clean old typescript ---'
-
 # 方法一：通过GULP
 echo '--- start : compile typescript by gulp ---'
 npx gulp compress-typescript
 echo '--- end: compile typescript by gulp ---'
 
 # 方法二：通过 tsc 与 terser
+# echo '--- start : clean old typescript ---'
+# rm -rf webroot/scripts/ts/*
+# echo '---   end : clean old typescript ---'
 # echo '--- start : compile typescript ---'
 # npx tsc -p tsconfig.json
 # echo '--- finish : compile typescript ---'
@@ -93,12 +92,15 @@ echo '--- end: process-html ---'
 # ========================================
 # docs
 # ========================================
-echo '--- start : copy doc ---'
-mkdir -p webroot/docs/
-rm -rf  webroot/docs/*
-cp -r  docs/* webroot/docs/
-echo '--- finish: copy doc ---'
+# echo '--- start : copy doc ---'
+# mkdir -p webroot/docs/
+# rm -rf  webroot/docs/*
+# cp -r  docs/* webroot/docs/
+# echo '--- finish: copy doc ---'
 
+# ========================================
+# deploy local server
+# ========================================
 rm -rf ~/workspace/nginx/jadecdn/webroot/jadeutils.v3/*
 cp -r webroot/* ~/workspace/nginx/jadecdn/webroot/jadeutils.v3   
 
