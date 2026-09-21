@@ -16,7 +16,16 @@ const DOCK_BAR_MARGIN = 10;
  * 桌面环境的参数配置
  */
 interface IDesktopConfig {
-	desktop?: { backgroundImage?: string, width: string, height: string },
+	/** 桌面区域配置 */
+	desktop?: {
+		/** 桌面背景图片 */
+		backgroundImage?: string,
+		/** 桌面宽度 */
+		width: string,
+		/** 桌面高度 */
+		height: string
+	},
+	/** Dock 任务栏配置 */
 	dockBar?: DockBarParam
 }
 
