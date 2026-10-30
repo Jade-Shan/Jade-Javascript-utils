@@ -943,6 +943,8 @@ export class TestJadeUtils {
 	}
 
 	static testWiki() {
+		// test-jade-wiki.html 里有 `esp-unicode` 标签，要先注册自定义标签
+		WebUtil.initCustomElements();
 		TestWebHtmlPage.testJquery();
 	}
 

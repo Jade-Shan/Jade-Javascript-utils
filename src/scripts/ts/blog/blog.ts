@@ -231,6 +231,9 @@ export class BlogPage {
 	 */
 	static async initWikiPage(basePath: string, title: string, userId: string = "teo") {
 
+		// 注册 `esp-unicode` 标签，页面里已有的该标签会在注册时被 upgrade
+		WebUtil.initCustomElements();
+
 		let apiRoot = "//www.jade-dungeon.cn:8088/";
 		let cfg: PageConfig = { apiRoot: apiRoot, pageTitle: "Diary", subTitle: title, ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);

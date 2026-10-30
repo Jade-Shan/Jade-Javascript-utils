@@ -2,15 +2,13 @@ import { StrUtil, TimeUtil } from './basic.js';
 import { SimpleMap } from './dataStructure.js';
 
 
-/** 创建自定义标签，用于显示Unicode字符 */
-export class EscapeUnicode extends HTMLElement {
-	constructor() {
-		super();
-		let oldHtml = this.innerHTML;
-		// this.innerHTML = "&#x" + oldHtml + ";";
-		this.innerHTML = oldHtml.replace(/(&amp;#x?[0-9a-fA-F]{1,6};)/, (e => e.replace('&amp;', '&')));
-	}
-}
+/**
+ * 自定义标签 `esp-unicode` 的元素类型，用于显示Unicode字符
+ *
+ * 仅为类型声明，编译后被擦除；标签的实现在 {@link WebUtil.initCustomElements} 中定义，
+ * 以免模块加载期求值 `HTMLElement` 而污染无 DOM 的运行环境
+ */
+export type IEscapeUnicode = HTMLElement;
 
 /**
  * 规范可以使用的图标大小
@@ -224,8 +222,25 @@ export class WebUtil {
 
 	/**
 	 * 创建自定义标签，用于显示Unicode字符
+	 *
+	 * 类定义放在方法内部，只在调用时（浏览器环境）才求值 `HTMLElement`，
+	 * 避免模块顶层求值导致无 DOM 的环境（Node / SSR）import 即抛 `ReferenceError`
+	 *
+	 * 可重复调用：标签已注册时直接返回，避免 `customElements.define()` 抛
+	 * `NotSupportedError`
 	 */
 	static initCustomElements(): void {
+		// 已注册过就不再重复注册
+		if (undefined !== customElements.get('esp-unicode')) { return; }
+		/** 创建自定义标签，用于显示Unicode字符 */
+		class EscapeUnicode extends HTMLElement {
+			constructor() {
+				super();
+				let oldHtml = this.innerHTML;
+				// 带 `g` 标志，一个标签里的多个转义实体要全部还原
+				this.innerHTML = oldHtml.replace(/&amp;(#x?[0-9a-fA-F]{1,6};)/g, "&$1");
+			}
+		}
 		/** 创建自定义标签必须要有一个连字符*/
 		customElements.define('esp-unicode', EscapeUnicode);
 	}
