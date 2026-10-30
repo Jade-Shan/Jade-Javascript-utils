@@ -1,5 +1,38 @@
 {
+	"name": "@jade-dungeon/jade-utils",
+	"version": "3.0.0",
+	"description": "个人前端工具库：通用工具、2D 几何、Canvas 绘图、桌面式窗口 UI、TRPG 沙盘、博客/Wiki 页面框架",
+	"license": "GPL-3.0-or-later",
+	"author": "Jade Shan",
+	"sideEffects": false,
+	"exports": {
+		".":                { "types": "./dist/index.d.ts",             "default": "./dist/index.js" },
+		"./basic":          { "types": "./dist/basic.d.ts",             "default": "./dist/basic.js" },
+		"./data":           { "types": "./dist/dataStructure.d.ts",     "default": "./dist/dataStructure.js" },
+		"./web":            { "types": "./dist/web.d.ts",               "default": "./dist/web.js" },
+		"./resource":       { "types": "./dist/resource.d.ts",          "default": "./dist/resource.js" },
+		"./3rd-lib-tool":   { "types": "./dist/3rdLibTool.d.ts",        "default": "./dist/3rdLibTool.js" },
+		"./geo2d":          { "types": "./dist/ui/geo2d.d.ts",          "default": "./dist/ui/geo2d.js" },
+		"./canvas":         { "types": "./dist/ui/canvas.d.ts",         "default": "./dist/ui/canvas.js" },
+		"./ui-window":      { "types": "./dist/ui/UIWindow.d.ts",       "default": "./dist/ui/UIWindow.js" },
+		"./web-html-page":  { "types": "./dist/ui/webHtmlPage.d.ts",    "default": "./dist/ui/webHtmlPage.js" },
+		"./sandtable":      { "types": "./dist/trpg/sandtable.d.ts",    "default": "./dist/trpg/sandtable.js" },
+		"./blog":           { "types": "./dist/blog/blog.d.ts",         "default": "./dist/blog/blog.js" },
+		"./wiki":           { "types": "./dist/blog/wiki.d.ts",         "default": "./dist/blog/wiki.js" },
+		"./workout":        { "types": "./dist/workout/workout.d.ts",   "default": "./dist/workout/workout.js" },
+		"./workout-data":   { "types": "./dist/workout/workoutData.d.ts","default": "./dist/workout/workoutData.js" }
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build:pkg": "tsc -p tsconfig.build.json && node -e \"require('fs').writeFileSync('dist/package.json','{\\\"type\\\":\\\"module\\\"}\\n')\"",
+		"prepublishOnly": "npm run build:pkg"
+	},
 	"devDependencies": {
+		"@types/jquery": "^3.5.32",
+		"7.css": "^0.21.1",
+		"98.css": "^0.1.21",
 		"gulp": "^4.0.2",
 		"gulp-clean": "^0.4.0",
 		"gulp-cli": "^2.3.0",
@@ -16,10 +49,5 @@
 		"jshint": "^2.13.6",
 		"terser": "^5.39.0",
 		"typescript": "^5.8.3"
-	},
-	"dependencies": {
-		"@types/jquery": "^3.5.32",
-		"7.css": "^0.21.1",
-		"98.css": "^0.1.21"
 	}
 }
