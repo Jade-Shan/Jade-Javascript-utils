@@ -229,7 +229,7 @@ export class BlogPage {
 	 * @param userId - 用户 ID，默认为 "teo"
 	 * @returns {Promise<void>}
 	 */
-	static async initWikiPage(basePath: string, title: string, userId: string = "teo") {
+	static async initBlogPage(basePath: string, title: string, userId: string = "teo") {
 
 		// 注册 `esp-unicode` 标签，页面里已有的该标签会在注册时被 upgrade
 		WebUtil.initCustomElements();

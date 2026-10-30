@@ -104,4 +104,6 @@ echo '--- end: process-html ---'
 rm -rf ~/workspace/nginx/jadecdn/webroot/jadeutils.v3/*
 cp -r webroot/* ~/workspace/nginx/jadecdn/webroot/jadeutils.v3   
 
+cp webroot/html/blog.html ~/workspace/nginx/jadedungeon-v2/webroot/index.html
+
 sleep 3 && sync

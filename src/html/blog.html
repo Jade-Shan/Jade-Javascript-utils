@@ -49,9 +49,22 @@
 <script type="text/javascript" src="../scripts/ts/wiki.js" ></script>
 -->
 <script type="module">
+		import { WebUtil  } from "@@staticRoot/scripts/ts/web.js";
 		import { BlogPage } from "@@staticRoot/scripts/ts/blog/blog.js";
 
-		await BlogPage.initWikiPage('', '温其如玉');
+		let currUser = WebUtil.loadCookieValue('data.currUser');
+		let urlParams = new URLSearchParams(window.location.search);
+		if (currUser && currUser.length > 0) {
+			// do nothging
+		} else {
+			currUser = 'teo';
+		}
+		let urlUser = urlParams.get('currUser')
+		if (urlUser && urlUser.length > 0) {
+			currUser = urlUser;
+		}		
+
+		await BlogPage.initBlogPage('', '温其如玉', currUser);
 
 </script> 
 </html>
