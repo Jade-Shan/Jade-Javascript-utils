@@ -86,12 +86,10 @@ export class BlogPage {
 	 * @param userId - 用户 ID，默认为 "teo"
 	 * @returns {Promise<void>}
 	 */
-	static async initBlogPage(basePath: string, title: string, userId: string = "teo") {
+	static async initBlogPage(basePath: string, title: string, userId: string = "teo", currPage = 1) {
 
 		let apiRoot = API_ROOT;
-		BlogCommon.initPageFrame(apiRoot, title);
-
-		let currPage = 1;
+		BlogCommon.initPageFrame(apiRoot, title, "Journal");
 
 		try {
 			await Promise.all([

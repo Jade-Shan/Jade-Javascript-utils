@@ -31,12 +31,10 @@ export class GalleryPage {
 	 * @param userId - 用户 ID，默认为 "teo"
 	 * @returns {Promise<void>}
 	 */
-	static async initGalleryPage(basePath: string, title: string, userId: string = "teo") {
+	static async initGalleryPage(basePath: string, title: string, userId: string = "teo", currPage = 1) {
 
 		let apiRoot = API_ROOT;
-		BlogCommon.initPageFrame(apiRoot, title);
-
-		let currPage = 1;
+		BlogCommon.initPageFrame(apiRoot, title, "Gallery");
 
 		try {
 			await Promise.all([

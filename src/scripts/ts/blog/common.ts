@@ -275,14 +275,15 @@ export class BlogCommon {
 	 *
 	 * @param apiRoot - API 根路径
 	 * @param title - 页面副标题
+	 * @param pageTitle - 页面类型标题
 	 * @returns {WebHtmlPage} 初始化完成的页面对象
 	 */
-	static initPageFrame(apiRoot: string, title: string): WebHtmlPage {
+	static initPageFrame(apiRoot: string, title: string, pageTitle: string = "Diary"): WebHtmlPage {
 
 		// 注册 `esp-unicode` 标签，页面里已有的该标签会在注册时被 upgrade
 		WebUtil.initCustomElements();
 
-		let cfg: PageConfig = { apiRoot: apiRoot, pageTitle: "Diary", subTitle: title, ajaxTimeout: 500 };
+		let cfg: PageConfig = { apiRoot: apiRoot, pageTitle: pageTitle, subTitle: title, ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);
 		page.renderSubTitle();
 		//

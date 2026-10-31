@@ -52,6 +52,7 @@
 		import { WebUtil  } from "@@staticRoot/scripts/ts/web.js";
 		import { GalleryPage } from "@@staticRoot/scripts/ts/blog/gallery.js";
 
+		let currPage = 1;
 		let currUser = WebUtil.loadCookieValue('data.currUser');
 		let urlParams = new URLSearchParams(window.location.search);
 		if (currUser && currUser.length > 0) {
@@ -63,8 +64,12 @@
 		if (urlUser && urlUser.length > 0) {
 			currUser = urlUser;
 		}		
+		let pmPage = urlParams.get('currPage')
+		if (pmPage && pmPage.length > 0) {
+			currPage = pmPage;
+		}
 
-		await GalleryPage.initGalleryPage('', '温其如玉', currUser);
+		await GalleryPage.initGalleryPage('', '温其如玉', currUser, currPage);
 
 </script> 
 </html>
