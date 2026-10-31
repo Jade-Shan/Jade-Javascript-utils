@@ -17,7 +17,9 @@
 		"./ui-window":      { "types": "./dist/ui/UIWindow.d.ts",       "default": "./dist/ui/UIWindow.js" },
 		"./web-html-page":  { "types": "./dist/ui/webHtmlPage.d.ts",    "default": "./dist/ui/webHtmlPage.js" },
 		"./sandtable":      { "types": "./dist/trpg/sandtable.d.ts",    "default": "./dist/trpg/sandtable.js" },
+		"./blog-comm":      { "types": "./dist/blog/common.d.ts",       "default": "./dist/blog/common.js" },
 		"./blog":           { "types": "./dist/blog/blog.d.ts",         "default": "./dist/blog/blog.js" },
+		"./gallery":        { "types": "./dist/blog/gallery.d.ts",      "default": "./dist/blog/gallery.js" },
 		"./wiki":           { "types": "./dist/blog/wiki.d.ts",         "default": "./dist/blog/wiki.js" },
 		"./workout":        { "types": "./dist/workout/workout.d.ts",   "default": "./dist/workout/workout.js" },
 		"./workout-data":   { "types": "./dist/workout/workoutData.d.ts","default": "./dist/workout/workoutData.js" }

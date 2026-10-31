@@ -56,8 +56,17 @@ ul { margin-left:0em; padding-left: 1.8em; }
 /* ==========================================
  * title
  * ========================================== */
-.content h1 p, h2 p, h3 p, h4 p, h5 p, h6 p { margin-top: 0; }
-.content h1, h2, h3, h4, h5, h6 {
+/* 以下两条选择器原来写成 `.content h1, h2, h3, h4, h5, h6`。
+ * CSS 逗号列表里每个选择器都是独立的，只有 h1 被 .content 限定，
+ * h2~h6 泄漏成了全局规则，页面上所有标题都会中招。
+ * 实际后果：bootstrap 弹窗的 h4.modal-title 被加上 position: relative，
+ * 而同级的 button.close 是 float 的非定位元素，绘制层级在定位元素之下，
+ * 于是撑满整行宽的标题盖住了关闭按钮，命中测试同序 —— 按钮点不动。
+ * 这里给每个选择器都补全 .content 限定。 */
+.content h1 p, .content h2 p, .content h3 p,
+.content h4 p, .content h5 p, .content h6 p { margin-top: 0; }
+.content h1, .content h2, .content h3,
+.content h4, .content h5, .content h6 {
 	margin: 20px 0 10px; padding: 0; position: relative; 
 	cursor: text; font-weight: bold; 
 	text-shadow: @title-shadow-color 0 0.0625rem; 
@@ -169,6 +178,11 @@ ul { margin-left:0em; padding-left: 1.8em; }
 .widget h2 {
 	margin: auto;
 	padding: 5px 10px 5px 10px;
+	/* 侧栏标题在 .content 之外，原来是靠上面那条泄漏的全局 h2 规则拿到
+	 * text-shadow 的。那条规则补上 .content 限定后这里会丢掉阴影，
+	 * 所以显式声明同样的值，保持改动前后视觉一致。
+	 * （margin / font-weight 本来就是自己定义的，特异性更高，不受影响） */
+	text-shadow: @title-shadow-color 0 0.0625rem;
 	color: @toc-tog-color-fg;
 	background: @toc-tog-color-bg;
 	border: 1px solid @widget-border-color;
@@ -441,5 +455,13 @@ th .MathJax { color: @table-color-th-fg; background: @table-color-th-bg; }
  *  pop-image
  * ========================================== */
 #photo-frame>.modal-dialog{width:95%}
+/* 兜底规则，配合文件开头 title 区块的选择器修正一起看。
+ * .close 是 float 的非定位元素，绘制层级低于任何定位元素；同级的
+ * h4.modal-title 撑满整行宽，一旦它被加上 position 就会盖住关闭按钮，
+ * 命中测试同序，按钮直接点不动（曾由全局 h2~h6 规则泄漏引发）。
+ * 这里显式定位并抬高层级，之后再有类似的样式泄漏也不会复发。
+ * 用 .modal-header>.close 而非 #photo-frame 下的后代选择器，
+ * 让所有 bootstrap 弹窗都受保护，不限于图片查看框。 */
+.modal-header>.close{position:relative;z-index:1}
 
 

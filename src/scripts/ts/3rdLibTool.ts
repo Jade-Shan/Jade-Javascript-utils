@@ -259,7 +259,9 @@ export class BootStrapHelper {
 		elemArr.forEach((photoImg: HTMLImageElement, key: number, parent: NodeListOf<HTMLImageElement>) => {
 			if (photoImg) {
 				photoImg.onclick = (ev: MouseEvent): any => {
-					BootStrapHelper.viewPic(photoImg.alt, photoImg.src, photoFrameId);
+					// 懒加载的图片点开时可能还停在占位图上，优先取 data-origin 的原图地址
+					let url = photoImg.getAttribute("data-origin") || photoImg.src;
+					BootStrapHelper.viewPic(photoImg.alt, url, photoFrameId);
 				};
 			}
 		});
