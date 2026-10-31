@@ -1,9 +1,12 @@
-import { workItems } from "./workout.js";
+import { workItems, initWorkItems } from "./workout.js";
 
 
 export class TestWorkout {
 
 	static testShowWorkoutItem() {
+		// 肌肉图改为按需构建，用之前要先初始化
+		initWorkItems();
+
 		let baseDiv = document.querySelector("#test-workout-images");
 		if (!baseDiv) {
 			throw new Error("页面缺少必需元素 #test-workout-images");

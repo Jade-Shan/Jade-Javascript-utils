@@ -16,7 +16,16 @@ const DOCK_BAR_MARGIN = 10;
  * 桌面环境的参数配置
  */
 interface IDesktopConfig {
-	desktop?: { backgroundImage?: string, width: string, height: string },
+	/** 桌面区域配置 */
+	desktop?: {
+		/** 桌面背景图片 */
+		backgroundImage?: string,
+		/** 桌面宽度 */
+		width: string,
+		/** 桌面高度 */
+		height: string
+	},
+	/** Dock 任务栏配置 */
 	dockBar?: DockBarParam
 }
 
@@ -839,20 +848,9 @@ interface DockBarCfg {
 }
 
 /**
- * Dock 栏构造参数
+ * Dock 栏构造参数（DockBarCfg 的全可选版本）
  */
-interface DockBarParam {
-	/** Dock 栏背景颜色 */
-	dockColor?: string,
-	/** 图标颜色 */
-	iconColor?: string,
-	/** 透明度 */
-	opacity?: {normal: number, hover: number},
-	/** 图标缩放响应范围 */
-	range?: number,
-	/** 图标最大缩放倍数 */
-	maxScale?: number,
-}
+type DockBarParam = Partial<DockBarCfg>;
 
 /**
  * Dock 任务栏

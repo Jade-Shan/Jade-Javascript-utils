@@ -58,7 +58,7 @@ TypeScript 源文件按依赖顺序排列（gulpfile.js 中的编译顺序即依
 
 ### 资源与 Web 基础
 - `src/scripts/ts/resource.ts` — Base64 内嵌图标、默认图片资源（DefaultIconGroup, IconGroup），依赖 dataStructure 和 web
-- `src/scripts/ts/web.ts` — HTTP 请求（WebUtil.ajax）、Base64 图片类型定义（IBase64Img, Base64ImgType）、自定义 HTML 元素 EscapeUnicode，依赖 basic 和 dataStructure
+- `src/scripts/ts/web.ts` — HTTP 请求（WebUtil.ajax）、Base64 图片类型定义（IBase64Img, Base64ImgType）、自定义 HTML 元素 `esp-unicode`（元素类型 `IEscapeUnicode`，实现与注册在 `WebUtil.initCustomElements()` 内，需在浏览器环境显式调用），依赖 basic 和 dataStructure
 
 ### 几何与图形层
 - `src/scripts/ts/geo2d.ts` — 2D 几何库：Point2D, Line2D, Rectangle2D, Circle2D, Polygon2D, Ray2D。定义 IGeo2D / GeoShape2D 接口，提供碰撞检测、最近点计算。依赖 basic（NumUtil）

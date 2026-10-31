@@ -1,0 +1,50 @@
+import { API_ROOT, BlogCommon } from './common.js';
+
+
+/**
+ * 相册页面
+ *
+ * 组织相册页面的完整初始化流程，包括用户信息加载、相册分页列表以及主题切换。
+ * 用户信息、文章渲染和分页列表的公共逻辑在 `BlogCommon` 中。
+ */
+export class GalleryPage {
+
+	/**
+	 * 加载用户相册列表（分页）并渲染
+	 *
+	 * @param apiRoot - API 根路径
+	 * @param userId - 用户 ID
+	 * @param currPage - 当前页码
+	 * @returns {Promise<void>}
+	 */
+	static async loadUserAblume (apiRoot: string, userId: string, currPage: number) {
+		await BlogCommon.loadArticleList(
+			page => `${apiRoot}api/gallery/loadByUser?userId=${encodeURIComponent(userId)}&pageSize=5&page=${page}`,
+			currPage);
+	}
+
+	/**
+	 * 相册页面初始化入口
+	 *
+	 * @param basePath - 站点根路径前缀
+	 * @param title - 页面副标题
+	 * @param userId - 用户 ID，默认为 "teo"
+	 * @returns {Promise<void>}
+	 */
+	static async initGalleryPage(basePath: string, title: string, userId: string = "teo", currPage = 1) {
+
+		let apiRoot = API_ROOT;
+		BlogCommon.initPageFrame(apiRoot, title, "Gallery");
+
+		try {
+			await Promise.all([
+				BlogCommon.loadUserInfo(apiRoot, userId),
+				GalleryPage.loadUserAblume(apiRoot, userId, currPage),
+			]);
+		} catch (e) {
+			console.error("Gallery page init failed:", e);
+		}
+
+	}
+
+}

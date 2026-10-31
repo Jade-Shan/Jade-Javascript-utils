@@ -1,0 +1,19 @@
+// npm 打包专用编译配置
+//
+// 与 CDN 构建用的 tsconfig.json 分开：
+//   - tsconfig.json      → gulp 用，输出 webroot/scripts/ts/，含 test*.ts 和 sourcemap
+//   - tsconfig.build.json → npm 打包用，输出 dist/，排除 test*.ts，不带 sourcemap
+//
+// 用法：npx tsc -p tsconfig.build.json
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"outDir": "dist",
+		"rootDir": "src/scripts/ts",
+		"declaration": true,
+		"sourceMap": false,
+		"inlineSources": false
+	},
+	"include": ["src/scripts/ts"],
+	"exclude": ["src/scripts/ts/**/test*.ts"]
+}

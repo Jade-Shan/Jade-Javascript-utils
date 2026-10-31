@@ -2,6 +2,8 @@ import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from '../ui/webH
 
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from '../3rdLibTool.js';
 
+import { WebUtil } from '../web.js';
+
 /**
  * Wiki 页面
  *
@@ -18,6 +20,9 @@ export class WikiPage {
 	 * @returns {Promise<void>}
 	 */
 	static async initWikiPage(basePath: string, title: string) {
+
+		// 注册 `esp-unicode` 标签，页面里已有的该标签会在注册时被 upgrade
+		WebUtil.initCustomElements();
 
 		let cfg: PageConfig = { apiRoot: "/", pageTitle: "Study Notes", subTitle: title, ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);

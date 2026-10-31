@@ -2,15 +2,13 @@ import { StrUtil, TimeUtil } from './basic.js';
 import { SimpleMap } from './dataStructure.js';
 
 
-/** 创建自定义标签，用于显示Unicode字符 */
-export class EscapeUnicode extends HTMLElement {
-	constructor() {
-		super();
-		let oldHtml = this.innerHTML;
-		// this.innerHTML = "&#x" + oldHtml + ";";
-		this.innerHTML = oldHtml.replace(/(&amp;#x?[0-9a-fA-F]{1,6};)/, (e => e.replace('&amp;', '&')));
-	}
-}
+/**
+ * 自定义标签 `esp-unicode` 的元素类型，用于显示Unicode字符
+ *
+ * 仅为类型声明，编译后被擦除；标签的实现在 {@link WebUtil.initCustomElements} 中定义，
+ * 以免模块加载期求值 `HTMLElement` 而污染无 DOM 的运行环境
+ */
+export type IEscapeUnicode = HTMLElement;
 
 /**
  * 规范可以使用的图标大小
@@ -167,6 +165,16 @@ export interface ImageProxyConfig {
 };
 
 /**
+ * 图片懒加载配置
+ */
+export interface LazyImageConfig {
+	/** 存放真实图片地址的属性名，默认 `data-origin` */
+	originAttr ?: string,
+	/** 提前加载的距离，默认 `"200px"`，即图片距可视区还有 200px 时就开始加载 */
+	rootMargin ?: string
+};
+
+/**
  * Web 工具类
  *
  * 提供 HTTP 请求、Cookie 操作、图片处理、文件下载、表单验证等通用功能。
@@ -221,11 +229,76 @@ export class WebUtil {
 		});
 	}
 
+	/**
+	 * 图片懒加载：元素进入可视区域后，才把真实地址写入 `src`
+	 *
+	 * 图片先用占位图渲染，真实地址放在 `data-origin` 属性里。滚动到可视区域
+	 * 附近时才换成真实地址，避免一次性发起整页的图片请求。换好地址的图片会
+	 * 立即取消监听，但 `data-origin` 保留，供点击放大等逻辑取原图地址。
+	 *
+	 * 浏览器不支持 `IntersectionObserver` 时直接全部加载，退化为原来的行为。
+	 *
+	 * @param elemSlt - 图片元素的 CSS 选择器或元素列表，默认 `img[data-origin]`
+	 * @param cfg - 懒加载配置
+	 * @returns {IntersectionObserver | null} 监听器，不支持或无需监听时返回 null。
+	 *          调用方替换掉这批图片所在的 DOM 时，应调用其 `disconnect()`，
+	 *          否则监听器会一直持有已经移除的元素
+	 */
+	static lazyLoadImages(elemSlt: string | NodeListOf<HTMLImageElement> = 'img[data-origin]',
+		cfg?: LazyImageConfig): IntersectionObserver | null //
+	{
+		const originAttr = cfg?.originAttr ?? 'data-origin';
+		const rootMargin = cfg?.rootMargin ?? '200px';
+		const elemArr = typeof elemSlt === 'string'
+			? document.querySelectorAll<HTMLImageElement>(elemSlt) : elemSlt;
+
+		/** 把真实地址写入 src，没有 data-origin 的元素不动 */
+		const loadOrigin = (img: HTMLImageElement): void => {
+			const origin = img.getAttribute(originAttr);
+			if (origin) { img.src = origin; }
+		};
+
+		// 不支持 IntersectionObserver 的浏览器直接全部加载
+		if (typeof IntersectionObserver === 'undefined') {
+			elemArr.forEach(loadOrigin);
+			return null;
+		}
+
+		const observer = new IntersectionObserver((entries, obs) => {
+			for (const entry of entries) {
+				if (!entry.isIntersecting) { continue; }
+				const img = entry.target as HTMLImageElement;
+				loadOrigin(img);
+				obs.unobserve(img);  // 已经换成真实地址，不用再监听
+			}
+		}, {rootMargin: rootMargin});
+
+		elemArr.forEach((img: HTMLImageElement) => { observer.observe(img); });
+		return observer;
+	}
+
 
 	/**
 	 * 创建自定义标签，用于显示Unicode字符
+	 *
+	 * 类定义放在方法内部，只在调用时（浏览器环境）才求值 `HTMLElement`，
+	 * 避免模块顶层求值导致无 DOM 的环境（Node / SSR）import 即抛 `ReferenceError`
+	 *
+	 * 可重复调用：标签已注册时直接返回，避免 `customElements.define()` 抛
+	 * `NotSupportedError`
 	 */
 	static initCustomElements(): void {
+		// 已注册过就不再重复注册
+		if (undefined !== customElements.get('esp-unicode')) { return; }
+		/** 创建自定义标签，用于显示Unicode字符 */
+		class EscapeUnicode extends HTMLElement {
+			constructor() {
+				super();
+				let oldHtml = this.innerHTML;
+				// 带 `g` 标志，一个标签里的多个转义实体要全部还原
+				this.innerHTML = oldHtml.replace(/&amp;(#x?[0-9a-fA-F]{1,6};)/g, "&$1");
+			}
+		}
 		/** 创建自定义标签必须要有一个连字符*/
 		customElements.define('esp-unicode', EscapeUnicode);
 	}

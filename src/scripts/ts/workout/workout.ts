@@ -486,9 +486,28 @@ let loadWorkoutMuscleSvg = (workout: StrenghtWorkout, imgId: string, width: stri
 	return {info: workout, pose: pose, font: svg01, back: svg02 };
 };
 
+/**
+ * 所有力量训练动作的肌肉图
+ *
+ * 初始为空，需先调用 {@link initWorkItems} 填充
+ */
 export let workItems: Array<{ info: StrenghtWorkout, pose: SVGSVGElement, font: SVGSVGElement, back: SVGSVGElement }> = [];
-for (let i=0;i<strenghtWorkoutArr.length;i++){
-	let rec = strenghtWorkoutArr[i];
-	let info = loadWorkoutMuscleSvg(rec, rec.id,'270','500','scale(0.5)');
-	workItems.push(info);
+
+/**
+ * 构建所有动作的肌肉图，填充 {@link workItems}
+ *
+ * 构建过程要调 `document.createElementNS()`，所以放在函数里按需调用，
+ * 避免模块加载期求值 `document` 导致无 DOM 的环境（Node / SSR）import 即抛
+ * `ReferenceError`
+ *
+ * 可重复调用：已填充过时直接返回
+ */
+export function initWorkItems(): void {
+	// 已经构建过就不再重复构建
+	if (workItems.length > 0) { return; }
+	for (let i=0;i<strenghtWorkoutArr.length;i++){
+		let rec = strenghtWorkoutArr[i];
+		let info = loadWorkoutMuscleSvg(rec, rec.id,'270','500','scale(0.5)');
+		workItems.push(info);
+	}
 }
