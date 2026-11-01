@@ -288,16 +288,18 @@ export class DataTableHelper {
 		$(elemSlt ? elemSlt : 'div.content>table').each((n: any, t: any) => {
 			let table = $(t);
 			let thead = table.find('thead');
-			if (thead.size() < 1) {
+			// 用 .length 而不是 .size()：后者在 jQuery 3.0 已移除，调用会抛
+			// `thead.size is not a function`。$ 声明的返回类型是 any，TS 查不出来
+			if (thead.length < 1) {
 				thead = $('<thead></thead>');
 				let rows = table.find('tbody>tr');
 				rows.each((ln: any, r: any) => {
 					let row = $(r); let th = row.find("th");
-					if (th.size() > 0) { thead.append(row); }
+					if (th.length > 0) { thead.append(row); }
 				});
-				if (thead.find('th').size() > 0) { // 要有表头才能加上DataTable
+				if (thead.find('th').length > 0) { // 要有表头才能加上DataTable
 					table.append(thead);
-					let rowCount = rows.size() as number;
+					let rowCount = rows.length as number;
 					if (rowCount > 20) {  // 20行不到的表就不加DataTable了
 						try {
 							let info = false; let paging = false; let searching = false;

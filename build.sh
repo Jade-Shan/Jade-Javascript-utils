@@ -106,8 +106,8 @@ cp -r webroot/* ~/workspace/nginx/jadecdn/webroot/jadeutils.v3
 
 cp webroot/html/blog.html    ~/workspace/nginx/jadedungeon-v2/webroot/index.html
 cp webroot/html/gallery.html ~/workspace/nginx/jadedungeon-v2/webroot/gallery.html
-cp webroot/html/blog.html    ~/workspace/nginx/jadedungeon/webroot/index.html
-cp webroot/html/gallery.html ~/workspace/nginx/jadedungeon/webroot/gallery.html
+# cp webroot/html/blog.html    ~/workspace/nginx/jadedungeon/webroot/index.html
+# cp webroot/html/gallery.html ~/workspace/nginx/jadedungeon/webroot/gallery.html
 
 sleep 3 && sync
 

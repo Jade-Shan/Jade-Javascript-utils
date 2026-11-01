@@ -3,18 +3,24 @@ import { CanvasUtils, ImageClip } from "../ui/canvas.js";
 import { JadeUIResource, DefaultIconGroup } from "../resource.js";
 import { CircleToken, ICanvasFrame, ImageResource, LineToken, RectangleToken, SandTable, SandTableUtils, SceneDataResp } from "./sandtable.js";
 import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "../ui/UIWindow.js";
+import { DemoEnvConfig, demoEnv } from "../env.demo.js";
 
 export namespace TestJadeTRPG {
 
-	export let testTrpgCompose = async () => {
+	/**
+	 * @param env - 页面从 `envs.js` 注入的环境配置，用到 `apiRoot` 和 `themeRoot`
+	 */
+	export let testTrpgCompose = async (env?: DemoEnvConfig) => {
 		let viewSize = 139;
+		let apiRoot   = demoEnv(env, 'apiRoot'  );
+		let themeRoot = demoEnv(env, 'themeRoot');
 		// load image resource
-		let imgProxyUrl = "http://www.jade-dungeon.cn:8088/api/sandtable/parseImage?src=";
+		let imgProxyUrl = `${apiRoot}/api/sandtable/parseImage?src=`;
 		let imgResources: ImageResource[] = [{
-			"id": "icons", "type": "Image", // 
-			"url": "http://www.jade-dungeon.cn:8081/jadeutils.v3/themes/trpg/images/icons.jpg"},{
+			"id": "icons", "type": "Image", //
+			"url": `${themeRoot}/trpg/images/icons.jpg`},{
 			"id": "map"  , "type": "Image", //
-			"url": "http://www.jade-dungeon.cn:8081/jadeutils.v3/themes/trpg/images/map.jpg"
+			"url": `${themeRoot}/trpg/images/map.jpg`
 		}];
 		await SandTableUtils.loadImageResources(imgResources, imgProxyUrl);
 		//
@@ -403,7 +409,10 @@ export namespace TestJadeTRPG {
 
 	}
 
-	export let testTrpgUI = async () => {
+	/**
+	 * @param env - 页面从 `envs.js` 注入的环境配置，用到 `apiRoot` 和 `themeRoot`
+	 */
+	export let testTrpgUI = async (env?: DemoEnvConfig) => {
 		// window UI
 		let desktop01 = document.getElementById(`test-desktop-01`)!;
 		let desktop: UIDesktop = new UIDesktop(desktop01, { dockBar: { range: 300, maxScale: 1.8 } });
@@ -424,8 +433,8 @@ export namespace TestJadeTRPG {
 		})
 
 		// load sandtable
-		let mapUrl = "http://www.jade-dungeon.cn:8081/jadeutils.v3/themes/trpg/images/map.jpg";
-		let imgProxyUrl = "http://www.jade-dungeon.cn:8088/api/sandtable/parseImage?src=";
+		let mapUrl = `${demoEnv(env, 'themeRoot')}/trpg/images/map.jpg`;
+		let imgProxyUrl = `${demoEnv(env, 'apiRoot')}/api/sandtable/parseImage?src=`;
 		// load image resource
 		await SandTableUtils.loadImageResources(testSceneData.imgResources, imgProxyUrl);
 		//
@@ -446,6 +455,12 @@ export namespace TestJadeTRPG {
 }
 
 
+/* 沙盘场景的样例数据
+ *
+ * 这里的 URL 刻意保持明文写死，不走 `envs.js` 注入 —— 本常量是改造后端时的
+ * 对比样本，明文形式便于和后端实际返回的 JSON 逐字段比对。
+ * 代价是用到它的 `testTrpgUI()` 仍会按这些地址去取图。
+ */
 let testSceneData: SceneDataResp = {
   "username": "jade",
   "loginToken": "jade|a8dce1e8-63c3-4825-8932-5dd8f430aaa4|1747416892778",

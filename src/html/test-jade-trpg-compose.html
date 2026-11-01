@@ -53,7 +53,9 @@
 </body>
 <script type="module">
 	import { TestJadeTRPG } from "@jade-dungeon/jade-utils/trpg/testJadeTRPG.js";
-	window.onload = function () { TestJadeTRPG.testTrpgCompose(); }
+	window.onload = function () {
+		TestJadeTRPG.testTrpgCompose({ apiRoot: '@@apiRoot', themeRoot: '@@staticRoot/themes' });
+	}
 </script>
 
 </html>

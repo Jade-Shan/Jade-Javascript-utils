@@ -156,6 +156,31 @@ declare namespace SyntaxHighlighter { ... }
 declare namespace MathJax { ... }
 ```
 
+**注意 jQuery 版本是 3.5.1，`declare function $(cc: any): any` 返回 `any`，所以用错 API 编译期查不出来。**
+已踩过两个坑（都是 jQuery 3.0 移除的 API，运行时才抛错）：
+
+| 不能用 | 要用 | 症状 |
+|--------|------|------|
+| `.size()` | `.length` | `xxx.size is not a function` |
+| `$(window).load(fn)` | `$(window).on('load', fn)` | `e.indexOf is not a function`，且回调静默不执行 |
+
+同类已移除的还有 `.bind()` / `.unbind()` / `.delegate()` / `.undelegate()` / `$.browser` / `.andSelf()`，写 jQuery 代码时留意。
+
+## demo 页面的环境配置注入
+
+demo / 测试脚本不写死后端和 CDN 地址，由页面从 `envs.js` 注入：
+
+```
+envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参  →  发请求的方法
+```
+
+- `src/scripts/ts/env.demo.ts` 定义 `DemoEnvConfig`（`apiRoot` / `themeRoot` / `cdn3rd`）和取值函数 `demoEnv()`。**不在 `exports` 里**，不随 npm 包发布
+- `DemoEnvConfig.themeRoot` 在 `envs.js` 里**没有同名键** —— 它就是 `staticRoot` 加 `/themes`，页面侧传 `'@@staticRoot/themes'` 拼出来，不另设配置项
+- 入口函数签名形如 `testTrpgUI(env?: DemoEnvConfig)`，形参要继续往内层函数传
+- 缺值时 `demoEnv()` 返回空串，不兜底成生产地址 —— 兜底会让「忘了传参」静默变成「偷偷打生产环境」
+- `trpg/testJadeTRPG.ts` 的 `testSceneData` 刻意保持明文写死的 URL，它是改造后端时的对比样本
+- `envs.js` 的 `rls` 段当前是 `TODO-生产环境确定` 占位，开发期只测 `dev`
+
 ## 编译输出
 
 - TypeScript 编译为 ES6 模块（`target: "ES6"`, `module: "ES6"`），输出 `.js`、`.d.ts` 和 `.js.map`

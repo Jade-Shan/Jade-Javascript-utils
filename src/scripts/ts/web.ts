@@ -195,7 +195,50 @@ export class WebUtil {
 	}
 
 		/**
+	 * 解析图片 URL，判断是否跨源，并给出绝对形式
+	 *
+	 * 代理存在的目的是绕开跨源图片对 canvas 的污染（污染后 `getImageData()` 会抛错），
+	 * 所以判定标准应该是「是否跨源」，而不是「URL 长什么样」。
+	 *
+	 * 用 `new URL(url, location.href)` 解析后比对 origin，三种写法都能正确识别：
+	 *
+	 * | 写法 | 例子 | 结果 |
+	 * |------|------|------|
+	 * | 绝对 URL | `http://other.com/x.jpg` | 跨源则走代理 |
+	 * | 协议相对 | `//other.com/x.jpg` | 跨源则走代理 |
+	 * | 路径相对 | `/themes/x.jpg` | 同源，不走代理 |
+	 *
+	 * 同时返回 `absUrl`（补全协议后的绝对地址），交给代理用。协议相对的
+	 * `//host/path` 直接丢给后端，后端多半解析不了（Python urllib 会报
+	 * `unknown url type`），所以要先在前端补全。
+	 *
+	 * `data:` / `blob:` 不发网络请求，直接视为同源。
+	 *
+	 * @param url - 图片 URL
+	 * @returns {{isCrossOrigin: boolean, absUrl: string}} 跨源标记与绝对地址。
+	 *          解析失败时 `isCrossOrigin` 为 false、`absUrl` 为原值
+	 */
+	private static resolveImageUrl(url: string): { isCrossOrigin: boolean, absUrl: string } {
+		if (!url) { return { isCrossOrigin: false, absUrl: url }; }
+		// data: / blob: 是内联数据，不涉及跨源
+		if (url.startsWith('data:') || url.startsWith('blob:')) {
+			return { isCrossOrigin: false, absUrl: url };
+		}
+		try {
+			const parsed = new URL(url, location.href);
+			return { isCrossOrigin: parsed.origin !== location.origin, absUrl: parsed.href };
+		} catch (e) {
+			// 解析不了的 URL 按同源处理，交给浏览器自己报错，不要套上代理前缀
+			console.warn(`resolveImageUrl: 无法解析的 URL，按同源处理: ${url}`);
+			return { isCrossOrigin: false, absUrl: url };
+		}
+	}
+
+	/**
 	 * 通过代理加载图片，加载失败时使用默认占位图
+	 *
+	 * 只有跨源图片才会套上 `cfg.proxyUrl` 前缀。需要无条件走代理（比如用代理做图片
+	 * 变换而不只是绕跨源）时，传 `cfg.proxyFunc` 自己决定。
 	 *
 	 * @param imageElem - 图片元素
 	 * @param oriImageUrl - 原始图片 URL
@@ -203,14 +246,15 @@ export class WebUtil {
 	 * @returns {Promise<void>}
 	 */
 	static async loadImageByProxy(imageElem: HTMLImageElement, oriImageUrl: string, //
-		cfg?: ImageProxyConfig): Promise<void> // 
+		cfg?: ImageProxyConfig): Promise<void> //
 	{
 		let proxyFunc = cfg?.proxyFunc ? cfg.proxyFunc : (url: string) => {
-			let newUrl = url;
-			if (cfg?.proxyUrl && url.indexOf('http') == 0) {
-				newUrl = cfg.proxyUrl + encodeURIComponent(url);
+			const { isCrossOrigin, absUrl } = WebUtil.resolveImageUrl(url);
+			if (cfg?.proxyUrl && isCrossOrigin) {
+				// 传绝对地址给代理，后端不用再猜协议
+				return cfg.proxyUrl + encodeURIComponent(absUrl);
 			}
-			return newUrl;
+			return url;
 		};
 		let imageUrl = proxyFunc(oriImageUrl);
 		let pm = new Promise((

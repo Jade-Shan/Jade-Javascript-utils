@@ -5,6 +5,7 @@ import { PageConfig, WebHtmlPage } from './ui/webHtmlPage.js';
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from './3rdLibTool.js';
 import { CanvasCircle2D, CanvasLine2D, CanvasPoint2D, CanvasRay2D, CanvasRectangle2D, CanvasUtils, ICanvasRay2D, ICanvasRectangle2D } from './ui/canvas.js';
 import { Circle2D, Geo2DUtils, GeoShape2D, IRay2D, Line2D, Point2D, Ray2D } from './ui/geo2d.js';
+import { DemoEnvConfig, demoEnv } from './env.demo.js';
 
 
 let testFunc = (isPassed: boolean, log: (msg: string, sty: string, mk: string) => void) => {
@@ -251,10 +252,14 @@ class TestWebUtil {
 		testFunc("Basic YWFhOmJiYg==" === WebUtil.webAuthBasic("aaa", "bbb"), (msg, sty, mk) => { console.log(msg, "WebUtil.webAuthBasic()", sty, mk); });
 	}
 
-	static async testHttpRequest() {
+	/**
+	 * @param env - 页面从 `envs.js` 注入的环境配置，用到 `apiRoot`
+	 */
+	static async testHttpRequest(env?: DemoEnvConfig) {
+		let apiRoot = demoEnv(env, 'apiRoot');
 		//
 		let userInfoResp: HttpResponse<UserInfoResp> = await WebUtil.requestHttp<string, UserInfoResp>({
-			method: "GET", url: `http://www.jade-dungeon.cn:8088/api/blog/loadUserById?userId=guest`
+			method: "GET", url: `${apiRoot}/api/blog/loadUserById?userId=guest`
 		}, {
 			onLoad: (evt, xhr, req) => {
 				// console.log(xhr.response);
@@ -266,9 +271,10 @@ class TestWebUtil {
 
 		//
 		let imageElem =  document.getElementById("imageProxyTest") as HTMLImageElement;
+		// 故意用外部图床的跨域图片：只有跨域图片才能验证代理确实生效了，
+		// 换成本站图片的话代理走不走都一样，测不出问题
 		let imageUrl = "https://s21.ax1x.com/2024/06/29/pk6vkEF.jpg";
-		// let imageUrl = "http://www.jade-dungeon.cn:8081/jadeutils.v3/themes/trpg/images/map.jpg";
-		let proxyUrl = "http://www.jade-dungeon.cn:8088/api/sandtable/parseImage?src=";
+		let proxyUrl = `${apiRoot}/api/sandtable/parseImage?src=`;
 		await WebUtil.loadImageByProxy(imageElem, imageUrl, {proxyUrl: proxyUrl});
 	}
 
@@ -276,7 +282,10 @@ class TestWebUtil {
 
 class TestWebHtmlPage {
 
-	static testJquery() {
+	/**
+	 * @param env - 页面从 `envs.js` 注入的环境配置，用到 `cdn3rd`
+	 */
+	static testJquery(env?: DemoEnvConfig) {
 		let cfg: PageConfig = { apiRoot: "/", pageTitle: "test-page", subTitle: "for-test", ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);
 		page.renderSubTitle();
@@ -329,7 +338,9 @@ class TestWebHtmlPage {
 		//
 		BootStrapHelper.bindImageFrame("img.img-frame");
 		//
-		SyntaxHighlighterHelper.loadCodeHightlight("http://www.jade-dungeon.cn:8081","/3rd/SyntaxHighlighter/2.1.364/scripts");
+		// 路径布局与 HTML 里的 `@@cdn3rd/SyntaxHighlighter/2.1.364/scripts/shCore.js` 保持一致：
+		// `/3rd` 这一层归 envs.js 的 cdn3rd 管，这里只拼库名和版本
+		SyntaxHighlighterHelper.loadCodeHightlight(demoEnv(env, 'cdn3rd'), "/SyntaxHighlighter/2.1.364/scripts");
 		//
 		MathJaxHelper.initMathJax();
 		//
@@ -924,8 +935,11 @@ class TestCanvas {
 
 export class TestJadeUtils {
 
-	static testAll() {
-		// 
+	/**
+	 * @param env - 页面从 `envs.js` 注入的环境配置，往下传给发请求的测试项
+	 */
+	static testAll(env?: DemoEnvConfig) {
+		//
 		TestBasicUtil.testNum();
 		TestBasicUtil.testStr();
 		TestBasicUtil.testTime();
@@ -934,18 +948,21 @@ export class TestJadeUtils {
 		TestDataStructure.testSimpleMap();
 		TestDataStructure.testSimpleStack();
 		TestDataStructure.testSimpleQueue();
-		// 
+		//
 		TestWebUtil.testHtml();
 		//
-		TestWebUtil.testHttpRequest();
+		TestWebUtil.testHttpRequest(env);
 		//
-		TestWebHtmlPage.testJquery();
+		TestWebHtmlPage.testJquery(env);
 	}
 
-	static testWiki() {
+	/**
+	 * @param env - 页面从 `envs.js` 注入的环境配置，往下传给 `testJquery()`
+	 */
+	static testWiki(env?: DemoEnvConfig) {
 		// test-jade-wiki.html 里有 `esp-unicode` 标签，要先注册自定义标签
 		WebUtil.initCustomElements();
-		TestWebHtmlPage.testJquery();
+		TestWebHtmlPage.testJquery(env);
 	}
 
 	static testCanvas() {

@@ -194,7 +194,7 @@ $JAVA -jar appJarFIle.jar ${@}
 
 	<script type="module">
 		import { TestJadeUtils } from "@jade-dungeon/jade-utils/testJadeUtils.js";
-		TestJadeUtils.testAll($);
+		TestJadeUtils.testAll({ apiRoot: '@@apiRoot', cdn3rd: '@@cdn3rd' });
 	</script> 
 </html>
 

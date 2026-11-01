@@ -158,8 +158,9 @@ $JAVA -jar appJarFIle.jar ${@}
 
 	<script type="module">
 		import { TestJadeUtils } from "@jade-dungeon/jade-utils/testJadeUtils.js";
-		$(window).load(function() {
-				TestJadeUtils.testAll();
+		// 用 .on('load', ...) 而不是 .load(...)：后者在 jQuery 3.0 已移除
+		$(window).on('load', function() {
+				TestJadeUtils.testAll({ apiRoot: '@@apiRoot', cdn3rd: '@@cdn3rd' });
 		});
 	</script> 
 </html>
