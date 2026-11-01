@@ -226,6 +226,31 @@ declare namespace MathJax { ... }
 `WebHtmlPage.changeTheme(themeName)` 通过启用/禁用 `<link rel="alternate stylesheet">` 标签实现主题切换。当前主题持久化到 cookie（`ui.theme`），`initUITheme()` 在页面加载时读取 cookie 恢复主题。
 
 
+## 排查：页面报 CORS 错误
+
+**先确认后端进程活着，再查 CORS 配置。** 后端崩掉时浏览器报的也是 CORS 错误 ——
+跨源请求失败时浏览器拿不到带 `Access-Control-Allow-Origin` 的响应，
+「服务没响应」和「服务响应了但没这个头」在浏览器看来都是跨源检查没通过。
+Firefox 对连不上的情况报的就是「CORS 请求未能成功」，状态码显示 `(null)`。
+
+本项目后端的 CORS 配置已确认没问题，**遇到 CORS 报错优先怀疑后端进程崩了**，重启即可。
+
+```bash
+# 1. 后端端口有没有服务（000 = 连不上，此时的「CORS 错误」是假象，重启后端）
+curl -s -o /dev/null -w "%{http_code}\n" --max-time 3 http://localhost:8082/
+
+# 2. 确认活着之后，再看响不响 CORS 头
+curl -s -D - -o /dev/null "http://localhost:8082/api/blog/loadUserById?userId=u001" \
+  | grep -i access-control
+```
+
+判断依据：状态码 `(null)` / XHR `status=0` 且**后端日志里没有这条请求** → 后端没活着；
+后端日志里**有**这条请求 → 请求到了，才是真的缺 CORS 头。
+
+注意 XHR 层面「服务活着但无 CORS 头」和「端口上没有服务」的表现完全相同
+（都是 `onerror` + `status=0`），光看前端代码分不出来，必须查后端日志或用 `curl` 探活。
+详见 `docs/refactor-20261101.md` 第 10.6 节。
+
 ## 待跟进的后端 API 问题
 
 以下的问题要等后端的API修复以后才能修改。检查代码与修复问题时要保留以下表中的问题：

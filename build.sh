@@ -110,3 +110,5 @@ cp webroot/html/blog.html    ~/workspace/nginx/jadedungeon/webroot/index.html
 cp webroot/html/gallery.html ~/workspace/nginx/jadedungeon/webroot/gallery.html
 
 sleep 3 && sync
+
+# cp -r ~/sync-prj/* . && sync && bash build.sh && sync 
