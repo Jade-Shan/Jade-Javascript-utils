@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概览
 
-jadeutils.v3 是一个个人前端工具库，作为 CDN 静态资源部署到 nginx。包含 TypeScript 通用工具库、HTML5 Canvas 2D 几何库、桌面式窗口 UI 系统、TRPG 沙盘，以及博客/Wiki 页面框架。CSS 主题使用 Less 编写。
+jadeutils.v3 是一个个人前端工具库，作为 CDN 静态资源部署到 nginx，同时可以打包成 npm 包 `@jade-dungeon/jade-utils` 本地安装。包含 TypeScript 通用工具库、HTML5 Canvas 2D 几何库、桌面式窗口 UI 系统、TRPG 沙盘、健身动作肌肉图，以及博客/Wiki 页面框架。CSS 主题使用 Less 编写。
 
 ## 构建命令
 
@@ -19,11 +19,10 @@ jadeutils.v3 是一个个人前端工具库，作为 CDN 静态资源部署到 n
 # 使用 .nvmrc 指定的 Node 版本 (v22.22.2)
 nvm use
 
-# 完整构建（编译 TS + Less → webroot/，生成 gnuplot 文档图片）
+# CDN 构建：编译 window-ui 主题 + TS（含压缩）+ HTML 模板 → webroot/
+# 注意：脚本里内容主题、workout/trpg 主题、gnuplot/plantuml 作图、
+#       拷贝到 nginx 这几段都是注释状态，要用时需手动取消注释
 bash build.sh
-
-# 编译 TypeScript + 压缩，生成 PlantUML 图片，部署到 nginx
-bash deploy-test.sh
 
 # 仅编译 TypeScript（含类型声明 .d.ts）
 npx gulp process-typescript
@@ -31,51 +30,80 @@ npx gulp process-typescript
 # 编译并压缩 TypeScript（.min.js）
 npx gulp compress-typescript
 
-# 编译所有主题的 Less → CSS
+# default 任务：并行跑全部主题 + TypeScript 编译与压缩（不含 HTML）
 npx gulp
 
-# 单独编译 window-ui 主题
-npx gulp process-style-window-ui
+# 单独编译某套主题
+npx gulp process-style-hobbit       # 内容主题，另有 lo-fi / paper-print
+npx gulp process-images-hobbit      # 只拷该主题图片
+npx gulp process-style-window-ui    # 窗口 UI 主题
+npx gulp process-style-workout      # workout 主题
 
-# 拷贝 TRPG 主题图片
+# 拷贝 TRPG 主题图片（无 Less，纯拷贝）
 npx gulp process-style-trpg
+
+# HTML 模板展开（@@ 变量替换，取值见 envs.js）
+npx gulp include-html-dev           # dev 环境
+npx gulp process-html-rls           # rls 环境，额外跑 processhtml
+
+# npm 包构建：编译 dist/ 并写入 dist/package.json
+npm run build:pkg
 ```
+
+两个构建期注意事项：
+
+- 首次克隆仓库后必须先 `cp envs.sample.js envs.js` —— `envs.js` 在 `.gitignore` 中，
+  而 `gulpfile.js` 第 20 行顶层 `require("./envs")`，缺该文件时所有 gulp 任务都会挂
+- `default` 任务是 `gulp.parallel(themeTasks)`，而 `themeTasks` 同时含 `process-typescript`
+  和 `compress-typescript`，后者又是 `gulp.series('process-typescript', ...)`。
+  也就是说 `npx gulp` 会让 `process-typescript`（含 `clean-typescript` 删目录）并发跑两次。
+  要稳定产出 TS 产物时单独跑 `npx gulp compress-typescript`，这也是 `build.sh` 的做法
 
 ## 编译配置
 
-- **无 `tsconfig.json`** — TypeScript 编译选项（`target: "es6"`, `module: "es6"`, `strict: true`, `noImplicitAny: true`, `declaration: true`）内联在 `gulpfile.js` 第 174-182 行的 `process-typescript` 任务中
-- **无 `package.json` scripts** — 不通过 `npm run` 构建，构建脚本直接调用 `node ./node_modules/gulp-cli/bin/gulp.js` 或 `npx gulp`
+- **两份 tsconfig** — `tsconfig.json` 给 gulp 的 CDN 构建用（`target: "ES6"`, `module: "ES6"`, `moduleResolution: "bundler"`, `strict: true`, `declaration: true`, `sourceMap: true`），输出 `webroot/scripts/ts/`，含 `test*.ts`；`tsconfig.build.json` 继承前者给 npm 打包用，输出 `dist/`，排除 `test*.ts`、不带 sourcemap。`gulpfile.js` 通过 `ts.createProject('tsconfig.json')` 复用主配置
+- **`package.json` scripts 只管 npm 打包** — `build:pkg`（`tsc -p tsconfig.build.json`）和 `prepublishOnly`。CDN 构建不走 `npm run`，由 `build.sh` 直接调 `npx gulp`
+- **npm 包按子路径导出** — `exports` 配了 17 个子路径（`./basic`、`./geo2d`、`./ui-window` 等），`files` 只含 `dist`。用法见 `README.md`
 - **无打包器** — 不使用 Webpack/Rollup/Vite，TypeScript 编译为 ES6 模块后由浏览器原生 `<script type="module">` 直接加载
-- **无自动化测试框架** — `testJadeUtils.ts`、`testJadeUI.ts`、`testJadeTRPG.ts` 是浏览器手动测试页面脚本，随源码一起编译，通过 `src/html/` 下的 HTML 页面在浏览器中运行
+- **无自动化测试框架** — `testJadeUtils.ts`、`testJadeUI.ts`、`testJadeTRPG.ts`、`testWorkout.ts` 是浏览器手动测试页面脚本，随 CDN 构建一起编译（npm 包里排除），通过 `src/html/` 下的 HTML 页面在浏览器中运行
 
 ## 源码架构
 
-TypeScript 源文件按依赖顺序排列（gulpfile.js 中的编译顺序即依赖顺序）：
+`src/scripts/ts/` 下共 21 个 `.ts` 文件（9732 行），其中 4 个 `test*.ts` 占 1897 行。
+按子目录组织：根目录放基础层，`ui/`、`blog/`、`trpg/`、`workout/` 各放一类。
+依赖方向严格单向、无循环。
 
 ### 基础层（无内部依赖）
-- `src/scripts/ts/basic.ts` — 基础工具：NumUtil（数字格式化）、StrUtil、TimeUtil、ColorRGB
-- `src/scripts/ts/dataStructure.ts` — 数据结构：SimpleMap（顺序保留的 Map 实现）、SimpleStack、SimpleQueue
+- `basic.ts` — 基础工具：NumUtil（数字格式化）、StrUtil、TimeUtil、IColorRGB / ColorRGB
+- `dataStructure.ts` — 数据结构：SimpleMap（顺序保留的 Map 实现）、SimpleStack、SimpleQueue
 
 ### 资源与 Web 基础
-- `src/scripts/ts/resource.ts` — Base64 内嵌图标、默认图片资源（DefaultIconGroup, IconGroup），依赖 dataStructure 和 web
-- `src/scripts/ts/web.ts` — HTTP 请求（WebUtil.ajax）、Base64 图片类型定义（IBase64Img, Base64ImgType）、自定义 HTML 元素 `esp-unicode`（元素类型 `IEscapeUnicode`，实现与注册在 `WebUtil.initCustomElements()` 内，需在浏览器环境显式调用），依赖 basic 和 dataStructure
+- `web.ts` — HTTP 请求（`WebUtil.requestHttp`）、Base64 图片类型定义（IBase64Img, Base64ImgType, IconSize）、图片懒加载（`lazyLoadImages`）、Cookie 读写、自定义 HTML 元素 `esp-unicode`（元素类型 `IEscapeUnicode`，实现与注册在 `WebUtil.initCustomElements()` 内，需在浏览器环境显式调用），依赖 basic 和 dataStructure
+- `resource.ts` — Base64 内嵌图标与默认桌面背景（DefaultIconGroup, IconGroup, JadeUIResource），约 310 行是 base64 数据，依赖 dataStructure 和 web
 
 ### 几何与图形层
-- `src/scripts/ts/geo2d.ts` — 2D 几何库：Point2D, Line2D, Rectangle2D, Circle2D, Polygon2D, Ray2D。定义 IGeo2D / GeoShape2D 接口，提供碰撞检测、最近点计算。依赖 basic（NumUtil）
-- `src/scripts/ts/canvas.ts` — Canvas 2D 绘图抽象：ICanvas2D 接口、CanvasShape2D 基类、ImageClip 图片裁剪，依赖 geo2d 和 web
+- `ui/geo2d.ts` — 2D 几何库：Point2D, Line2D, Rectangle2D, Circle2D, Polygon2D, Ray2D。定义 IGeo2D / GeoShape2D 接口，Geo2DUtils 提供碰撞检测、最近点计算。依赖 basic（NumUtil）
+- `ui/canvas.ts` — Canvas 2D 绘图抽象：ICanvas2D 接口、CanvasShape2D 基类、ImageClip 图片裁剪、CanvasUtils，依赖 geo2d 和 web
 
 ### Web 页面层
-- `src/scripts/ts/webHtmlPage.ts` — 通用 HTML 页面框架：PageConfig, WebHtmlPage 类（导航栏、侧栏、页脚、搜索渲染），依赖 web
-- `src/scripts/ts/3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper, ShowdownUtils。包装全局脚本库（jQuery `$`、MathJax、SyntaxHighlighter、showdown）
+- `ui/webHtmlPage.ts` — 通用 HTML 页面框架：PageConfig、NavTreeNode、ThemeBinding 接口，WebHtmlPage 类（导航栏渲染、分页渲染、副标题、目录面板展开折叠、主题切换），另导出写死的站点配置 `SITE_NAV_ITEMS` / `SITE_THEMES`。依赖 basic 和 web
+- `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper, ShowdownUtils。包装全局脚本库（jQuery `$`、MathJax、SyntaxHighlighter、showdown），无内部依赖
 
 ### 业务应用层
-- `src/scripts/ts/wiki.ts` — Wiki 页面，依赖 webHtmlPage 和 3rdLibTool
-- `src/scripts/ts/blog.ts` — 博客页面（用户信息、推荐文章列表、评论系统），依赖 webHtmlPage、web 和 3rdLibTool
-- `src/scripts/ts/UIWindow.ts` — 桌面式窗口 UI 系统：可拖拽/缩放的窗口、Dock 任务栏、Z-index 管理、桌面配置，依赖 dataStructure、geo2d、resource 和 web
-- `src/scripts/ts/sandtable.ts` — TRPG 战棋沙盘：Token 管理、视野/可见性（glimmer/dark）、Canvas 战争迷雾，依赖 basic、canvas、geo2d 和 web
+- `blog/common.ts` — 博客与相册共用逻辑：BlogCommon（用户信息加载、文章渲染、分页列表加载、页面框架初始化），另导出写死的 `API_ROOT`。依赖 basic、dataStructure、web、ui/webHtmlPage、3rdLibTool
+- `blog/blog.ts` — 博客页面：BlogPage（推荐文章列表、用户文章分页列表），入口 `initBlogPage()`。依赖 basic、web、blog/common
+- `blog/gallery.ts` — 相册页面：GalleryPage，入口 `initGalleryPage()`。依赖 blog/common
+- `blog/wiki.ts` — Wiki 页面：WikiPage，入口 `initWikiPage()`（代码高亮、数学公式、DataTable、目录面板）。依赖 ui/webHtmlPage、3rdLibTool、web
+- `ui/UIWindow.ts` — 桌面式窗口 UI 系统：可拖拽/缩放的窗口、Dock 任务栏、Z-index 管理、桌面配置、JadeWindowUI。依赖 dataStructure、ui/geo2d、resource 和 web。**样式上隐式依赖 98.css**（见「主题系统」一节）
+- `trpg/sandtable.ts` — TRPG 战棋沙盘：Token 管理、视野/可见性（default/glimmer/dark）、Canvas 战争迷雾、SandTableUtils。依赖 basic、ui/canvas、ui/geo2d 和 web
+- `workout/workout.ts` — 健身动作肌肉图：把肌肉数据渲染成 SVG。约 363 行是写死的 SVG 路径数据。构建产物需显式调 `initWorkItems()`（避免模块加载期求值 `document`）。依赖 dataStructure 和 workout/workoutData
+- `workout/workoutData.ts` — 肌肉与肌肉图数据（muscleInfo, fontMuscleImgs, backMuscleimgs），整个文件都是数据，无内部依赖
+
+### 汇总入口
+- `index.ts` — `export *` 汇总全部模块，供不带子路径的 `import ... from '@jade-dungeon/jade-utils'` 使用。没有打包器做 tree-shaking，所以推荐优先用子路径导入
 
 ### 测试/Demo（编译但不互相依赖）
-- `src/scripts/ts/testJadeTRPG.ts`, `testJadeUtils.ts`, `testJadeUI.ts` — 浏览器手动测试/Demo 脚本，非自动化测试。通过 `src/html/` 下的 HTML 页面使用 `<script type="module">` 加载
+- `testJadeUtils.ts`、`ui/testJadeUI.ts`、`trpg/testJadeTRPG.ts`、`workout/testWorkout.ts` — 浏览器手动测试/Demo 脚本，非自动化测试。通过 `src/html/` 下的 HTML 页面使用 `<script type="module">` 加载。`testJadeTRPG.ts` 里有 5 处写死的生产环境图片 URL
 
 ### TypeScript 声明引用
 - `src/scripts/include/refTypes.d.ts` — 外部类型声明（目前为空，曾被用于 jQuery 声明）
@@ -106,50 +134,63 @@ declare namespace MathJax { ... }
 
 ## 编译输出
 
-- TypeScript 编译为 ES6 模块（`target: "es6"`, `module: "es6"`），输出 `.js` 和 `.d.ts` 到 `webroot/scripts/ts/`
+- TypeScript 编译为 ES6 模块（`target: "ES6"`, `module: "ES6"`），输出 `.js`、`.d.ts` 和 `.js.map`
+  到 `webroot/scripts/ts/`（CDN 构建），或 `.js` + `.d.ts` 到 `dist/`（npm 打包，无 sourcemap）
 - 严格模式：`noImplicitAny: true`, `strict: true`
+- 压缩产物 `.min.js` 由 `compress-typescript` 任务用 uglify 生成，只在 CDN 构建里有
 - Less 主题编译为合并后的 `all.css` 和 `all.min.css`，输出到 `webroot/themes/<theme>/styles/`
 
 ## 目录结构
 
 | 目录 | 用途 |
 |------|------|
-| `src/scripts/ts/` | TypeScript 源码 |
+| `src/scripts/ts/` | TypeScript 源码，分 `ui/`、`blog/`、`trpg/`、`workout/` 四个子目录 |
 | `src/scripts/include/` | 外部类型声明 |
-| `src/themes/` | Less 源文件（hobbit, lo-fi, paper-print）+ 图片资源 + window-ui 样式 + trpg 纯图片 |
-| `src/html/` | HTML 测试页面 |
-| `webroot/` | 构建产物输出目录 |
-| `docs/` | 文档（geo.md, gnuplot 数学图表, plantuml UML 图, cric.tt01.png 三角函数参考图） |
+| `src/themes/` | Less 源文件（hobbit, lo-fi, paper-print）+ window-ui / workout 样式 + trpg 纯图片 + 各主题图片资源（共约 5.3 MB） |
+| `src/html/` | HTML 页面：3 个真实页面（index / blog / gallery）+ 9 个 `test-*` 演示页 + `parts/` 下 5 个片段 |
+| `webroot/` | CDN 构建产物输出目录（gitignore） |
+| `dist/` | npm 包构建产物输出目录（gitignore） |
+| `docs/` | 文档：geo.md（几何库）、design-pkg.md（npm 打包可行性）、refactor-20261101.md（拆分方案研究）、tsconfig-info.md、styles.md、ui-style-win98.md、svg-img.md、doc-uml.md、node-env-cfg.md、study-jsx.md、ssh-secure.md、`img-plt/`（gnuplot 数学图表）、`uml/`（plantuml）、`win98-menu/`、cric.tt01.png |
+| `context/` | 需求与进度记录 |
 
 ## 部署
 
-- **nginx 本地路径**: `deploy-test.sh` 将编译产物拷贝到 `/home/ecs-user/workspace/nginx/jadecdn/webroot/jadeutils.v3/`
-- `deploy-test.sh` 被 `.gitignore` 忽略，属于本地配置文件，不在版本控制中
 - 生产部署作为 CDN 静态资源，通过 `webroot/jadeutils.v3/` 路径提供服务
+- 拷贝到本地 nginx 的逻辑在 `build.sh` 末尾，当前是注释状态：
+  目标路径 `~/workspace/nginx/jadecdn/webroot/jadeutils.v3/`
+- 历史上有一个 `deploy-test.sh` 做部署，被 `.gitignore` 忽略，当前工作区中不存在该文件
 
 ## 编码模式
 
 - **接口/实现分离** — geo2d、canvas、sandtable 层使用 `IXxx` 接口 + `class Xxx implements IXxx` 模式。接口定义只读契约，类提供实现和可变属性
-- **工具命名空间** — 纯函数工具集使用 namespace 组织：`Geo2DUtils`、`CanvasUtils`、`SandTableUtils`、`JadeWindowUI`
+- **工具命名空间** — 纯函数工具集使用 namespace 组织：`Geo2DUtils`、`CanvasUtils`、`SandTableUtils`、`JadeWindowUI`、`JadeUIResource`
 - **静态方法工具类** — 基础层的 `NumUtil`、`StrUtil`、`TimeUtil`、`WebUtil` 等使用全静态方法的类
-- **应用入口** — `WikiPage.initWikiPage()` 和 `BlogPage.initWikiPage()` 是页面级入口，各自组织完整页面的初始化流程
+- **应用入口** — `WikiPage.initWikiPage()`、`BlogPage.initBlogPage()`、`GalleryPage.initGalleryPage()` 是页面级入口，各自组织完整页面的初始化流程。博客与相册的共用部分抽到 `BlogCommon`
+- **DOM 求值推迟到方法内** — 浏览器 API（`HTMLElement`、`document`）不在模块顶层求值，而是放进需要显式调用的方法里（`WebUtil.initCustomElements()`、`initWorkItems()`），这样无 DOM 的环境（Node / SSR / 单元测试）import 不会抛 `ReferenceError`
 
 ## 主题系统
 
-项目有两套独立的主题系统：
+项目有四套独立的主题/资源体系：
 
 ### 内容主题（hobbit / lo-fi / paper-print）
 
 定义在 `gulpfile.js` 的 `themes` 数组中，用于博客和 Wiki 页面。采用 **`comm.less` + `part.1.less`** 变量模式：
 
-- `src/themes/comm.less` — 共享的结构样式（450+ 行），所有视觉属性通过 Less 变量引用（`@text-color-main`、`@page-bg-img`、`@title-color-fg-h1` 等），只使用变量不定义值
+- `src/themes/comm.less` — 共享的结构样式（467 行），所有视觉属性通过 Less 变量引用（`@text-color-main`、`@page-bg-img`、`@title-color-fg-h1` 等共 86 个变量），只使用变量不定义值，因此无法独立编译
 - `src/themes/<theme>/styles/part.1.less` — 各主题定义这些变量的具体值，通过不同的颜色/字体/图片实现视觉差异
-- 构建时 gulp 将两者合并为 `all.less`，编译为 `all.css` 和 `all.min.css`
+- 构建时 gulp 将两者 `concat` 成 `all.less`，编译为 `all.css` 和 `all.min.css`
+- **concat 顺序是主题文件在前、`comm.less` 在后**（`gulpfile.js` 第 62 行）。Less 变量是最后赋值生效，所以一旦给 `comm.less` 加默认值，默认值会盖掉主题的覆盖值。当前能跑是因为 `comm.less` 一个值都没定义
 
 ### window-ui 主题
 
 独立的窗口管理器 UI 样式，不参与 comm.less 体系：
-- `src/themes/window-ui/styles/desktop.less` — 桌面式窗口 UI 样式（`.desktop`、`.window`、`.dock-bar` 等），通过独立 gulp 任务 `process-style-window-ui` 编译
+- `src/themes/window-ui/styles/desktop.less` — 桌面式窗口 UI 样式（`.desktop`、`.dock-bar`、`.title-bar-icon` 等），通过独立 gulp 任务 `process-style-window-ui` 编译
+- **对 98.css 有隐式依赖** — `UIWindow.ts` 往 DOM 上加 12 个 class，`desktop.less` 只定义了其中 7 个，剩下的 `window`、`window-body`、`title-bar`、`title-bar-text`、`inactive` 由第三方 98.css 提供。98.css 当前只是 `devDependencies` 的一项，测试页面从 `@@cdn3rd` 外链加载，`package.json` 里没有声明这层关系。不引 98.css 窗口就没有边框和标题栏
+
+### workout 主题
+
+- `src/themes/workout/styles/muscle.less` — 肌肉图配色（7 行），通过 gulp 任务 `process-style-workout` 编译
+- `src/themes/workout/images/` — 约 1.9 MB 图片，是所有主题里体积最大的一套
 
 ### TRPG 资源（纯图片，无 CSS）
 
@@ -166,8 +207,8 @@ declare namespace MathJax { ... }
 
 | API | 问题 | 前端影响 | 状态 |
 |-----|------|---------|------|
-| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
-| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog.ts` 第 154 行对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog/blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
+| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog/common.ts` 第 256 行对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
 
 
 
