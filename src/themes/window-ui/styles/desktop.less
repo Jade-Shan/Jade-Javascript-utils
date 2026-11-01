@@ -24,6 +24,24 @@ div.desktop>div.window>div.window-body {
 	margin-right: 5px;
 }
 
+/**
+ * 没有图标时的退化外观。
+ *
+ * `UIWindow.ts` 的图标数据来自 `ui/uiResource.ts` 的注册表，没注册 provider
+ * 时（不调 `registerDefaultUIResource()`）就不写 backgroundImage，而是加这个
+ * class。标题栏里把那 12px 宽度和右边距一起收掉，否则标题文字会凭空缩进一块空白。
+ */
+.title-bar-icon.no-icon {
+	width: 0 !important;
+	margin-right: 0;
+}
+
+/* dock 栏的任务项没图标时，留出方块让 CSS 自己画，不然点不到 */
+.menu-item.no-icon {
+	background: var(--surface, #c0c0c0);
+	box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff;
+}
+
 .title-bar-controls>button {
 	cursor: pointer;
 }

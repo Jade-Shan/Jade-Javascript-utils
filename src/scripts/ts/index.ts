@@ -17,6 +17,10 @@ export * from './dataStructure.js';
 
 // 资源与 Web 基础
 export * from './web.js';
+// 窗口 UI 的资源注册表（只有接口，无图片数据）
+export * from './ui/uiResource.js';
+// 内置图标与背景（310 行 base64）。从本入口导入会把它一起拉进来，
+// 介意体积的话用子路径 `/ui-resource` 只拿注册表，不碰这个文件
 export * from './resource.js';
 
 // 第三方库封装
@@ -36,3 +40,4 @@ export * from './blog/blog.js';
 export * from './blog/wiki.js';
 export * from './workout/workout.js';
 export * from './workout/workoutData.js';
+export * from './workout/workoutPoseData.js';

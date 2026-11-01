@@ -82,7 +82,7 @@ npm run build:test    # 只编译，不跑
 - `.test-build/package.json` 里要有 `{"type":"module"}`，否则 Node 把 ESM 产物当 CJS 解析。
   这一步由 `build:test` 脚本自动写入，和 `build:pkg` 对 `dist/` 做的是同一件事
 
-当前覆盖范围（224 个用例）：
+当前覆盖范围（263 个用例）：
 
 | 模块 | 需要 jsdom |
 |------|-----------|
@@ -95,10 +95,14 @@ npm run build:test    # 只编译，不跑
 | `web` 的 Cookie 读写、`initCustomElements()`、懒加载 | 是 |
 | `ui/webHtmlPage`（DOM 操作、分页、导航、主题切换） | 是 |
 | `blog/common` 的选择器表 + `loadUserInfo` | 是（外加假 XHR） |
+| `ui/uiResource` 的注册表 + `resource` 的内置 provider | 否 |
+| `workout` 的渲染逻辑（`mergePathWithStyle` 纯函数，三个 SVG 渲染函数要 document） | 部分 |
+| `blog/wiki` 的 `DEFAULT_WIKI_PAGE_CONFIG` | 否 |
 
-未覆盖：`ui/canvas`、`ui/UIWindow`、`trpg/sandtable`（jsdom 不实现
+未覆盖：`ui/canvas`、`ui/UIWindow` 的渲染部分、`trpg/sandtable`（jsdom 不实现
 `getContext('2d')`，要额外装 `canvas` 原生模块）、`blog/*` 的文章渲染
-（要 mock showdown）、`3rdLibTool` 除导航栏模板外的部分（依赖全局 jQuery 等）。
+（要 mock showdown）、`blog/wiki` 的 `initWikiPage()`（要 jQuery / MathJax /
+SyntaxHighlighter 三个全局库）、`3rdLibTool` 除导航栏模板外的部分。
 
 ### jsdom 的用法
 
@@ -147,11 +151,12 @@ document 或 cookie 互相影响。异步场景用 `withDomAsync()`。
 
 ### 资源与 Web 基础
 - `web.ts` — HTTP 请求（`WebUtil.requestHttp`）、Base64 图片类型定义（IBase64Img, Base64ImgType, IconSize）、图片懒加载（`lazyLoadImages`）、Cookie 读写、自定义 HTML 元素 `esp-unicode`（元素类型 `IEscapeUnicode`，实现与注册在 `WebUtil.initCustomElements()` 内，需在浏览器环境显式调用），依赖 basic 和 dataStructure
-- `resource.ts` — Base64 内嵌图标与默认桌面背景（DefaultIconGroup, IconGroup, JadeUIResource），约 310 行是 base64 数据，依赖 dataStructure 和 web
+- `resource.ts` — 内置的 Base64 图标与默认桌面背景（DefaultIconGroup, JadeUIResource, `registerDefaultUIResource()`），约 310 行是 base64 数据。**是 opt-in 的**：`UIWindow.ts` 不 import 本文件，要用这套图标得显式调 `registerDefaultUIResource()`（见「窗口 UI 的资源注册表」一节）。依赖 dataStructure、web、ui/uiResource
 
 ### 几何与图形层
 - `ui/geo2d.ts` — 2D 几何库：Point2D, Line2D, Rectangle2D, Circle2D, Polygon2D, Ray2D。定义 IGeo2D / GeoShape2D 接口，Geo2DUtils 提供碰撞检测、最近点计算。依赖 basic（NumUtil）
 - `ui/canvas.ts` — Canvas 2D 绘图抽象：ICanvas2D 接口、CanvasShape2D 基类、ImageClip 图片裁剪、CanvasUtils，依赖 geo2d 和 web
+- `ui/uiResource.ts` — 窗口 UI 的资源注册表：`IconGroup` 类型、`IUIResourceProvider` 接口、`registerUIResourceProvider()` / `getIconGroup()` / `getDesktopBackground()` / `pickIconSize()`。**只有契约，零图片数据**。依赖 web
 
 ### Web 页面层
 - `ui/webHtmlPage.ts` — 通用 HTML 页面框架：PageConfig、NavTreeNode、ThemeBinding、SiteConfig、TopNavContext、TopNavRenderer 接口，WebHtmlPage 类（导航栏渲染、分页渲染、副标题、目录面板展开折叠、主题切换）。**只定义类型，不带任何站点的值、也不带 CSS 框架的 class**（见「站点配置与导航栏模板」一节）。依赖 basic 和 web
@@ -163,10 +168,11 @@ document 或 cookie 互相影响。异步场景用 `withDomAsync()`。
 - `blog/blog.ts` — 博客页面：BlogPage（推荐文章列表、用户文章分页列表），入口 `initBlogPage()`。依赖 basic、web、blog/common
 - `blog/gallery.ts` — 相册页面：GalleryPage，入口 `initGalleryPage()`。依赖 blog/common
 - `blog/wiki.ts` — Wiki 页面：WikiPage，入口 `initWikiPage()`（代码高亮、数学公式、DataTable、目录面板）。依赖 ui/webHtmlPage、3rdLibTool、web
-- `ui/UIWindow.ts` — 桌面式窗口 UI 系统：可拖拽/缩放的窗口、Dock 任务栏、Z-index 管理、桌面配置、JadeWindowUI。依赖 dataStructure、ui/geo2d、resource 和 web。**样式上隐式依赖 98.css**（见「主题系统」一节）
+- `ui/UIWindow.ts` — 桌面式窗口 UI 系统：可拖拽/缩放的窗口、Dock 任务栏、Z-index 管理、桌面配置、JadeWindowUI。依赖 dataStructure、ui/geo2d、ui/uiResource 和 web。**不依赖 resource.ts** —— 图标与背景走注册表，见「窗口 UI 的资源注册表」一节。**样式上隐式依赖 98.css**（见「主题系统」一节）
 - `trpg/sandtable.ts` — TRPG 战棋沙盘：Token 管理、视野/可见性（default/glimmer/dark）、Canvas 战争迷雾、SandTableUtils。依赖 basic、ui/canvas、ui/geo2d 和 web
-- `workout/workout.ts` — 健身动作肌肉图：把肌肉数据渲染成 SVG。约 363 行是写死的 SVG 路径数据。构建产物需显式调 `initWorkItems()`（避免模块加载期求值 `document`）。依赖 dataStructure 和 workout/workoutData
-- `workout/workoutData.ts` — 肌肉与肌肉图数据（muscleInfo, fontMuscleImgs, backMuscleimgs），整个文件都是数据，无内部依赖
+- `workout/workout.ts` — 健身动作肌肉图的**渲染逻辑**，242 行、不含数据：`loadMuscleSvg`、`mergePathWithStyle`、`loadPoseSvg`、`loadWorkoutMuscleSvg`、`workItems`、`initWorkItems`。数据可注入（`WorkoutData` / `DEFAULT_WORKOUT_DATA`）。构建产物需显式调 `initWorkItems()`（避免模块加载期求值 `document`）。依赖 workout/workoutData 和 workout/workoutPoseData
+- `workout/workoutData.ts` — 肌肉数据与动作清单（muscleInfo, fontMuscleImgs, backMuscleimgs, strenghtWorkoutArr, StrenghtWorkout），整个文件都是数据，无内部依赖
+- `workout/workoutPoseData.ts` — 14 个动作的姿势 SVG 路径（strengthPoseSvgArr），332 行纯数据，无内部依赖
 
 ### 汇总入口
 - `index.ts` — `export *` 汇总全部模块，供不带子路径的 `import ... from '@jade-dungeon/jade-utils'` 使用。没有打包器做 tree-shaking，所以推荐优先用子路径导入
@@ -290,6 +296,62 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 - **DOM 求值推迟到方法内** — 浏览器 API（`HTMLElement`、`document`）不在模块顶层求值，而是放进需要显式调用的方法里（`WebUtil.initCustomElements()`、`initWorkItems()`），这样无 DOM 的环境（Node / SSR / 单元测试）import 不会抛 `ReferenceError`
 - **路径配置集中在 envs.js** — 页面里不写死产物路径。模块路径走 import map（基址 `importMapRoot`），第三方库和主题走 `@@cdn3rd` / `@@staticRoot`
 
+## 窗口 UI 的资源注册表
+
+`UIWindow.ts` **不 import `resource.ts`**。那个文件有 310 行 base64（27.8 KB），
+直接依赖的话只想用窗口管理器的人也得下载。图标和桌面背景走
+`ui/uiResource.ts` 的注册表：
+
+```typescript
+import { registerDefaultUIResource } from '@jade-dungeon/jade-utils/resource';
+registerDefaultUIResource();   // 用内置的 3 组图标 + 桌面背景
+```
+
+| 不做什么 | 结果 |
+|---------|------|
+| 不调 `registerDefaultUIResource()` | 窗口没图标、桌面没背景图，外观交给 CSS 的 `.no-icon` |
+| 不 import `resource.ts` | 产物里不含那 27.8 KB |
+
+三条硬规则：
+
+- **`registerDefaultUIResource()` 必须在构造窗口之前调** ——
+  `UIWindowAdapter` 的 `cfg` 字段初始化时就向注册表要默认图标了。
+  三个 demo 入口（`testJadeUI` 的两个、`testJadeTRPG.testTrpgUI`）都在第一行调
+- **注册表取不到时返回 `undefined`，不要加兜底** ——
+  兜底成某张内置图片就等于没拆。`test/uiresource.test.ts` 有三条用例盯这个
+- **往 `UIWindow.ts` 里加 `import ... from "../resource.js"` 是倒退** ——
+  这层依赖刚拆掉（`docs/refactor-20261101.md` 第 16.1 节）
+
+注意注册表和 `JadeUIResource.getDefaultIcon()` 的兜底语义**相反**：
+后者遇到未知名字会 warn 并退回 `ELEC_FACE`（老的公开 API，保留原样），
+注册表则是「没有就是没有」。
+
+## workout 的数据与渲染
+
+`workout.ts` 只有渲染逻辑（242 行），数据在另两个文件：
+
+| 文件 | 内容 |
+|------|------|
+| `workout/workout.ts` | `loadMuscleSvg` / `mergePathWithStyle` / `loadPoseSvg` / `loadWorkoutMuscleSvg` / `initWorkItems` |
+| `workout/workoutData.ts` | 肌肉图路径 + 动作清单 |
+| `workout/workoutPoseData.ts` | 14 个动作的姿势 SVG 路径（332 行） |
+
+**不要把数据写回 `workout.ts`** —— 刚拆出去的（第 16.2 节）。数据可注入：
+
+```typescript
+initWorkItems();                        // 内置数据
+initWorkItems({ workouts: myList });    // 只换动作清单
+```
+
+`initWorkItems()` 幂等（`workItems.length > 0` 就直接返回），
+所以**换数据要在第一次调用时就传**，已经填过再传新数据不会重建。
+
+`mergePathWithStyle` 是纯函数，**不能改成原地修改入参** ——
+`DEFAULT_WORKOUT_DATA` 是模块级常量，被改一次整个进程的渲染结果都不对了。
+
+数据**没有**改成 JSON：`initWorkItems()` 是同步 API，改 async 是 breaking change，
+而且本项目没打包器、JSON 只能真发 HTTP 请求。理由写在 `workoutPoseData.ts` 头部。
+
 ## 站点配置与导航栏模板
 
 `ui/webHtmlPage.ts` 是库层，**不放任何一个站点的值、也不放任何 CSS 框架的 class**。
@@ -346,6 +408,19 @@ BlogCommon.loadUserInfo(apiRoot, userId, { userName: '#my-name' });
 
 `loadArticleList()` 的分页回调递归调自己，**选择器要一起往下传**，
 否则翻页之后退回默认选择器。
+
+### wiki 页面的跨项目路径
+
+`initWikiPage()` 的调用方在另一个 vimwiki 项目里。三项原来写死的值收在
+`blog/wiki.ts` 的 `DEFAULT_WIKI_PAGE_CONFIG`：`apiRoot`（`/`）、
+`pageTitle`（`Study Notes`）、`hlCodePath`（SyntaxHighlighter 的 brush 目录，
+指向 `../../vimwiki-theme/3rd/...`）。
+
+- **默认值不要改** —— 外部那个项目靠它们继续跑，改了等于悄悄改了那边的行为。
+  `test/wiki.config.test.ts` 有一条用例逐项比对
+- **`SyntaxHighlighterHelper.loadCodeHightlight()` 的 `hlCodePath` 是必传的** ——
+  库层不该知道别人的 brush 脚本放哪。漏传时 autoloader 不报错，
+  高亮只是**静默失效**，所以宁可编译期报错
 
 ## 主题系统
 

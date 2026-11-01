@@ -1,6 +1,8 @@
 import { TimeUtil } from "../basic.js";
 import { CanvasUtils, ImageClip } from "../ui/canvas.js";
-import { JadeUIResource, DefaultIconGroup } from "../resource.js";
+import {
+	JadeUIResource, DefaultIconGroup, registerDefaultUIResource,
+} from "../resource.js";
 import { CircleToken, ICanvasFrame, ImageResource, LineToken, RectangleToken, SandTable, SandTableUtils, SceneDataResp } from "./sandtable.js";
 import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "../ui/UIWindow.js";
 import { DemoEnvConfig, demoEnv } from "../env.demo.js";
@@ -413,6 +415,8 @@ export namespace TestJadeTRPG {
 	 * @param env - 页面从 `envs.js` 注入的环境配置，用到 `apiRoot` 和 `themeRoot`
 	 */
 	export let testTrpgUI = async (env?: DemoEnvConfig) => {
+		// 用内置的那套图标和桌面背景，要在构造窗口之前调用
+		registerDefaultUIResource();
 		// window UI
 		let desktop01 = document.getElementById(`test-desktop-01`)!;
 		let desktop: UIDesktop = new UIDesktop(desktop01, { dockBar: { range: 300, maxScale: 1.8 } });

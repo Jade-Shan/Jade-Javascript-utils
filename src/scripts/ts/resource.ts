@@ -1,11 +1,30 @@
+/**
+ * 内置的窗口 UI 资源：3 组 ×5 尺寸图标 + 1 张桌面背景
+ *
+ * **这个文件约 310 行是 base64 数据，是整个包体积的大头（27 KB）。**
+ * 所以它是 opt-in 的：`UIWindow.ts` 不再 import 本文件，而是通过
+ * [ui/uiResource.ts](ui/uiResource.ts) 的注册表取资源。想用这套内置图标就显式注册：
+ *
+ * ```typescript
+ * import { registerDefaultUIResource } from '@jade-dungeon/jade-utils/resource';
+ * registerDefaultUIResource();   // 不调用的话窗口就没图标、桌面就没背景图
+ * ```
+ *
+ * 不 import 本文件的使用方不会下载这 27 KB。
+ * 拆包之后本文件会成为独立的可选包 `@jade-dungeon/window-ui-icons`。
+ */
 import { SimpleMap } from "./dataStructure.js";
 import { IconSize, IBase64Img, Base64ImgType } from "./web.js";
+import {
+	IconGroup, IUIResourceProvider, pickIconSize, registerUIResourceProvider,
+} from "./ui/uiResource.js";
 
 /** 默认图标组枚举 */
 export enum DefaultIconGroup { ELEC_FACE, ELEC_BUG, CAMERA };
 
-/** 图标组：包含五种尺寸的 Base64 图片 */
-export type IconGroup = { x12: IBase64Img, x16: IBase64Img, x24: IBase64Img, x32: IBase64Img, x48: IBase64Img };
+// `IconGroup` 的定义已挪到 ui/uiResource.ts（库层的资源契约）。
+// 这里再导出一次，保持 `import { IconGroup } from '.../resource'` 继续可用
+export type { IconGroup };
 
 /** 默认图标组：ELEC_FACE（电子脸） */
 const iconDefault01: IconGroup = {
@@ -326,14 +345,6 @@ export namespace JadeUIResource {
 		return grp;
 	}
 
-	const sizeKeyMap: Record<number, keyof IconGroup> = {
-		[IconSize.x12]: "x12",
-		[IconSize.x16]: "x16",
-		[IconSize.x24]: "x24",
-		[IconSize.x32]: "x32",
-		[IconSize.x48]: "x48",
-	};
-
 	/**
 	 * 按名称和尺寸获取默认图标的 Base64 字符串
 	 * @param name - 图标组名称
@@ -341,17 +352,48 @@ export namespace JadeUIResource {
 	 * @returns {string} Base64 格式的图片数据 URI，未找到时返回空字符串
 	 */
 	export function getDefaultIconBase64(name: DefaultIconGroup, size: IconSize): string {
-		const grp = getDefaultIcon(name);
-		const key = sizeKeyMap[size];
-		if (key) {
-			const img = grp[key];
-			return `${img.format},${img.data}`;
-		}
-		return "";
+		const img = pickIconSize(getDefaultIcon(name), size);
+		return img ? `${img.format},${img.data}` : "";
 	}
 
 	/** 默认桌面背景图片 */
 	export const defaultDesktopBackground = imgDesktopBg;
 
+	/** 图标名（字符串形式）到内置图标组的映射，给注册表用 */
+	const nameMap: Record<string, DefaultIconGroup> = {
+		"ELEC_FACE": DefaultIconGroup.ELEC_FACE,
+		"ELEC_BUG":  DefaultIconGroup.ELEC_BUG,
+		"CAMERA":    DefaultIconGroup.CAMERA,
+	};
+
+	/**
+	 * 内置资源的 provider 实现
+	 *
+	 * 注册表按字符串取图标（库层不该知道 `DefaultIconGroup` 有哪些值），
+	 * 所以这里做一层枚举名到枚举值的转换。省略 `name` 时给 `ELEC_FACE`。
+	 */
+	export const defaultProvider: IUIResourceProvider = {
+		getIconGroup(name?: string): IconGroup | undefined {
+			if (name === undefined) { return getDefaultIcon(DefaultIconGroup.ELEC_FACE); }
+			const key = nameMap[name];
+			// 这里和 getDefaultIcon() 不同：注册表的契约是「没有就返回
+			// undefined」，不兜底、不打 warn，由调用方决定怎么退化
+			return key === undefined ? undefined : getDefaultIcon(key);
+		},
+		getDesktopBackground(): IBase64Img | undefined { return imgDesktopBg; },
+	};
+
+}
+
+/**
+ * 把内置资源注册给窗口 UI
+ *
+ * 不调用则窗口没图标、桌面没背景图（外观交给 CSS）。
+ * 这是 opt-in 的 —— 见本文件头部的说明。
+ *
+ * @returns {void}
+ */
+export function registerDefaultUIResource(): void {
+	registerUIResourceProvider(JadeUIResource.defaultProvider);
 }
 

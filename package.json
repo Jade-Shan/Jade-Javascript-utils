@@ -10,6 +10,7 @@
 		"./basic":          { "types": "./dist/basic.d.ts",             "default": "./dist/basic.js" },
 		"./data":           { "types": "./dist/dataStructure.d.ts",     "default": "./dist/dataStructure.js" },
 		"./web":            { "types": "./dist/web.d.ts",               "default": "./dist/web.js" },
+		"./ui-resource":    { "types": "./dist/ui/uiResource.d.ts",     "default": "./dist/ui/uiResource.js" },
 		"./resource":       { "types": "./dist/resource.d.ts",          "default": "./dist/resource.js" },
 		"./3rd-lib-tool":   { "types": "./dist/3rdLibTool.d.ts",        "default": "./dist/3rdLibTool.js" },
 		"./geo2d":          { "types": "./dist/ui/geo2d.d.ts",          "default": "./dist/ui/geo2d.js" },
@@ -22,7 +23,8 @@
 		"./gallery":        { "types": "./dist/blog/gallery.d.ts",      "default": "./dist/blog/gallery.js" },
 		"./wiki":           { "types": "./dist/blog/wiki.d.ts",         "default": "./dist/blog/wiki.js" },
 		"./workout":        { "types": "./dist/workout/workout.d.ts",   "default": "./dist/workout/workout.js" },
-		"./workout-data":   { "types": "./dist/workout/workoutData.d.ts","default": "./dist/workout/workoutData.js" }
+		"./workout-data":   { "types": "./dist/workout/workoutData.d.ts","default": "./dist/workout/workoutData.js" },
+		"./workout-pose":   { "types": "./dist/workout/workoutPoseData.d.ts","default": "./dist/workout/workoutPoseData.js" }
 	},
 	"files": [
 		"dist"

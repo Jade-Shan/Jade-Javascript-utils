@@ -1,5 +1,7 @@
 import { CanvasCircle2D, CanvasRectangle2D, CanvasUtils } from "./canvas.js";
-import { JadeUIResource, DefaultIconGroup } from "../resource.js";
+import {
+	JadeUIResource, DefaultIconGroup, registerDefaultUIResource,
+} from "../resource.js";
 import { JadeWindowUI, UIDesktop, UIObj, UIWindowAdapter, WinParam } from "./UIWindow.js";
 
 export namespace TestJadeUI {
@@ -147,6 +149,9 @@ export namespace TestJadeUI {
 
 
 	export let testWindowUI = () => {
+		// 用内置的那套图标和桌面背景。必须在构造窗口之前调用 ——
+		// UIWindowAdapter 的 cfg 初始化时就向注册表要默认图标了
+		registerDefaultUIResource();
 		//
 		let desktop00 = document.getElementById(`test-desktop-00`);
 		if (desktop00) {
@@ -218,6 +223,8 @@ export namespace TestJadeUI {
 
 
 	export let testCanvasWindow = () => {
+		// 这两个入口函数页面侧是分别调的，所以各自注册一次（幂等）
+		registerDefaultUIResource();
 		//
 		//
 		let icon01 = JadeUIResource.getDefaultIcon(DefaultIconGroup.ELEC_FACE);

@@ -30,13 +30,20 @@ export class SyntaxHighlighterHelper {
 	/**
 	 * 加载 SyntaxHighlighter 各语言高亮脚本并执行高亮
 	 *
-	 * @param hlRootPath - 站点根路径前缀，默认为空字符串
-	 * @param hlCodePath - 高亮脚本所在目录路径，默认为 ../../vimwiki-theme/3rd/SyntaxHighlighter/2.1.364/scripts
+	 * `hlCodePath` 原来有个默认值 `../../vimwiki-theme/3rd/SyntaxHighlighter/...`,
+	 * **指向的是本项目之外的另一个 vimwiki 项目的目录**。那个路径对别的使用方
+	 * 没有任何意义，而且一旦漏传就会静默地去加载不存在的脚本（autoloader 不报错，
+	 * 高亮只是不生效）。所以现在改成必传 —— 库不该知道别人的 brush 脚本放在哪。
+	 *
+	 * 本站 wiki 页面的那个路径挪到了 `blog/wiki.ts` 的
+	 * `DEFAULT_WIKI_PAGE_CONFIG.hlCodePath`（应用层），调用方不用改。
+	 *
+	 * @param hlRootPath - 站点根路径前缀，空值按空串处理
+	 * @param hlCodePath - 高亮脚本（shBrush*.js）所在目录，**必传**，不带尾斜杠
 	 * @returns {void}
 	 */
-	static loadCodeHightlight(hlRootPath?: string, hlCodePath?: string) {
+	static loadCodeHightlight(hlRootPath: string | undefined, hlCodePath: string) {
 		hlRootPath = hlRootPath ? hlRootPath : "";
-		hlCodePath = hlCodePath ? hlCodePath : "../../vimwiki-theme/3rd/SyntaxHighlighter/2.1.364/scripts";
 		let basePath = `${hlRootPath}${hlCodePath}/`;
 		let parsePath = (arr: Array<string>): Array<string> => {
 			let lines: Array<string> = [];

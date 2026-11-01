@@ -91,7 +91,8 @@ import { NumUtil, SimpleMap, Point2D } from '@jade-dungeon/jade-utils';
 | `/data` | `dataStructure.ts` | `SimpleMap`、`SimpleStack`、`SimpleQueue` | 任意 |
 | `/geo2d` | `ui/geo2d.ts` | `Point2D`、`Line2D`、`Rectangle2D`、`Circle2D`、`Polygon2D`、`Ray2D`、`Geo2DUtils` | 任意 |
 | `/web` | `web.ts` | `WebUtil`（HTTP 请求、Base64 图片） | 浏览器 |
-| `/resource` | `resource.ts` | `DefaultIconGroup`、`IconGroup`、`JadeUIResource` | 浏览器 |
+| `/ui-resource` | `ui/uiResource.ts` | `IconGroup`、`IUIResourceProvider`、`registerUIResourceProvider`、`pickIconSize` | 任意（只有接口，零图片数据） |
+| `/resource` | `resource.ts` | `DefaultIconGroup`、`JadeUIResource`、`registerDefaultUIResource` | 浏览器，**含 27.8 KB base64** |
 | `/canvas` | `ui/canvas.ts` | `ICanvas2D`、`CanvasShape2D`、`ImageClip`、`CanvasUtils` | 浏览器 |
 | `/ui-window` | `ui/UIWindow.ts` | `UIDesktop`、`DockBar`、`JadeWindowUI` | 浏览器 |
 | `/web-html-page` | `ui/webHtmlPage.ts` | `WebHtmlPage`、`PageConfig`、`SiteConfig`、`NavTreeNode`、`ThemeBinding`、`TopNavRenderer` | 浏览器 |
@@ -99,8 +100,9 @@ import { NumUtil, SimpleMap, Point2D } from '@jade-dungeon/jade-utils';
 | `/3rd-lib-tool` | `3rdLibTool.ts` | `SyntaxHighlighterHelper`、`MathJaxHelper`、`BootStrapHelper`、`DataTableHelper`、`ShowdownUtils` | 浏览器 + 全局脚本 |
 | `/blog` | `blog/blog.ts` | `BlogPage` | 浏览器 |
 | `/wiki` | `blog/wiki.ts` | `WikiPage` | 浏览器 |
-| `/workout` | `workout/workout.ts` | `workItems`、`initWorkItems` | 浏览器 |
-| `/workout-data` | `workout/workoutData.ts` | `muscleInfo`、`fontMuscleImgs`、`backMuscleimgs` | 任意 |
+| `/workout` | `workout/workout.ts` | `workItems`、`initWorkItems`、`loadMuscleSvg`、`mergePathWithStyle`、`loadPoseSvg` | 浏览器 |
+| `/workout-data` | `workout/workoutData.ts` | `muscleInfo`、`fontMuscleImgs`、`backMuscleimgs`、`strenghtWorkoutArr` | 任意 |
+| `/workout-pose` | `workout/workoutPoseData.ts` | `strengthPoseSvgArr` | 任意 |
 
 「任意」= 零 DOM 依赖，Node / SSR / 单元测试里都能直接 import。
 
@@ -121,6 +123,39 @@ console.log(workItems.length);
 ```
 
 两个方法都是幂等的，重复调用无副作用。
+
+### 窗口 UI 的图标：按需加载
+
+`/ui-window` 不依赖 `/resource`。那个子路径有 27.8 KB base64 图标，
+只想要窗口管理器的话不会被连带下载 —— 代价是**默认没有图标和桌面背景**。
+
+想用内置的那套，显式注册：
+
+```typescript
+import { registerDefaultUIResource } from '@jade-dungeon/jade-utils/resource';
+import { UIDesktop } from '@jade-dungeon/jade-utils/ui-window';
+
+// 必须在构造窗口之前调：窗口的默认图标是构造时向注册表取的
+registerDefaultUIResource();
+const desktop = new UIDesktop(document.getElementById('desk')!);
+```
+
+想用自己的图标，实现 `IUIResourceProvider`：
+
+```typescript
+import {
+	registerUIResourceProvider, IconGroup,
+} from '@jade-dungeon/jade-utils/ui-resource';
+
+registerUIResourceProvider({
+	// name 省略时返回默认图标；不认识的名字返回 undefined
+	getIconGroup: (name) => myIcons[name ?? 'default'],
+	getDesktopBackground: () => myWallpaper,
+});
+```
+
+什么都不注册也能跑：窗口的图标位会带上 `.no-icon` class，
+桌面不设置 `background-image`，外观交给 CSS。
 
 ### 页面框架：站点配置与导航栏模板
 
@@ -198,9 +233,13 @@ web.ts
 ├── basic.ts
 └── dataStructure.ts
 
-resource.ts
-├── dataStructure.ts
+uiResource.ts                     (资源注册表，只有接口无数据)
 └── web.ts
+
+resource.ts                       (内置图标，27.8 KB base64，opt-in)
+├── dataStructure.ts
+├── web.ts
+└── uiResource.ts → web.ts
 
 webHtmlPage.ts
 ├── basic.ts
@@ -213,10 +252,10 @@ canvas.ts
 ├── geo2d.ts → basic.ts
 └── web.ts → basic.ts, dataStructure.ts
 
-UIWindow.ts
+UIWindow.ts                       (注意：不依赖 resource.ts)
 ├── dataStructure.ts
 ├── geo2d.ts → basic.ts
-├── resource.ts → dataStructure.ts, web.ts
+├── uiResource.ts → web.ts
 └── web.ts → basic.ts, dataStructure.ts
 
 sandtable.ts
@@ -250,7 +289,7 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 |----|------|------|
 | L0 基础 | `basic.ts`, `dataStructure.ts`, `3rdLibTool.ts` | 零内部依赖 |
 | L1 核心 | `geo2d.ts`, `web.ts` | 仅依赖 L0 |
-| L2 资源 | `resource.ts`, `webHtmlPage.ts` | 依赖 L0+L1 |
+| L2 资源 | `uiResource.ts`, `resource.ts`, `webHtmlPage.ts`, `site.config.ts` | 依赖 L0+L1 |
 | L3 图形 | `canvas.ts` | 依赖 geo2d + web |
 | L4 应用 | `UIWindow.ts`, `sandtable.ts`, `blog.ts`, `wiki.ts` | 依赖 L0~L3 |
 | L5 测试 | `testJade*.ts` | 依赖所有上层 |
@@ -263,8 +302,8 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 
 | API | 问题 | 前端影响 | 状态 |
 |-----|------|---------|------|
-| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
-| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog.ts` 第 154 行对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog/blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
+| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog/common.ts` 的 `loadArticleList()` 里对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
 
 ---
 

@@ -234,3 +234,39 @@ export const backMuscleimgs = [
 	{id:"b-b-8-l"  , muscle:"b-8"  , "style":"muscle-outline", d:"m 208.5965,938.21494 7.07107,4.04062 6.56599,43.94163 -4.04061,6.06092 z" },
 	{id:"b-b-8-r"  , muscle:"b-8"  , "style":"muscle-outline", d:"m 356.07877,938.72002 0,0 -7.25942,48.86403 4.24817,5.83414 12.10263,-62.27431 z" }
 ]
+
+/**
+ * 一个力量训练动作
+ *
+ * `pim` / `min` / `ext` 是肌肉 id 列表，分别对应主要、次要、辅助发力肌群，
+ * 渲染时按这三档给 SVG 路径套不同的 class。id 的取值见本文件的 `muscleInfo`。
+ */
+export interface StrenghtWorkout {
+	readonly part : string;
+	readonly epart: string;
+	readonly type : string;
+	readonly id   : string;
+	readonly name : string;
+	readonly ename: string;
+	readonly pim  : Array<string>;
+	readonly min  : Array<string>;
+	readonly ext  : Array<string>;
+}
+
+/** 力量训练动作清单 */
+export const strenghtWorkoutArr: Array<StrenghtWorkout> = [
+	{part: "肩部", epart: "Shoulder",   type: "fixed", id: "sth-1-1", name: "肩部推举", ename: "Shoulder Press"     , pim: ["4-1", "4-2", "4-3"], min: ["3-1-1", "5-5-1", "5-5-2", "5-5-3"], ext: []},
+	{part: "肩部", epart: "Shoulder",   type: "fixed", id: "sth-1-2", name: "肩部推举", ename: "Shoulder Press"     , pim: ["4-1", "4-2", "4-3"], min: ["5-5-1", "5-5-2", "5-5-3"], ext: []},
+	{part: "胸部", epart: "Chest",      type: "fixed", id: "sth-2-1", name: "胸部推举", ename: "Chest Press"        , pim: ["2-1", "2-2"], min: ["4-1", "4-2", "5-5-1", "5-5-2", "5-5-3"], ext: []},
+	{part: "胸部", epart: "Chest",      type: "fixed", id: "sth-2-2", name: "宽距胸推", ename: "Wide Chest Press"   , pim: ["2-1", "2-2", "5-5-1", "5-5-2", "5-5-3"], min: [], ext: []},
+	{part: "胸部", epart: "Chest",      type: "fixed", id: "sth-2-3", name: "上斜胸推", ename: "Incline Chest Press", pim: ["2-1", "2-2", "4-1", "5-5-1", "5-5-2", "5-5-3"], min: [], ext: []},
+	{part: "背部", epart: "Back",       type: "fixed", id: "sth-3-1", name: "低位划船", ename: "Low Row"            , pim: ["3-6"], min: ["3-1-1", "3-1-2", "5-2-1", "5-2-2"], ext: []},
+	{part: "背部", epart: "Back",       type: "fixed", id: "sth-3-2", name: "高位下拉", ename: "Height pull"        , pim: ["3-6", "5-2-1", "5-2-2"], min: [], ext: []},
+	{part: "背部", epart: "Back",       type: "fixed", id: "sth-3-3", name: "划船"    , ename: "Row"                , pim: ["3-1-1", "3-1-2", "4-3", "3-6", "5-2-1", "5-2-2"], min: [], ext: []},
+	{part: "腰部", epart: "Waist",      type: "fixed", id: "sth-4-1", name: "下背"    , ename: "Lower Back"         , pim: ["8-1"], min: [], ext: []},
+	{part: "大臂", epart: "Upper Arms", type: "fixed", id: "sth-5-1", name: "弯举"    , ename: "Arm Curl"           , pim: ["5-2-1", "5-2-2"], min: [], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-1", name: "腿举"    , ename: "Leg Press"          , pim: ["a-6", "a-7", "a-8", "9-1"], min: ["a-9-2", "a-9-3", "a-1", "a-5"], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-2", name: "腿内收"  , ename: "Adductor"           , pim: ["a-1", "a-5"], min: [], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-3", name: "腿屈伸"  , ename: "Leg Extension"      , pim: ["a-6", "a-7", "a-8"], min: [], ext: []},
+	{part: "大腿", epart: "Thighs",     type: "fixed", id: "sth-7-4", name: "腿外展"  , ename: "Abductor"           , pim: ["9-1"], min: [], ext: []}
+ ];
