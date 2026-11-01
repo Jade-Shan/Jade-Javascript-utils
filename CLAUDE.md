@@ -262,7 +262,7 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
   到 `webroot/scripts/ts/`（CDN 构建），或 `.js` + `.d.ts` 到 `dist/`（npm 打包，无 sourcemap）
 - 严格模式：`noImplicitAny: true`, `strict: true`
 - 压缩产物 `.min.js` 由 `compress-typescript` 任务用 uglify 生成，只在 CDN 构建里有
-- Less 主题编译为合并后的 `all.css` 和 `all.min.css`，输出到 `webroot/themes/<theme>/styles/`
+- Less 主题编译为合并后的 `all.css` 和 `all.min.css`。三套内容主题输出到 `webroot/themes/blog/<theme>/styles/`，window-ui / workout 输出到 `webroot/themes/<name>/styles/`
 
 ## 目录结构
 
@@ -270,7 +270,7 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 |------|------|
 | `src/scripts/ts/` | TypeScript 源码，分 `ui/`、`blog/`、`trpg/`、`workout/` 四个子目录 |
 | `src/scripts/include/` | 外部类型声明 |
-| `src/themes/` | Less 源文件（hobbit, lo-fi, paper-print）+ window-ui / workout 样式 + trpg 纯图片 + 各主题图片资源（共约 5.3 MB） |
+| `src/themes/` | 按应用分四组：`blog/`（comm.less + hobbit / lo-fi / paper-print）、`window-ui/`、`workout/`、`trpg/`（纯图片）。含约 5.3 MB 图片资源 |
 | `src/html/` | HTML 页面：3 个真实页面（index / blog / gallery）+ 9 个 `test-*` 演示页 + `parts/` 下 5 个片段 |
 | `webroot/` | CDN 构建产物输出目录（gitignore） |
 | `dist/` | npm 包构建产物输出目录（gitignore） |
@@ -424,16 +424,33 @@ BlogCommon.loadUserInfo(apiRoot, userId, { userName: '#my-name' });
 
 ## 主题系统
 
-项目有四套独立的主题/资源体系：
+项目有四套独立的主题/资源体系，目录按「属于哪个应用」分组：
+
+```
+src/themes/
+├── blog/              # 三套内容主题 + 它们共用的 comm.less
+│   ├── comm.less
+│   ├── hobbit/
+│   ├── lo-fi/
+│   └── paper-print/
+├── window-ui/         # 独立：窗口 UI 样式 + 站点 favicon
+├── trpg/              # 独立：沙盘素材，纯图片无 Less
+└── workout/           # 独立：肌肉图配色
+```
+
+**产物同构**：`webroot/themes/blog/<theme>/styles/all.css`，
+其余三套仍在 `webroot/themes/<name>/`（深度没变）。
+页面引用也跟着带 `blog/`，见 `src/html/parts/head.html`。
 
 ### 内容主题（hobbit / lo-fi / paper-print）
 
 定义在 `gulpfile.js` 的 `themes` 数组中，用于博客和 Wiki 页面。采用 **`comm.less` + `part.1.less`** 变量模式：
 
-- `src/themes/comm.less` — 共享的结构样式（467 行），所有视觉属性通过 Less 变量引用（`@text-color-main`、`@page-bg-img`、`@title-color-fg-h1` 等共 86 个变量），只使用变量不定义值，因此无法独立编译
-- `src/themes/<theme>/styles/part.1.less` — 各主题定义这些变量的具体值，通过不同的颜色/字体/图片实现视觉差异
+- `src/themes/blog/comm.less` — 共享的结构样式（467 行），所有视觉属性通过 Less 变量引用（`@text-color-main`、`@page-bg-img`、`@title-color-fg-h1` 等共 86 个变量），只使用变量不定义值，因此无法独立编译
+- `src/themes/blog/<theme>/styles/part.1.less` — 各主题定义这些变量的具体值，通过不同的颜色/字体/图片实现视觉差异
 - 构建时 gulp 将两者 `concat` 成 `all.less`，编译为 `all.css` 和 `all.min.css`
-- **concat 顺序是主题文件在前、`comm.less` 在后**（`gulpfile.js` 第 62 行）。Less 变量是最后赋值生效，所以一旦给 `comm.less` 加默认值，默认值会盖掉主题的覆盖值。当前能跑是因为 `comm.less` 一个值都没定义
+- **concat 顺序是主题文件在前、`comm.less` 在后**（`gulpfile.js` 第 76 行）。Less 变量是最后赋值生效，所以一旦给 `comm.less` 加默认值，默认值会盖掉主题的覆盖值。当前能跑是因为 `comm.less` 一个值都没定义
+- **那两个 glob 必须分开写，别合成 `src/themes/blog/**/*.less`** —— `comm.less` 的字典序排在 `hobbit/` 前面，合并之后 concat 顺序会反掉（主题色全失效），而且三套主题会被合进同一个文件。实测记录见 `docs/refactor-20261101.md` 第 17 节
 
 ### window-ui 主题
 

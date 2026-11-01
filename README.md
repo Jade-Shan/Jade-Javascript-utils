@@ -209,6 +209,16 @@ page.renderTopNav(site, "#topnav", (ctx) =>
 Less 主题（`src/themes/`，含 5.3 MB 图片）不在 npm 包里，`files` 只含 `dist`。
 主题仍走 CDN 引用，构建流程见下方「构建命令」。
 
+目录按应用分四组，产物同构：
+
+| 源码 | 产物 | 说明 |
+|------|------|------|
+| `src/themes/blog/comm.less` | （concat 进各主题） | 三套内容主题共用的结构层 |
+| `src/themes/blog/<theme>/` | `webroot/themes/blog/<theme>/` | hobbit / lo-fi / paper-print |
+| `src/themes/window-ui/` | `webroot/themes/window-ui/` | 窗口 UI 样式 + 站点 favicon |
+| `src/themes/workout/` | `webroot/themes/workout/` | 肌肉图配色 |
+| `src/themes/trpg/` | `webroot/themes/trpg/` | 沙盘素材，纯图片无 Less |
+
 ### 许可证
 
 GPLv3（见 [LICENSE](LICENSE)）。GPL 有传染性：使用本库的项目分发时也须以

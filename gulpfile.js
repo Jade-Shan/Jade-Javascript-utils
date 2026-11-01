@@ -33,11 +33,17 @@ const themeTasks = [];
 // css for blog
 // =======================
 
+/* 三套内容主题和它们共用的 comm.less 都在 src/themes/blog/ 下，
+ * 产物同构：webroot/themes/blog/<theme>/。window-ui / workout / trpg
+ * 是各自独立的一套，仍在 themes/ 下一层，深度没变。
+ */
+const blogThemeRoot = 'themes/blog/';
+
 themes.forEach((theme) => {
 
 	const imageTsk = 'process-images-' + theme;
-	const imageSrc = 'src/themes/' + theme + '/images/';
-	const imageDst = 'webroot/themes/' + theme + '/images/';
+	const imageSrc = 'src/' + blogThemeRoot + theme + '/images/';
+	const imageDst = 'webroot/' + blogThemeRoot + theme + '/images/';
 	gulp.task(imageTsk,  gulp.series(
 		() => {
 			return gulp.src([imageDst + '*'], {read: false, allowEmpty: true})
@@ -49,9 +55,9 @@ themes.forEach((theme) => {
 	themeTasks.push(imageTsk)
 
 	const styleTsk = 'process-style-' + theme;
-	const styleCommSrc = 'src/themes/';
-	const styleThemesSrc = 'src/themes/' + theme;
-	const styleThemesDst = 'webroot/themes/' + theme;
+	const styleCommSrc = 'src/' + blogThemeRoot;
+	const styleThemesSrc = 'src/' + blogThemeRoot + theme;
+	const styleThemesDst = 'webroot/' + blogThemeRoot + theme;
 	gulp.task(styleTsk,  gulp.series(
 		() => {
 			return gulp.src([styleThemesDst + '/styles/*'], {read: false, allowEmpty: true})
@@ -60,6 +66,13 @@ themes.forEach((theme) => {
 			return gulp.src([styleThemesSrc + '/images/**/*']).pipe(gulp.dest(styleThemesDst + '/images/'))
 		},
 		() => {
+			/* 这两个 glob 必须分开写、且主题在前 comm.less 在后。
+			 * Less 变量最后赋值生效，顺序一反主题色就全失效。
+			 *
+			 * 别"顺手"简化成 src/themes/blog/ ** /*.less —— comm.less 排在
+			 * hobbit/ 前面（字典序），concat 顺序会反掉，而且三套主题会被
+			 * 合进同一个文件。实测过，见 docs/refactor-20261101.md 第 17 节。
+			 */
 			return gulp.src([styleThemesSrc + '/styles/**/*.less', styleCommSrc + 'comm.less'])
 				.pipe(concat('all.less'))
 				.pipe(less({compress: false})).on('error', (e) => {console.log(e)})
