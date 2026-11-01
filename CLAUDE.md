@@ -90,7 +90,7 @@ npm run build:pkg
 - `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper, ShowdownUtils。包装全局脚本库（jQuery `$`、MathJax、SyntaxHighlighter、showdown），无内部依赖
 
 ### 业务应用层
-- `blog/common.ts` — 博客与相册共用逻辑：BlogCommon（用户信息加载、文章渲染、分页列表加载、页面框架初始化），另导出写死的 `API_ROOT`。依赖 basic、dataStructure、web、ui/webHtmlPage、3rdLibTool
+- `blog/common.ts` — 博客与相册共用逻辑：BlogCommon（用户信息加载、文章渲染、分页列表加载、页面框架初始化）、`normalizeApiRoot()`（规整 API 根路径）。依赖 basic、dataStructure、web、ui/webHtmlPage、3rdLibTool
 - `blog/blog.ts` — 博客页面：BlogPage（推荐文章列表、用户文章分页列表），入口 `initBlogPage()`。依赖 basic、web、blog/common
 - `blog/gallery.ts` — 相册页面：GalleryPage，入口 `initGalleryPage()`。依赖 blog/common
 - `blog/wiki.ts` — Wiki 页面：WikiPage，入口 `initWikiPage()`（代码高亮、数学公式、DataTable、目录面板）。依赖 ui/webHtmlPage、3rdLibTool、web
@@ -114,13 +114,37 @@ npm run build:pkg
 
 ### ES Module 原生加载
 
-编译后的 `.js` 文件通过 `<script type="module">` 加载，import 语句使用 `.js` 扩展名：
+TS 源码之间的 import 使用 `.js` 扩展名（对应编译产物），这个写法同时满足浏览器原生 ESM 和 NodeNext 规范：
 
 ```typescript
-// 源码中 import 使用 .js 扩展名（对应编译产物）
 import { NumUtil } from './basic.js';
 import { SimpleMap } from './dataStructure.js';
 ```
+
+### import map（HTML 页面侧）
+
+HTML 页面不写产物路径，用包名 import，由 import map 映射到实际路径：
+
+```javascript
+import { WebUtil } from '@jade-dungeon/jade-utils/web';   // 与 npm 消费方写法一致
+```
+
+机制：
+
+- 映射表由 `gulpfile.js` 的 `buildImportMap()` 读 `package.json` 的 `exports` 生成，
+  把 `./dist/` 前缀换成 `envs.js` 的 `importMapRoot`。**不要手写第二份清单** ——
+  加导出项只改 `package.json` 的 `exports` 即可
+- 末尾有一条带尾斜杠的前缀键兜住 `exports` 里没列的模块（`test*.js` 等）。
+  解析规则是精确键优先于前缀键
+- `initCurrEnv()` 把 JSON 注入 fileinclude 的 context（`gulp-file-include` 原样插入、不转义引号）
+- `src/html/parts/importmap.html` 输出 `<script type="importmap">` 标签，
+  10 个有模块 import 的页面各 include 一次
+
+两个硬约束：**必须在页面第一个 `<script type="module">` 之前**，且**一个文档只能有一个 import map**。
+新增页面时如果已经 include 了 `parts/head.html`（内含 importmap），不要再单独 include 一次。
+
+换 CDN 只改 `envs.js` 的 `importMapRoot` 一个值，填绝对地址即可。
+落地细节与验证记录见 `docs/refactor-20261101.md` 第 9 节。
 
 ### 第三方库全局脚本
 
@@ -167,6 +191,7 @@ declare namespace MathJax { ... }
 - **静态方法工具类** — 基础层的 `NumUtil`、`StrUtil`、`TimeUtil`、`WebUtil` 等使用全静态方法的类
 - **应用入口** — `WikiPage.initWikiPage()`、`BlogPage.initBlogPage()`、`GalleryPage.initGalleryPage()` 是页面级入口，各自组织完整页面的初始化流程。博客与相册的共用部分抽到 `BlogCommon`
 - **DOM 求值推迟到方法内** — 浏览器 API（`HTMLElement`、`document`）不在模块顶层求值，而是放进需要显式调用的方法里（`WebUtil.initCustomElements()`、`initWorkItems()`），这样无 DOM 的环境（Node / SSR / 单元测试）import 不会抛 `ReferenceError`
+- **路径配置集中在 envs.js** — 页面里不写死产物路径。模块路径走 import map（基址 `importMapRoot`），第三方库和主题走 `@@cdn3rd` / `@@staticRoot`
 
 ## 主题系统
 

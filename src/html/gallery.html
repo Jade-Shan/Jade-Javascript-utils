@@ -49,8 +49,8 @@
 <script type="text/javascript" src="../scripts/ts/wiki.js" ></script>
 -->
 <script type="module">
-		import { WebUtil  } from "@@staticRoot/scripts/ts/web.js";
-		import { GalleryPage } from "@@staticRoot/scripts/ts/blog/gallery.js";
+		import { WebUtil  } from "@jade-dungeon/jade-utils/web";
+		import { GalleryPage } from "@jade-dungeon/jade-utils/gallery";
 
 		let currPage = 1;
 		let currUser = WebUtil.loadCookieValue('data.currUser');
@@ -69,7 +69,7 @@
 			currPage = pmPage;
 		}
 
-		await GalleryPage.initGalleryPage('', '温其如玉', currUser, currPage);
+		await GalleryPage.initGalleryPage('@@apiRoot', '温其如玉', currUser, currPage);
 
 </script> 
 </html>

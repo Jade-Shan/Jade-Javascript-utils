@@ -2,6 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
+		@@include('./src/html/parts/importmap.html', { })
 		<title>test wiki</title>
 		<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 
@@ -273,7 +274,7 @@ $JAVA -jar appJarFIle.jar ${@}
 	<script type="text/javascript" src="../scripts/ts/testJadeUtils.js" ></script>
 	-->
 	<script type="module">
-		import { TestJadeUtils } from "@@staticRoot/scripts/ts/testJadeUtils.js";
+		import { TestJadeUtils } from "@jade-dungeon/jade-utils/testJadeUtils.js";
 		TestJadeUtils.testWiki();
 	</script> 
 </html>

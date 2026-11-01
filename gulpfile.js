@@ -18,6 +18,7 @@ const clean     = require('gulp-clean');       //清空文件夹
 const fileinclude = require('gulp-file-include');    //html模板
 const processhtml = require('gulp-processhtml');     // html引用替换
 const envs        = require("./envs"); // 加载配置中的envs.js文件
+const fs          = require('fs');     // 读 package.json 生成 import map
 
 const themes = ['hobbit', 'lo-fi', 'paper-print'];
 
@@ -210,13 +211,44 @@ themeTasks.push('compress-typescript');
 // html
 // ==================
 
+/* 生成 import map 的 imports 对象。
+ *
+ * 键直接复用 package.json 的 exports 子路径，这样页面里写的 import 路径
+ * 和 npm 消费方完全一致：
+ *   CDN  : import { NumUtil } from '@jade-dungeon/jade-utils/basic';
+ *   npm  : import { NumUtil } from '@jade-dungeon/jade-utils/basic';
+ *
+ * 值把 exports 里的 "./dist/" 前缀换成 env.importMapRoot，指向 CDN 产物。
+ * 末尾额外加一条带尾斜杠的前缀映射，兜住 exports 里没列的模块
+ * （test*.js 等）。import map 的解析规则是精确键优先于前缀键。
+ */
+let buildImportMap = (env) => {
+	const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+	const root = env.importMapRoot;
+	const imports = {};
+	for (const [subpath, cond] of Object.entries(pkg.exports)) {
+		const file = typeof cond === 'string' ? cond : cond.default;
+		if (!file) { continue; }
+		// "." → 包名本身；"./basic" → "包名/basic"
+		const key = subpath === '.' ? pkg.name : pkg.name + subpath.slice(1);
+		imports[key] = file.replace(/^\.\/dist\//, root + '/');
+	}
+	imports[pkg.name + '/'] = root + '/';
+	return imports;
+};
+
 let initCurrEnv = (env) => {
 	env.buildversion = env.buildversion + (new Date()).getTime();
-	console.log("buildversion : " + env.buildversion);
-	console.log("webRoot      : " + env.webRoot     );
-	console.log("apiRoot      : " + env.apiRoot     );
-	console.log("cdnRoot      : " + env.cdnRoot     );
-	console.log("cdn3rd       : " + env.cdn3rd      );
+	// 注入到 fileinclude 的 context，供 parts/importmap.html 使用。
+	// gulp-file-include 原样插入不转义，所以可以直接塞 JSON 文本
+	env.importmap = JSON.stringify({ imports: buildImportMap(env) }, null, 1);
+	console.log("buildversion  : " + env.buildversion );
+	console.log("webRoot       : " + env.webRoot      );
+	console.log("staticRoot    : " + env.staticRoot   );
+	console.log("importMapRoot : " + env.importMapRoot);
+	console.log("apiRoot       : " + env.apiRoot      );
+	console.log("cdnRoot       : " + env.cdnRoot      );
+	console.log("cdn3rd        : " + env.cdn3rd       );
 };
 
 const htmlSrc = "src/html/"

@@ -1,6 +1,6 @@
 import { StrUtil } from '../basic.js';
 import { WebUtil, HttpResponse } from "../web.js"
-import { API_ROOT, BlogCommon } from './common.js';
+import { normalizeApiRoot, BlogCommon } from './common.js';
 
 
 /**
@@ -81,14 +81,15 @@ export class BlogPage {
 	/**
 	 * 博客页面初始化入口
 	 *
-	 * @param basePath - 站点根路径前缀
+	 * @param basePath - 后端 API 根路径。由页面从 `envs.js` 的 `apiRoot` 传入，
+	 *                   空值退化为同源根路径 `/`
 	 * @param title - 页面副标题
 	 * @param userId - 用户 ID，默认为 "teo"
 	 * @returns {Promise<void>}
 	 */
 	static async initBlogPage(basePath: string, title: string, userId: string = "teo", currPage = 1) {
 
-		let apiRoot = API_ROOT;
+		let apiRoot = normalizeApiRoot(basePath);
 		BlogCommon.initPageFrame(apiRoot, title, "Journal");
 
 		try {
