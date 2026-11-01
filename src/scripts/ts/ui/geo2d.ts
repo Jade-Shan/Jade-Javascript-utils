@@ -390,11 +390,28 @@ export namespace Geo2DUtils {
 	/**
 	 * 格式化角度，返回原始/规范化后的弧度和度数
 	 *
-	 * @param angle - 弧度值（可为负）
+	 * `oriAgl` / `oriDgr` 保留原值不动；`fmtAgl` / `fmtDgr` 折算到
+	 * `[0, 2π)` / `[0, 360°)`，输入为任意实数都成立。
+	 *
+	 * 注意圈数很大时有浮点残差：2π 本身是无理数的浮点近似，
+	 * `100π % 2π` 不会精确等于 0（实测约 8e-13 弧度）。这是浮点取模的
+	 * 固有误差，换任何写法都躲不开。比较角度时请用容差，不要用 `===`。
+	 *
+	 * @param angle - 弧度值（可为负，可超出 ±2π）
 	 * @returns {IAngle} 角度信息对象
 	 */
 	export function formatAngle(angle: number): IAngle {
-		let fmtAgl = angle < 0 ? Geo2DUtils.PI_DOUBLE + angle : angle;
+		// 先取模把任意实数折进 (-2π, 2π)，再把负的那半圈加一圈转正，
+		// 结果落在 [0, 2π)，与 IAngle 声明的契约一致。
+		//
+		// 原实现是 `angle < 0 ? PI_DOUBLE + angle : angle`，只补一次 2π，
+		// 所以超出 ±2π 的输入归一化不了：`-3π` 补完仍是负的，`3π` 也没折回。
+		//
+		// 末尾 `+ 0` 把 -0 归一成 +0：`-0 % 2π` 和 `-2π % 2π` 都得到 -0，
+		// 而 `-0 < 0` 为假，不会进入加一圈的分支。
+		let fmtAgl = angle % Geo2DUtils.PI_DOUBLE;
+		if (fmtAgl < 0) { fmtAgl = fmtAgl + Geo2DUtils.PI_DOUBLE; }
+		fmtAgl = fmtAgl + 0;
 		let oriDgr = angle * 180 / Math.PI;
 		let fmtDgr = fmtAgl * 180 / Math.PI;
 		return { oriAgl: angle, fmtAgl: fmtAgl, oriDgr: oriDgr, fmtDgr: fmtDgr };
@@ -422,62 +439,6 @@ export namespace Geo2DUtils {
 		let g = a.x - b.x;
 		let j = a.y - b.y;
 		return Math.sqrt(g * g + j * j);
-	}
-
-	/**
-	 * 判断点p是在线段line左边还是右边的
-	 * @param line line
-	 * @param p point
-	 * @returns  result > 0为左， < 0为右， =0为线上
-	 */
-	export function pointOfLineSide(line: ILine2D, p: IPoint2D): number {
-		return (line.a.y - line.b.y) * p.x + //
-			(line.b.x - line.a.x) * p.y + line.a.x * line.b.y - //
-			line.a.y * line.b.x;
-	}
-
-	/**
-	 * 判断点p在线段line 的垂直交点
-	 * @param line line
-	 * @param p point
-	 * @returns point
-	 */
-	export function pointToLine(line: ILine2D, p: IPoint2D): Point2D {
-		if (line.a.x == line.b.x && line.a.y == line.b.y) {
-			return new Point2D(line.a.x, line.b.y);
-		} else if (line.a.x == line.b.x) {
-			return new Point2D(line.a.x, p.y);
-		} else if (line.a.y == line.b.y) {
-			return new Point2D(p.x, line.a.y);
-		} else {
-			let a = p.x - line.a.x;
-			let b = p.y - line.a.y;
-			let c = line.b.x - line.a.x;
-			let d = line.b.y - line.a.y;
-
-			let dot = a * c + b * d;
-			let lenSq = c * c + d * d;
-			let param = dot / lenSq;
-
-			if (param < 0) {
-				return new Point2D(line.a.x, line.a.y);
-			} else if (param > 1) {
-				return new Point2D(line.b.x, line.b.y);
-			} else {
-				return new Point2D(line.a.x + param * c, line.a.y + param * d);
-			}
-		}
-	}
-
-	/**
-	 * 计算点到线段的距离
-	 * @param line line
-	 * @param p point
-	 * @returns distance
-	 */
-	export function pointToLineDistance(line: ILine2D, p: IPoint2D): number {
-		let q = pointToLine(line, p);
-		return distanceP2P(p, q);
 	}
 
 	/**
@@ -659,32 +620,20 @@ export namespace Geo2DUtils {
 	 * @param end 结束
 	 */
 	export function revolveRay(c: IPoint2D, startPoint: IPoint2D, endPoint: IPoint2D): IRevolveOption {
-		let d1 = { x: startPoint.x - c.x, y: startPoint.y - c.y };
-		let d2 = { x: endPoint.x   - c.x, y: endPoint.y   - c.y };
-		let startAngle = Math.atan2(d1.y, d1.x);
-		let endAngle   = Math.atan2(d2.y, d2.x);
-		let diffAngle  = endAngle - startAngle;
+		let startAngle = Math.atan2(startPoint.y - c.y, startPoint.x - c.x);
+		let endAngle   = Math.atan2(endPoint.y   - c.y, endPoint.x   - c.x);
 
-		if (d1.x * d2.x < 0 && d1.y * d2.y < 0) {
-			// 跨三个象限
-			if (checkPointLineSide({ a: startPoint, b: endPoint }, c) > 0) {
-				if (d1.y < 0 && d2.y > 0) {
-					// 从三四象限到一二象限
-					diffAngle = diffAngle - PI_DOUBLE;
-				} else if (d1.y > 0 && d2.y < 0) {
-					// 从一二象限三四象限
-					diffAngle = diffAngle + PI_DOUBLE;
-				}
-			}
-		} else if (d1.x < 0 && d2.x < 0) {
-			// 跨第一第四象限
-			if (d1.y < 0 && d2.y > 0) {
-				// 从第四象限到第一象限
-				diffAngle = diffAngle - PI_DOUBLE;
-			} else if (d1.y > 0 && d2.y < 0) {
-				// 从第一象限第四象限
-				diffAngle = diffAngle + PI_DOUBLE;
-			}
+		// `diff` 要的是「短弧」的有向角：两条射线之间不超过半圈的那个转法。
+		// 调用方 CanvasUtils.drawFanByRays() 用它的符号决定 arc() 的
+		// anticlockwise 参数，所以符号和大小都有视觉后果。
+		//
+		// atan2 的值域是 (-π, π]，两者相减落在 (-2π, 2π)，归一化回 (-π, π] 即可。
+		// 这里不用 while 循环：差值最多偏出一圈，一次加减就够。
+		let diffAngle = endAngle - startAngle;
+		if (diffAngle > Math.PI) {
+			diffAngle = diffAngle - PI_DOUBLE;
+		} else if (diffAngle <= -Math.PI) {
+			diffAngle = diffAngle + PI_DOUBLE;
 		}
 
 		return { start: startAngle, end: endAngle, diff: diffAngle };
@@ -693,25 +642,36 @@ export namespace Geo2DUtils {
 	/**
 	 * 判断点在直线的哪一侧
 	 *
-	 * @param line - 参考线段
+	 * 把线段看作「自下而上」的方向（即内部会把两端点按 y 排序），再判断点落在
+	 * 这个方向的左侧还是右侧。因此结果与 `line.a` / `line.b` 的书写顺序无关，
+	 * 这一点与裸叉积不同 —— 后者的符号随 a→b 方向翻转。
+	 *
+	 * 两端点 y 相同（水平线）时，方向取为从左到右。
+	 *
+	 * @param line - 参考线段（按直线处理，不限于线段范围内）
 	 * @param p - 待判断的点
-	 * @returns {number} 正值表示点在一侧，负值表示在另一侧，0 表示在线上
+	 * @returns {number} 负值表示点在「自下而上」方向的左侧，正值表示右侧，0 表示在直线上。
+	 *          绝对值与点到直线的距离成正比（差一个线段长度的系数）
 	 */
 	export function checkPointLineSide(line: ILine2D, p: IPoint2D): number {
-		let side = 0;
-		let ll = line.b.y < line.a.y ? { a: line.b, b: line.a } : line;
-		let angleAB = Math.atan2(ll.b.y - ll.a.y, ll.b.x - ll.a.x);
-		if (ll.a.y < p.y && p.y < ll.b.y) {
-			let angleAP = Math.atan2(p.y - ll.a.y, p.x - ll.a.x);
-			side = angleAB - angleAP;
-		} else if (p.y < ll.a.y) {
-			let cx = ll.a.x - ((ll.b.x - ll.a.x) / (ll.b.y - ll.a.y) * (ll.a.y - p.y))
-			side = p.x - cx;
-		} else if (ll.b.y < p.y) {
-			let cx = (ll.b.x - ll.a.x) / (ll.b.y - ll.a.y) * (p.y - ll.a.y) - ll.a.x;
-			side = p.x - cx;
+		// 归一化方向：优先按 y 从小到大，y 相同时按 x 从小到大。
+		// 这样同一条几何直线无论怎么写 a/b，得到的方向都唯一。
+		let ll = line;
+		if (line.b.y < line.a.y || (line.b.y === line.a.y && line.b.x < line.a.x)) {
+			ll = { a: line.b, b: line.a };
 		}
-		return side;
+		// 叉积 (b-a) × (p-a) 的相反数 —— 左侧为负，保持本函数原有的符号约定。
+		//
+		// 用叉积而不是按 y 分区间插值，解决了原实现的四个问题：
+		//   1. 水平线时分母为 0，返回 ±Infinity
+		//   2. p.y 正好等于某个端点的 y 时，三个分支条件都不满足，谎报 0（在线上）
+		//   3. 其中一个分支的截距项符号写错（`- a.x` 应为 `+ a.x`）
+		//   4. 一个分支返回角度差、另两个返回横向距离，量纲不一致
+		//
+		// 末尾 `+ 0` 是把 -0 归一成 +0：共线时某一项可能算出 `0 * 负数 = -0`，
+		// 使整个表达式得到 -0。虽然 `-0 === 0` 成立，但 Object.is 和严格断言
+		// 会把两者当成不同值，容易让调用方的「是否在线上」判断踩坑。
+		return (ll.b.y - ll.a.y) * (p.x - ll.a.x) - (ll.b.x - ll.a.x) * (p.y - ll.a.y) + 0;
 	}
 
 }

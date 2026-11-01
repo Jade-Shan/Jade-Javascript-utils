@@ -65,7 +65,37 @@ npm run build:pkg
 - **`package.json` scripts 只管 npm 打包** — `build:pkg`（`tsc -p tsconfig.build.json`）和 `prepublishOnly`。CDN 构建不走 `npm run`，由 `build.sh` 直接调 `npx gulp`
 - **npm 包按子路径导出** — `exports` 配了 17 个子路径（`./basic`、`./geo2d`、`./ui-window` 等），`files` 只含 `dist`。用法见 `README.md`
 - **无打包器** — 不使用 Webpack/Rollup/Vite，TypeScript 编译为 ES6 模块后由浏览器原生 `<script type="module">` 直接加载
-- **无自动化测试框架** — `testJadeUtils.ts`、`testJadeUI.ts`、`testJadeTRPG.ts`、`testWorkout.ts` 是浏览器手动测试页面脚本，随 CDN 构建一起编译（npm 包里排除），通过 `src/html/` 下的 HTML 页面在浏览器中运行
+- **单元测试用 Node 内置的 `node:test`** — 零新增运行时依赖，不引入 vitest/jest（那会带来 Vite 等打包工具，与「无打包器」的原则冲突）。`npm test` 即可跑，详见下面「单元测试」一节
+- **浏览器手动测试页另算** — `testJadeUtils.ts`、`testJadeUI.ts`、`testJadeTRPG.ts`、`testWorkout.ts` 是 demo/手动验证脚本，不是自动化测试。随 CDN 构建一起编译（npm 包里排除），通过 `src/html/` 下的 HTML 页面在浏览器中运行
+
+## 单元测试
+
+```bash
+npm test              # 编译 + 跑全部测试
+npm run build:test    # 只编译，不跑
+```
+
+- 测试文件在根目录的 `test/` 下，命名为 `<模块>.<主题>.test.ts`
+- 用 Node 内置的 `node:test` + `node:assert/strict`，**不装测试框架**
+- `tsconfig.test.json` 把 `src/` 和 `test/` 一起编到 `.test-build/`（gitignore），
+  再由 `node --test` 跑产物。**测的是编译产物，不是源码** —— 和 npm 消费方拿到的是同一种东西
+- `.test-build/package.json` 里要有 `{"type":"module"}`，否则 Node 把 ESM 产物当 CJS 解析。
+  这一步由 `build:test` 脚本自动写入，和 `build:pkg` 对 `dist/` 做的是同一件事
+
+当前覆盖范围（123 个用例）：零 DOM 依赖的三个模块 ——
+`basic`（NumUtil / StrUtil）、`dataStructure`（SimpleMap / SimpleStack / SimpleQueue）、
+`ui/geo2d`（Geo2DUtils + 四个几何类 + revolveRay）。
+
+涉及 DOM 的模块（`web`、`ui/canvas`、`ui/UIWindow`、`trpg/sandtable`、`blog/*`）
+还没有自动化测试，仍靠浏览器手动验证。要补的话需要 jsdom。
+
+写测试时的两条约定：
+
+- **断言当前行为，不是期望行为**。发现实现有缺陷时，照实断言并在注释里写明
+  「这是现状，不是期望」，这样修实现时测试会失败，起到提醒作用。
+  目前挂着一处：`Geo2DUtils.formatAngle` 超出 ±2π 时归一化不全
+  （`-3π` 补一次 2π 后仍为负，`3π` 没折回 `[0, 2π)`）
+- `testJadeUtils.ts` 里原有的手动测试断言是人工核对过的，可以直接当基线搬过来
 
 ## 源码架构
 
@@ -212,6 +242,9 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 ## 编码模式
 
 - **接口/实现分离** — geo2d、canvas、sandtable 层使用 `IXxx` 接口 + `class Xxx implements IXxx` 模式。接口定义只读契约，类提供实现和可变属性
+- **`checkPointLineSide` 的符号约定与裸叉积相反**。它先把端点按 y（y 相同则按 x）
+  排序，所以对点序不敏感，语义是「相对自下而上方向的侧」，且约定**左侧为负**。
+  自己写叉积判定时别把两套约定混用 —— 方向已是自下而上时，两者互为相反数
 - **工具命名空间** — 纯函数工具集使用 namespace 组织：`Geo2DUtils`、`CanvasUtils`、`SandTableUtils`、`JadeWindowUI`、`JadeUIResource`
 - **静态方法工具类** — 基础层的 `NumUtil`、`StrUtil`、`TimeUtil`、`WebUtil` 等使用全静态方法的类
 - **应用入口** — `WikiPage.initWikiPage()`、`BlogPage.initBlogPage()`、`GalleryPage.initGalleryPage()` 是页面级入口，各自组织完整页面的初始化流程。博客与相册的共用部分抽到 `BlogCommon`

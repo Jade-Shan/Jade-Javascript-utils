@@ -1,0 +1,25 @@
+// 单元测试专用编译配置
+//
+// 三份 tsconfig 的分工：
+//   tsconfig.json       → gulp 的 CDN 构建，输出 webroot/scripts/ts/，含 test*.ts 和 sourcemap
+//   tsconfig.build.json → npm 打包，输出 dist/，排除 test*.ts
+//   tsconfig.test.json  → 单元测试，把 src/ 和 test/ 一起编到 .test-build/
+//
+// 测试跑的是编译产物而不是源码，和 npm 消费方拿到的是同一种东西。
+//
+// 用法：npm test
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"outDir": ".test-build",
+		// rootDir 要盖住 src 和 test 两棵树，否则 tsc 会抱怨文件在 rootDir 之外
+		"rootDir": ".",
+		"declaration": false,
+		"sourceMap": true,
+		"inlineSources": true,
+		// 只有测试需要 Node 的类型（node:test / node:assert）。
+		// 主 tsconfig 的 lib 是 ["ES6","DOM",...]，不含 node，所以在这里单独加
+		"types": ["node"]
+	},
+	"include": ["src/scripts/ts", "test"]
+}
