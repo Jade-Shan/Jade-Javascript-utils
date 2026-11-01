@@ -416,8 +416,11 @@ BlogCommon.loadUserInfo(apiRoot, userId, { userName: '#my-name' });
 `pageTitle`（`Study Notes`）、`hlCodePath`（SyntaxHighlighter 的 brush 目录，
 指向 `../../vimwiki-theme/3rd/...`）。
 
-- **默认值不要改** —— 外部那个项目靠它们继续跑，改了等于悄悄改了那边的行为。
-  `test/wiki.config.test.ts` 有一条用例逐项比对
+- **默认值现在可以改，但别顺手改** —— 下游 vimwiki 项目确定整体重构，
+  不再构成兼容性约束（见 `docs/refactor-20261101.md` 18.10 节）。
+  所以改这些默认值是允许的，前提是**作为重构的一部分有意识地改**，
+  而不是顺手动一下。`test/wiki.config.test.ts` 有一条用例逐项比对，
+  改了会失败 —— 那条失败是提醒，不是错误
 - **`SyntaxHighlighterHelper.loadCodeHightlight()` 的 `hlCodePath` 是必传的** ——
   库层不该知道别人的 brush 脚本放哪。漏传时 autoloader 不报错，
   高亮只是**静默失效**，所以宁可编译期报错
@@ -433,7 +436,7 @@ src/themes/
 │   ├── hobbit/
 │   ├── lo-fi/
 │   └── paper-print/
-├── window-ui/         # 独立：窗口 UI 样式 + 站点 favicon
+├── window-ui/         # 独立：窗口 UI 样式 + 站点 favicon（favicon 待挪走，见下）
 ├── trpg/              # 独立：沙盘素材，纯图片无 Less
 └── workout/           # 独立：肌肉图配色
 ```
@@ -441,6 +444,12 @@ src/themes/
 **产物同构**：`webroot/themes/blog/<theme>/styles/all.css`，
 其余三套仍在 `webroot/themes/<name>/`（深度没变）。
 页面引用也跟着带 `blog/`，见 `src/html/parts/head.html`。
+
+**`window-ui/images/favicon.ico` 是待挪走的**：它是站点级资源，和窗口 UI 无关，
+放这里纯属历史沿革。阶段 2 切 workspaces 时挪到 web 项目侧
+（已定案，见 `docs/refactor-20261101.md` 18.5-4 和 18.12-(3)）。
+**现在不要单独挪** —— 它牵动 10 个页面的 `<link rel="icon">`，
+和切 workspaces 一起做才能一次验证完。
 
 ### 内容主题（hobbit / lo-fi / paper-print）
 
