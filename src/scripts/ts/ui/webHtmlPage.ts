@@ -43,31 +43,52 @@ export interface ThemeBinding {
 	themeName: string;
 }
 
-/** 站点默认导航菜单配置 */
-export const SITE_NAV_ITEMS: Array<NavTreeNode> = [
-	{ title: "Journal", link: "/" },
-	{ title: "Gallery", link: "/gallery.html" },
-	{ title: "Note"   , link: "/study/notes/wiki_html" },
-	{
-		title: "About Me", subs: [
-			{ title: "Github", link: "//github.com/Jade-Shan/", isNewWin: true },
-			{ title: ""      , link: "" },
-			{ title: "Resume", link: "/resume.html" }]
-	},
-	{
-		title: "Themes", subs: [
-			{ title: "hobbit", id: "switch-theme-hobbit"     , link: "#" },
-			{ title: "lo-fi" , id: "switch-theme-lo-fi"      , link: "#" },
-			{ title: "paper" , id: "switch-theme-paper-print", link: "#" }]
-	}
-];
+/**
+ * 站点配置
+ *
+ * 本模块只定义类型，不定义值 —— 导航树、品牌名、主题列表都是某一个站点的信息，
+ * 不是通用工具库该带的内容。值由应用层提供（本仓库放在 `site.config.ts`），
+ * 调用 {@link WebHtmlPage.renderTopNav} 时传入。
+ */
+export interface SiteConfig {
+	/** 品牌名，渲染在导航栏左侧 */
+	brandName: string;
+	/** 品牌链接，通常是站点首页 */
+	brandLink: string;
+	/** 导航树 */
+	navItems: Array<NavTreeNode>;
+	/** 主题切换项，与导航树里的 `id` 对应 */
+	themes: Array<ThemeBinding>;
+}
 
-/** 站点默认主题列表 */
-export const SITE_THEMES: Array<ThemeBinding> = [
-	{ elemSlt: "#switch-theme-hobbit"     , themeName: "hobbit"      },
-	{ elemSlt: "#switch-theme-lo-fi"      , themeName: "lo-fi"       },
-	{ elemSlt: "#switch-theme-paper-print", themeName: "paper-print" },
-];
+/**
+ * 导航栏渲染所需的全部信息
+ *
+ * 渲染函数是纯函数：拿到这个对象产出 HTML 字符串，不碰 DOM、不读实例状态。
+ */
+export interface TopNavContext {
+	/** 导航树 */
+	items: Array<NavTreeNode>;
+	/** 品牌名 */
+	brandName: string;
+	/** 品牌链接 */
+	brandLink: string;
+	/** 当前页对应的导航项标题，用于标出高亮项。取自 `PageConfig.pageTitle` */
+	activeTitle: string;
+}
+
+/**
+ * 导航栏模板
+ *
+ * 导航栏的 HTML 骨架与 CSS 框架绑定（本站用的是 Bootstrap 3），
+ * 所以做成可替换的：库提供框架无关的默认实现
+ * {@link WebHtmlPage.renderPlainTopNav}，用 Bootstrap 的应用传
+ * `BootStrapHelper.renderTopNav`。
+ *
+ * @param ctx - 渲染所需的导航树与品牌信息
+ * @returns {string} 导航栏的 HTML 字符串
+ */
+export type TopNavRenderer = (ctx: TopNavContext) => string;
 
 
 /**
@@ -90,46 +111,68 @@ export class WebHtmlPage {
 	/**
 	 * 渲染页首导航栏
 	 *
-	 * @param items - 导航节点列表
+	 * 骨架 HTML 由 `render` 产出，本方法只负责把结果写进 DOM。
+	 * 不传 `render` 时用框架无关的 {@link WebHtmlPage.renderPlainTopNav}，
+	 * 用 Bootstrap 3 的页面传 `BootStrapHelper.renderTopNav`。
+	 *
+	 * @param site - 站点配置（品牌名、导航树）
 	 * @param elemSlt - 目标元素选择器，默认 "#topnav"
+	 * @param render - 导航栏模板，默认 {@link WebHtmlPage.renderPlainTopNav}
 	 * @returns {void}
 	 */
-	renderTopNav(items: Array<NavTreeNode>, elemSlt: string = "#topnav"): void {
-		let navhtml = '<div class="navbar-header"> <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#example-navbar-collapse"> <span class="sr-only">切换导航</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button> <a class="navbar-brand" href="/">Jade Dungeon</a> </div> <div class="collapse navbar-collapse" id="example-navbar-collapse"> <ul class="nav navbar-nav">';
-		let addLink = (item: NavTreeNode) => {
-			if (item.title === "") {
-				navhtml = navhtml + '<li class="divider"></li>';
-			} else {
-				if (this.cfg.pageTitle === item.title) {
-					navhtml = navhtml + '<li class="active">';
-				} else { navhtml = navhtml + '<li>'; }
-				navhtml = navhtml + '<a ' ;
-				if (item.isNewWin) { navhtml = navhtml + ' target="_blank" '; }
-				if (item.id) { navhtml = navhtml + ' id="' + StrUtil.escapeHtml(item.id) + '" '; }
-				navhtml = navhtml + ' href="' + StrUtil.escapeHtml(item.link || '') + '">' + StrUtil.escapeHtml(item.title) + '</a></li>';
-			}
-		};
-
-		let addSub = function (item: NavTreeNode) {
-			navhtml = navhtml + '<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">';
-			navhtml = navhtml + StrUtil.escapeHtml(item.title);
-			navhtml = navhtml + '<b class="caret"></b></a><ul class="dropdown-menu">';
-			if (item.subs && item.subs.length > 0) {
-				item.subs.forEach((value) => { addLink(value); });
-			}
-			navhtml = navhtml + '</ul></li>';
-		};
-
-		if (items && items.length > 0) {
-			items.forEach((item) => {
-				if (item.link) { addLink(item); } else if (item.subs) { addSub(item); }
-			})
-		}
-		navhtml = navhtml + '</ul></div>';
+	renderTopNav(site: SiteConfig, elemSlt: string = "#topnav",
+		render: TopNavRenderer = WebHtmlPage.renderPlainTopNav): void //
+	{
+		let navhtml = render({
+			items: site.navItems, brandName: site.brandName,
+			brandLink: site.brandLink, activeTitle: this.cfg.pageTitle,
+		});
 		let navElem = document.querySelector(elemSlt);
 		if (navElem) {
 			navElem.innerHTML = navhtml;
 		}
+	}
+
+	/**
+	 * 默认导航栏模板：只有语义结构，不带任何 CSS 框架的 class
+	 *
+	 * 产出 `<a class="nav-brand">` + `<ul class="nav-list">`，子菜单是嵌套的
+	 * `<ul class="nav-sub">`。当前页高亮用 `li.active`，`title` 为空串的项是分隔符
+	 * `li.divider`。想换成 Bootstrap / 其他框架的骨架，传自己的
+	 * {@link TopNavRenderer} 给 {@link WebHtmlPage.renderTopNav}。
+	 *
+	 * @param ctx - 渲染所需的导航树与品牌信息
+	 * @returns {string} 导航栏的 HTML 字符串
+	 */
+	static renderPlainTopNav(ctx: TopNavContext): string {
+		let esc = StrUtil.escapeHtml;
+		let addLink = (item: NavTreeNode): string => {
+			// title 为空串是分隔符，不是导航项
+			if (item.title === "") { return '<li class="divider"></li>'; }
+			let html = ctx.activeTitle === item.title ? '<li class="active">' : '<li>';
+			html = html + '<a';
+			if (item.isNewWin) { html = html + ' target="_blank"'; }
+			if (item.id) { html = html + ' id="' + esc(item.id) + '"'; }
+			return html + ' href="' + esc(item.link || '') + '">' + esc(item.title) + '</a></li>';
+		};
+		let addSub = (item: NavTreeNode): string => {
+			let html = '<li class="nav-group"><span class="nav-group-title">' +
+				esc(item.title) + '</span><ul class="nav-sub">';
+			if (item.subs && item.subs.length > 0) {
+				item.subs.forEach((sub) => { html = html + addLink(sub); });
+			}
+			return html + '</ul></li>';
+		};
+
+		let navhtml = '<a class="nav-brand" href="' + esc(ctx.brandLink) + '">' +
+			esc(ctx.brandName) + '</a><ul class="nav-list">';
+		if (ctx.items && ctx.items.length > 0) {
+			ctx.items.forEach((item) => {
+				if (item.link) { navhtml = navhtml + addLink(item); }
+				else if (item.subs) { navhtml = navhtml + addSub(item); }
+			});
+		}
+		return navhtml + '</ul>';
 	}
 
 	/**

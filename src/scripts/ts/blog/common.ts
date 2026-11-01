@@ -1,8 +1,9 @@
 import { StrUtil } from '../basic.js';
-import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from '../ui/webHtmlPage.js';
+import { PageConfig, SiteConfig, WebHtmlPage } from '../ui/webHtmlPage.js';
 import { ShowdownUtils, BootStrapHelper } from '../3rdLibTool.js';
 import { WebUtil, HttpResponse } from "../web.js"
 import { SimpleMap } from '../dataStructure.js'
+import { JADE_DUNGEON_SITE } from '../site.config.js';
 
 
 /**
@@ -17,6 +18,76 @@ import { SimpleMap } from '../dataStructure.js'
 export function normalizeApiRoot(apiRoot: string): string {
 	if (!apiRoot || apiRoot.length < 1) { return "/"; }
 	return apiRoot.endsWith("/") ? apiRoot : apiRoot + "/";
+}
+
+
+/**
+ * 博客 / 相册页面的 DOM 选择器
+ *
+ * 这些选择器原来散在 `loadUserInfo()` / `loadArticleList()` 的函数体里，
+ * 页面结构一改就得翻代码逐个找。收进一张表之后，默认值集中在
+ * {@link DEFAULT_BLOG_SELECTORS}，页面想改只传要改的那几项，其余走默认。
+ *
+ * 全部字段可选，传部分即可：
+ *
+ * ```typescript
+ * BlogCommon.loadUserInfo(apiRoot, userId, { userName: '#my-name' });
+ * ```
+ *
+ * 这个模式 `webHtmlPage.ts` 已经在用了（`elemSlt: string = "#topnav"` 这类
+ * 带默认值的形参），差别只是 blog 层的选择器数量多，用对象装比摊成 7 个形参好。
+ */
+export interface BlogSelectors {
+	/** 用户名，默认 `#widget-username` */
+	userName?: string;
+	/** 头像 img，默认 `#widget-avatar` */
+	avatar?: string;
+	/** 头像外层链接，默认 `#widget-avatar-lnk` */
+	avatarLink?: string;
+	/** 个人描述，默认 `#widget-user-desc` */
+	desc?: string;
+	/** 加入时间，默认 `#widget-user-joined` */
+	joinTime?: string;
+	/** 用户组，默认 `#widget-user-group` */
+	group?: string;
+	/** 推荐文章列表容器，默认 `#widget-recommends-articles` */
+	recommends?: string;
+	/** 文章 / 相册列表容器，默认 `#articles` */
+	articleList?: string;
+	/** Bootstrap 图片查看模态框的**元素 id**（不带 `#`），默认 `photo-frame` */
+	photoFrameId?: string;
+	/** 可点开查看的图片，默认 `img.img-frame` */
+	imageFrame?: string;
+	/**
+	 * 懒加载图片，默认 `img[data-origin]`。
+	 * 实际用的是 `${articleList} ${lazyImage}`，所以这里只写容器内的部分
+	 */
+	lazyImage?: string;
+}
+
+/** {@link BlogSelectors} 的默认值，对应 `src/html/parts/` 下的页面结构 */
+export const DEFAULT_BLOG_SELECTORS: Required<BlogSelectors> = {
+	userName:   '#widget-username',
+	avatar:     '#widget-avatar',
+	avatarLink: '#widget-avatar-lnk',
+	desc:       '#widget-user-desc',
+	joinTime:   '#widget-user-joined',
+	group:      '#widget-user-group',
+	recommends: '#widget-recommends-articles',
+	articleList: '#articles',
+	photoFrameId: 'photo-frame',
+	imageFrame: 'img.img-frame',
+	lazyImage:  'img[data-origin]',
+};
+
+/**
+ * 把调用方传的选择器与默认值合并
+ *
+ * @param slt - 调用方传的选择器，可以只传一部分
+ * @returns {Required<BlogSelectors>} 每一项都有值的选择器表
+ */
+export function blogSelectors(slt: BlogSelectors = {}): Required<BlogSelectors> {
+	return { ...DEFAULT_BLOG_SELECTORS, ...slt };
 }
 
 
@@ -148,9 +219,10 @@ export class BlogCommon {
 	 *
 	 * @param apiRoot - API 根路径
 	 * @param userId - 用户 ID
+	 * @param slt - 页面选择器，缺省项走 {@link DEFAULT_BLOG_SELECTORS}
 	 * @returns {Promise<void>}
 	 */
-	static async loadUserInfo(apiRoot: string, userId: string) {
+	static async loadUserInfo(apiRoot: string, userId: string, slt: BlogSelectors = {}) {
 		let userInfoResp: HttpResponse<UserInfoResp> = await WebUtil.requestHttp<string, UserInfoResp>({
 			method: "GET", url: `${apiRoot}api/blog/loadUserById?userId=${encodeURIComponent(userId)}`
 		}, {
@@ -170,12 +242,13 @@ export class BlogCommon {
 				homePageUrl: "#"
 			}
 		};
-		let t1 = document.querySelector('#widget-username'   );
-		let t2 = document.querySelector<HTMLImageElement>('#widget-avatar'     );
-		let t3 = document.querySelector('#widget-user-desc'  );
-		let t4 = document.querySelector('#widget-user-joined');
-		let t5 = document.querySelector('#widget-user-group' );
-		let t6 = document.querySelector<HTMLLinkElement>('#widget-avatar-lnk' );
+		let s = blogSelectors(slt);
+		let t1 = document.querySelector(s.userName);
+		let t2 = document.querySelector<HTMLImageElement>(s.avatar);
+		let t3 = document.querySelector(s.desc    );
+		let t4 = document.querySelector(s.joinTime);
+		let t5 = document.querySelector(s.group   );
+		let t6 = document.querySelector<HTMLLinkElement>(s.avatarLink);
 
 		if (t1) t1.textContent = userInfo.user.userName;
 		if (t2) t2.alt         = userInfo.user.userName;
@@ -233,9 +306,12 @@ export class BlogCommon {
 	 *
 	 * @param urlBuilder - 按页码生成请求 URL 的函数
 	 * @param currPage - 当前页码
+	 * @param slt - 页面选择器，缺省项走 {@link DEFAULT_BLOG_SELECTORS}
 	 * @returns {Promise<void>}
 	 */
-	static async loadArticleList(urlBuilder: (page: number) => string, currPage: number) {
+	static async loadArticleList(urlBuilder: (page: number) => string,
+		currPage: number, slt: BlogSelectors = {}) //
+	{
 		let headers: SimpleMap<string, string> = new SimpleMap([["Accept","application/json, text/javascript, */*; q=0.01"]]);
 		let list: HttpResponse<UserArticlesResp> = await WebUtil.requestHttp<string, UserArticlesResp>({
 			method: "GET", url: urlBuilder(currPage),
@@ -258,14 +334,15 @@ export class BlogCommon {
 		for (const t of articles.articles) {
 			html += BlogCommon.renderArticle(t);
 		}
-		let tk = document.querySelector("#articles");
+		let s = blogSelectors(slt);
+		let tk = document.querySelector(s.articleList);
 		// 旧列表即将被替换，先停掉上一页图片的懒加载监听
 		BlogCommon.lazyImgObserver?.disconnect();
 		if (tk) tk.innerHTML = html;
 
 		// 服务端返回的pageCount是总页数不准确，所以需要+1。正在催促后端修改。等他们修好了，就可以去掉+1了。
 		let pagging = WebHtmlPage.renderPaging(articles.page, articles.pageCount + 1,
-			n => {BlogCommon.loadArticleList(urlBuilder, n);});
+			n => {BlogCommon.loadArticleList(urlBuilder, n, slt);});
 		tk?.appendChild(pagging);
 
 		let br = document.createElement("br");
@@ -274,11 +351,11 @@ export class BlogCommon {
 		// 翻页后内容已替换，把页面滚回顶部，避免停留在上一页的滚动位置
 		window.scrollTo({top: 0, behavior: "smooth"});
 		//
-		BootStrapHelper.initPhotoFrame("photo-frame");
+		BootStrapHelper.initPhotoFrame(s.photoFrameId);
 		//
-		BootStrapHelper.bindImageFrame("img.img-frame");
+		BootStrapHelper.bindImageFrame(s.imageFrame);
 		// 滚到可视区域附近才加载缩略图原图，先滚回顶部再绑定，避免按旧滚动位置判断
-		BlogCommon.lazyImgObserver = WebUtil.lazyLoadImages("#articles img[data-origin]");
+		BlogCommon.lazyImgObserver = WebUtil.lazyLoadImages(`${s.articleList} ${s.lazyImage}`);
 	}
 
 	/**
@@ -287,27 +364,32 @@ export class BlogCommon {
 	 * @param apiRoot - API 根路径
 	 * @param title - 页面副标题
 	 * @param pageTitle - 页面类型标题
+	 * @param site - 站点配置（品牌名、导航树、主题列表），默认本站的 {@link JADE_DUNGEON_SITE}
+	 * @param slt - 页面选择器，缺省项走 {@link DEFAULT_BLOG_SELECTORS}
 	 * @returns {WebHtmlPage} 初始化完成的页面对象
 	 */
-	static initPageFrame(apiRoot: string, title: string, pageTitle: string = "Diary"): WebHtmlPage {
-
+	static initPageFrame(apiRoot: string, title: string, pageTitle: string = "Diary",
+		site: SiteConfig = JADE_DUNGEON_SITE, slt: BlogSelectors = {}): WebHtmlPage //
+	{
 		// 注册 `esp-unicode` 标签，页面里已有的该标签会在注册时被 upgrade
 		WebUtil.initCustomElements();
 
+		let s = blogSelectors(slt);
 		let cfg: PageConfig = { apiRoot: apiRoot, pageTitle: pageTitle, subTitle: title, ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);
 		page.renderSubTitle();
-		//
-		page.renderTopNav(SITE_NAV_ITEMS);
+		// 页面是 Bootstrap 3 的，所以显式传 BS3 的导航栏模板。
+		// 库层的默认模板不带框架 class，换框架只改这一个参数
+		page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
 
 		//
-		BootStrapHelper.initPhotoFrame("photo-frame");
+		BootStrapHelper.initPhotoFrame(s.photoFrameId);
 		//
-		BootStrapHelper.bindImageFrame("img.img-frame");
+		BootStrapHelper.bindImageFrame(s.imageFrame);
 		//
 
 		page.initUITheme();
-		page.bindChangeTheme(SITE_THEMES);
+		page.bindChangeTheme(site.themes);
 
 		return page;
 	}

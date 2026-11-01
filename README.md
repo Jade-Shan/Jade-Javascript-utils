@@ -5,6 +5,38 @@ Jade-Javascript-Utils
 
 ---
 
+## 本地开发
+
+### 首次克隆后的必做一步
+
+```bash
+cp envs.sample.js envs.js
+```
+
+`envs.js` 在 `.gitignore` 中（各环境的地址不同，不入版本控制），
+而 `gulpfile.js` 顶层就 `require("./envs")`。**缺这个文件时所有 gulp 任务都会挂**，
+报错信息只提示找不到模块，不会说清该怎么办。
+
+拷完按实际环境改里面的值。两个容易填错的地方：
+
+- **所有地址都要带主机名。** 写成 `//:8081/xxx`（省略主机）不是合法 URL，
+  `new URL()` 会抛 `Invalid URL`，浏览器也解析不了
+- **`staticRoot` 不要填 `"."`。** 页面与静态资源分属不同服务时（比如页面在 8082、
+  资源在 8081），相对路径会拼到页面所在的服务上，取不到资源
+
+### 常用命令
+
+```bash
+nvm use                      # 切到 .nvmrc 指定的 Node 版本（v22.22.2）
+npm test                     # 跑单元测试
+bash build.sh                # CDN 构建
+npm run build:pkg            # 构建 npm 包到 dist/
+```
+
+构建命令的完整清单见 `CLAUDE.md` 的「构建命令」一节。
+
+---
+
 ## 作为 npm 包使用
 
 包名 `@jade-dungeon/jade-utils`，纯 ESM，需 Node 18+ 或支持原生 ESM 的打包器。
@@ -62,7 +94,7 @@ import { NumUtil, SimpleMap, Point2D } from '@jade-dungeon/jade-utils';
 | `/resource` | `resource.ts` | `DefaultIconGroup`、`IconGroup`、`JadeUIResource` | 浏览器 |
 | `/canvas` | `ui/canvas.ts` | `ICanvas2D`、`CanvasShape2D`、`ImageClip`、`CanvasUtils` | 浏览器 |
 | `/ui-window` | `ui/UIWindow.ts` | `UIDesktop`、`DockBar`、`JadeWindowUI` | 浏览器 |
-| `/web-html-page` | `ui/webHtmlPage.ts` | `WebHtmlPage`、`PageConfig` | 浏览器 |
+| `/web-html-page` | `ui/webHtmlPage.ts` | `WebHtmlPage`、`PageConfig`、`SiteConfig`、`NavTreeNode`、`ThemeBinding`、`TopNavRenderer` | 浏览器 |
 | `/sandtable` | `trpg/sandtable.ts` | `SandTable`、`CircleToken`、`RectangleToken`、`LineToken` | 浏览器 |
 | `/3rd-lib-tool` | `3rdLibTool.ts` | `SyntaxHighlighterHelper`、`MathJaxHelper`、`BootStrapHelper`、`DataTableHelper`、`ShowdownUtils` | 浏览器 + 全局脚本 |
 | `/blog` | `blog/blog.ts` | `BlogPage` | 浏览器 |
@@ -90,6 +122,45 @@ console.log(workItems.length);
 
 两个方法都是幂等的，重复调用无副作用。
 
+### 页面框架：站点配置与导航栏模板
+
+`/web-html-page` 不带任何站点的值，也不带任何 CSS 框架的 class。
+导航栏要两样东西：一份 `SiteConfig`，和一个产出骨架 HTML 的模板函数。
+
+```typescript
+import { WebHtmlPage, SiteConfig } from '@jade-dungeon/jade-utils/web-html-page';
+
+const site: SiteConfig = {
+	brandName: "My Site",
+	brandLink: "/",
+	navItems: [
+		{ title: "Home", link: "/" },
+		{ title: "More", subs: [{ title: "Github", link: "//github.com/me/", isNewWin: true }] },
+	],
+	// elemSlt 要对上 navItems 里某个子项的 id
+	themes: [{ elemSlt: "#switch-theme-dark", themeName: "dark" }],
+};
+
+const page = new WebHtmlPage({ apiRoot: "/", pageTitle: "Home", subTitle: "", ajaxTimeout: 500 });
+page.renderTopNav(site);          // 默认模板：语义结构，零框架 class
+page.bindChangeTheme(site.themes);
+```
+
+默认模板产出 `a.nav-brand` + `ul.nav-list`（子菜单是 `ul.nav-sub`），样式自己写。
+想换骨架就传第三个参数：
+
+```typescript
+// 用 Bootstrap 3 的话，本库带了一份现成的
+import { BootStrapHelper } from '@jade-dungeon/jade-utils/3rd-lib-tool';
+page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
+
+// 或者自己写，拿到的是渲染所需的全部输入
+page.renderTopNav(site, "#topnav", (ctx) =>
+	`<h1>${ctx.brandName}</h1>` + ctx.items.map(i => `<a href="${i.link}">${i.title}</a>`).join(''));
+```
+
+自己写模板时记得转义 —— 库里两份实现都过 `StrUtil.escapeHtml`。
+
 ### 第三方全局依赖
 
 `/3rd-lib-tool` 包装的是传统 `<script>` 标签加载的全局变量
@@ -115,7 +186,10 @@ GPL 兼容协议开源。仅内部使用、不对外分发则不受此约束。
 ```
 basic.ts                          (无依赖)
 dataStructure.ts                  (无依赖)
-3rdLibTool.ts                     (无依赖 - 使用全局声明)
+
+3rdLibTool.ts                     (第三方库用全局声明，不 import)
+└── basic.ts                      (StrUtil，用于转义)
+    (另 import type webHtmlPage.ts 的 NavTreeNode / TopNavContext，编译后擦除)
 
 geo2d.ts
 └── basic.ts
@@ -129,7 +203,11 @@ resource.ts
 └── web.ts
 
 webHtmlPage.ts
+├── basic.ts
 └── web.ts
+
+site.config.ts                    (本站配置，不在 exports 里)
+└── webHtmlPage.ts                (仅 SiteConfig 类型)
 
 canvas.ts
 ├── geo2d.ts → basic.ts
@@ -148,13 +226,17 @@ sandtable.ts
 └── web.ts → basic.ts, dataStructure.ts
 
 blog.ts
+├── basic.ts
 ├── web.ts → basic.ts, dataStructure.ts
-├── webHtmlPage.ts → web.ts
-└── 3rdLibTool.ts
+├── webHtmlPage.ts → basic.ts, web.ts
+├── site.config.ts → webHtmlPage.ts
+└── common.ts → 上述全部 + 3rdLibTool.ts
 
 wiki.ts
-├── webHtmlPage.ts → web.ts
-└── 3rdLibTool.ts
+├── web.ts → basic.ts, dataStructure.ts
+├── webHtmlPage.ts → basic.ts, web.ts
+├── site.config.ts → webHtmlPage.ts
+└── 3rdLibTool.ts → basic.ts
 
 ── 测试/Demo 文件 ──
 testJadeUtils.ts → basic, dataStructure, web, geo2d, webHtmlPage, 3rdLibTool, canvas

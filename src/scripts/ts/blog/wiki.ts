@@ -1,8 +1,10 @@
-import { PageConfig, WebHtmlPage, SITE_NAV_ITEMS, SITE_THEMES } from '../ui/webHtmlPage.js';
+import { PageConfig, SiteConfig, WebHtmlPage } from '../ui/webHtmlPage.js';
 
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from '../3rdLibTool.js';
 
 import { WebUtil } from '../web.js';
+
+import { JADE_DUNGEON_SITE } from '../site.config.js';
 
 /**
  * Wiki 页面
@@ -17,9 +19,14 @@ export class WikiPage {
 	 *
 	 * @param basePath - 站点根路径前缀，用于加载 SyntaxHighlighter 脚本
 	 * @param title - 页面副标题
+	 * @param site - 站点配置（品牌名、导航树、主题列表），默认本站的 `JADE_DUNGEON_SITE`。
+	 *               调用方在另一个 vimwiki 项目里，所以这个形参放在末尾、带默认值，
+	 *               那边不改调用也能继续跑
 	 * @returns {Promise<void>}
 	 */
-	static async initWikiPage(basePath: string, title: string) {
+	static async initWikiPage(basePath: string, title: string,
+		site: SiteConfig = JADE_DUNGEON_SITE) //
+	{
 
 		// 注册 `esp-unicode` 标签，页面里已有的该标签会在注册时被 upgrade
 		WebUtil.initCustomElements();
@@ -27,8 +34,8 @@ export class WikiPage {
 		let cfg: PageConfig = { apiRoot: "/", pageTitle: "Study Notes", subTitle: title, ajaxTimeout: 500 };
 		let page = new WebHtmlPage(cfg);
 		page.renderSubTitle();
-		//
-		page.renderTopNav(SITE_NAV_ITEMS);
+		// 页面是 Bootstrap 3 的，所以显式传 BS3 的导航栏模板
+		page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
 
 		//
 		DataTableHelper.bindInitDataTable();
@@ -64,7 +71,7 @@ export class WikiPage {
 		window.addEventListener('resize', changeTocWithWindow);
 
 		page.initUITheme();
-		page.bindChangeTheme(SITE_THEMES);
+		page.bindChangeTheme(site.themes);
 
 		// 调整一下目录列表的大小
 		changeTocWithWindow();

@@ -1,7 +1,7 @@
 import { ColorRGB, NumUtil, StrUtil, TimeUtil } from './basic.js';
 import { SimpleMap, SimpleStack, SimpleQueue } from './dataStructure.js'
 import { HttpRequest, HttpResponse, WebUtil } from './web.js';
-import { PageConfig, WebHtmlPage } from './ui/webHtmlPage.js';
+import { PageConfig, SiteConfig, WebHtmlPage } from './ui/webHtmlPage.js';
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from './3rdLibTool.js';
 import { CanvasCircle2D, CanvasLine2D, CanvasPoint2D, CanvasRay2D, CanvasRectangle2D, CanvasUtils, ICanvasRay2D, ICanvasRectangle2D } from './ui/canvas.js';
 import { Circle2D, Geo2DUtils, GeoShape2D, IRay2D, Line2D, Point2D, Ray2D } from './ui/geo2d.js';
@@ -290,23 +290,35 @@ class TestWebHtmlPage {
 		let page = new WebHtmlPage(cfg);
 		page.renderSubTitle();
 		//
-		page.renderTopNav([
-			{ title: "Journal", link: "/" },
-			{ title: "Gallery", link: "/gallery.html" },
-			{ title: "Note", link: "//118.178.197.156/study/study/wiki_html" },
-			{
-				title: "About Me", subs: [
-					{ title: "Github", link: "//github.com/Jade-Shan/", isNewWin: true },
-					{ title: "", link: "" },
-					{ title: "Resume", link: "/resume.html" }]
-			},
-			{
-				title: "Themes", subs: [
-					{ title: "hobbit", id: "switch-theme-hobbit"     , link: "#" },
-					{ title: "lo-fi" , id: "switch-theme-lo-fi"      , link: "#" },
-					{ title: "paper" , id: "switch-theme-paper-print", link: "#" }]
-			}
-		]);
+		// 这个 demo 页用的是 Bootstrap 3 的样式，所以传 BS3 的导航栏模板。
+		// 库层的默认模板 `WebHtmlPage.renderPlainTopNav` 不带框架 class
+		let site: SiteConfig = {
+			brandName: "Jade Dungeon",
+			brandLink: "/",
+			navItems: [
+				{ title: "Journal", link: "/" },
+				{ title: "Gallery", link: "/gallery.html" },
+				{ title: "Note", link: "//118.178.197.156/study/study/wiki_html" },
+				{
+					title: "About Me", subs: [
+						{ title: "Github", link: "//github.com/Jade-Shan/", isNewWin: true },
+						{ title: "", link: "" },
+						{ title: "Resume", link: "/resume.html" }]
+				},
+				{
+					title: "Themes", subs: [
+						{ title: "hobbit", id: "switch-theme-hobbit"     , link: "#" },
+						{ title: "lo-fi" , id: "switch-theme-lo-fi"      , link: "#" },
+						{ title: "paper" , id: "switch-theme-paper-print", link: "#" }]
+				}
+			],
+			themes: [
+				{ elemSlt: "#switch-theme-hobbit"     , themeName: "hobbit"      },
+				{ elemSlt: "#switch-theme-lo-fi"      , themeName: "lo-fi"       },
+				{ elemSlt: "#switch-theme-paper-print", themeName: "paper-print" },
+			],
+		};
+		page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
 
 		//
 		// _1_ 2 3 4 5 6 ... 20

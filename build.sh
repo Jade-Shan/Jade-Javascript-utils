@@ -92,11 +92,11 @@ echo '--- end: process-html ---'
 # ========================================
 # docs
 # ========================================
-# echo '--- start : copy doc ---'
-# mkdir -p webroot/docs/
-# rm -rf  webroot/docs/*
-# cp -r  docs/* webroot/docs/
-# echo '--- finish: copy doc ---'
+echo '--- start : copy doc ---'
+mkdir -p webroot/docs/
+rm -rf  webroot/docs/*
+cp -r  docs/* webroot/docs/
+echo '--- finish: copy doc ---'
 
 # ========================================
 # deploy local server

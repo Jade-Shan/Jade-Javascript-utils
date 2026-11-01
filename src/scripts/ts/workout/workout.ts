@@ -1,35 +1,9 @@
-import { SimpleMap } from "../dataStructure.js";
+import { fontMuscleImgs, backMuscleimgs } from "./workoutData.js"
 
-import { muscleInfo, fontMuscleImgs, backMuscleimgs } from "./workoutData.js"
-
-interface IMuscleRec     { readonly id: string, readonly name  : string, readonly chs  : string, readonly subs: Array<IMuscleRec>};
 interface IMuscleCsvPath { readonly id: string, readonly muscle: string, readonly style: string, readonly d   : string           };
 
-const muscleJsonArr:Array<IMuscleRec>     = muscleInfo;
 const fontMuscleArr:Array<IMuscleCsvPath> = fontMuscleImgs;
 const backMuscleArr:Array<IMuscleCsvPath> = backMuscleimgs;
-
-/*
-汇总记录到map
-*/
-let initMuscleMap = (recs: Array<IMuscleRec>) => {
-	let addMuscle2Map = (map: SimpleMap<string, IMuscleRec>, recs: Array<IMuscleRec>) => {
-		for (let i = 0; i < recs.length; i++) {
-			let rec: IMuscleRec = muscleJsonArr[i];
-			map.put(rec.id, rec);
-			if (rec.subs && rec.subs.length > 0) {
-				addMuscle2Map(map, rec.subs);
-			}
-		}
-	}
-	let map = new SimpleMap<string, IMuscleRec>();
-	addMuscle2Map(map, recs);
-	return map;
-}
-// let muscleMap: SimpleMap<string, IMuscleRec> = initMuscleMap(muscleJsonArr);
-
-
-
 
 
 /*

@@ -82,19 +82,57 @@ npm run build:test    # 只编译，不跑
 - `.test-build/package.json` 里要有 `{"type":"module"}`，否则 Node 把 ESM 产物当 CJS 解析。
   这一步由 `build:test` 脚本自动写入，和 `build:pkg` 对 `dist/` 做的是同一件事
 
-当前覆盖范围（123 个用例）：零 DOM 依赖的三个模块 ——
-`basic`（NumUtil / StrUtil）、`dataStructure`（SimpleMap / SimpleStack / SimpleQueue）、
-`ui/geo2d`（Geo2DUtils + 四个几何类 + revolveRay）。
+当前覆盖范围（224 个用例）：
 
-涉及 DOM 的模块（`web`、`ui/canvas`、`ui/UIWindow`、`trpg/sandtable`、`blog/*`）
-还没有自动化测试，仍靠浏览器手动验证。要补的话需要 jsdom。
+| 模块 | 需要 jsdom |
+|------|-----------|
+| `basic`（NumUtil / StrUtil） | 否 |
+| `dataStructure`（SimpleMap / SimpleStack / SimpleQueue） | 否 |
+| `ui/geo2d`（Geo2DUtils + 四个几何类 + revolveRay） | 否 |
+| `web` 的纯函数部分（校验、Base64、Unicode 转换） | 否 |
+| 两套导航栏模板（`renderPlainTopNav` / `BootStrapHelper.renderTopNav`） | 否（纯函数，只在断言 DOM 结构时用） |
+| `site.config` 的导航树与主题选择器一致性 | 否 |
+| `web` 的 Cookie 读写、`initCustomElements()`、懒加载 | 是 |
+| `ui/webHtmlPage`（DOM 操作、分页、导航、主题切换） | 是 |
+| `blog/common` 的选择器表 + `loadUserInfo` | 是（外加假 XHR） |
 
-写测试时的两条约定：
+未覆盖：`ui/canvas`、`ui/UIWindow`、`trpg/sandtable`（jsdom 不实现
+`getContext('2d')`，要额外装 `canvas` 原生模块）、`blog/*` 的文章渲染
+（要 mock showdown）、`3rdLibTool` 除导航栏模板外的部分（依赖全局 jQuery 等）。
+
+### jsdom 的用法
+
+碰 DOM 的测试用 `test/_jsdom-setup.ts` 的 `withDom()`：
+
+```typescript
+import { withDom } from './_jsdom-setup.js';
+
+test('xxx', () => {
+	withDom('<div id="a"></div>', () => {
+		// 这里 document / location / customElements 都可用
+	});
+});
+```
+
+每次调用新建一个 JSDOM，退出时还原全部被覆盖的全局，所以用例之间不会通过
+document 或 cookie 互相影响。异步场景用 `withDomAsync()`。
+
+两个注意点：
+
+- **被测模块必须不在模块加载期求值 DOM**。本项目已经满足（`EscapeUnicode`
+  挪进了 `initCustomElements()`、`initWorkItems()` 改成显式调用），所以
+  jsdom 可以在用例内部按需装配，不用动态 `import()`
+- **不要直接给 `globalThis.navigator` 赋值**。Node 21+ 自带只读的 `navigator`，
+  赋值会抛 `Cannot set property navigator`。helper 里用的是 `Object.defineProperty`
+
+### 写测试时的约定
 
 - **断言当前行为，不是期望行为**。发现实现有缺陷时，照实断言并在注释里写明
-  「这是现状，不是期望」，这样修实现时测试会失败，起到提醒作用。
-  目前挂着一处：`Geo2DUtils.formatAngle` 超出 ±2π 时归一化不全
-  （`-3π` 补一次 2π 后仍为负，`3π` 没折回 `[0, 2π)`）
+  「这是现状，不是期望」，这样修实现时测试会失败，起到提醒作用
+- **名字与契约不符的地方优先补测试**。已踩过两个：`checkUsername` 不允许下划线、
+  `checkImageFilePostfix` 的参数要带点（叫 `postfix` 但实际收文件名）
+- **回归验证不止做一次**。实现里特意写了注释说明的行为，要专门想想测没测到 ——
+  `esp-unicode` 的实体替换带 `g` 标志就是这样漏掉过（单实体的用例测不出来）
 - `testJadeUtils.ts` 里原有的手动测试断言是人工核对过的，可以直接当基线搬过来
 
 ## 源码架构
@@ -116,11 +154,12 @@ npm run build:test    # 只编译，不跑
 - `ui/canvas.ts` — Canvas 2D 绘图抽象：ICanvas2D 接口、CanvasShape2D 基类、ImageClip 图片裁剪、CanvasUtils，依赖 geo2d 和 web
 
 ### Web 页面层
-- `ui/webHtmlPage.ts` — 通用 HTML 页面框架：PageConfig、NavTreeNode、ThemeBinding 接口，WebHtmlPage 类（导航栏渲染、分页渲染、副标题、目录面板展开折叠、主题切换），另导出写死的站点配置 `SITE_NAV_ITEMS` / `SITE_THEMES`。依赖 basic 和 web
-- `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper, ShowdownUtils。包装全局脚本库（jQuery `$`、MathJax、SyntaxHighlighter、showdown），无内部依赖
+- `ui/webHtmlPage.ts` — 通用 HTML 页面框架：PageConfig、NavTreeNode、ThemeBinding、SiteConfig、TopNavContext、TopNavRenderer 接口，WebHtmlPage 类（导航栏渲染、分页渲染、副标题、目录面板展开折叠、主题切换）。**只定义类型，不带任何站点的值、也不带 CSS 框架的 class**（见「站点配置与导航栏模板」一节）。依赖 basic 和 web
+- `site.config.ts` — 本站（jade-dungeon）的站点配置 `JADE_DUNGEON_SITE`：品牌名、导航树、主题列表。**不在 `exports` 里**，和 `env.demo.ts` 一样不随 npm 包发布。依赖 ui/webHtmlPage（仅类型）
+- `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper, ShowdownUtils。包装全局脚本库（jQuery `$`、MathJax、SyntaxHighlighter、showdown）。两个 import：`StrUtil`（运行时）和 ui/webHtmlPage 的 `NavTreeNode` / `TopNavContext`（`import type`，编译后擦除）
 
 ### 业务应用层
-- `blog/common.ts` — 博客与相册共用逻辑：BlogCommon（用户信息加载、文章渲染、分页列表加载、页面框架初始化）、`normalizeApiRoot()`（规整 API 根路径）。依赖 basic、dataStructure、web、ui/webHtmlPage、3rdLibTool
+- `blog/common.ts` — 博客与相册共用逻辑：BlogCommon（用户信息加载、文章渲染、分页列表加载、页面框架初始化）、`normalizeApiRoot()`（规整 API 根路径）、页面选择器表 `BlogSelectors` / `DEFAULT_BLOG_SELECTORS` / `blogSelectors()`。依赖 basic、dataStructure、web、ui/webHtmlPage、3rdLibTool、site.config
 - `blog/blog.ts` — 博客页面：BlogPage（推荐文章列表、用户文章分页列表），入口 `initBlogPage()`。依赖 basic、web、blog/common
 - `blog/gallery.ts` — 相册页面：GalleryPage，入口 `initGalleryPage()`。依赖 blog/common
 - `blog/wiki.ts` — Wiki 页面：WikiPage，入口 `initWikiPage()`（代码高亮、数学公式、DataTable、目录面板）。依赖 ui/webHtmlPage、3rdLibTool、web
@@ -250,6 +289,63 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 - **应用入口** — `WikiPage.initWikiPage()`、`BlogPage.initBlogPage()`、`GalleryPage.initGalleryPage()` 是页面级入口，各自组织完整页面的初始化流程。博客与相册的共用部分抽到 `BlogCommon`
 - **DOM 求值推迟到方法内** — 浏览器 API（`HTMLElement`、`document`）不在模块顶层求值，而是放进需要显式调用的方法里（`WebUtil.initCustomElements()`、`initWorkItems()`），这样无 DOM 的环境（Node / SSR / 单元测试）import 不会抛 `ReferenceError`
 - **路径配置集中在 envs.js** — 页面里不写死产物路径。模块路径走 import map（基址 `importMapRoot`），第三方库和主题走 `@@cdn3rd` / `@@staticRoot`
+
+## 站点配置与导航栏模板
+
+`ui/webHtmlPage.ts` 是库层，**不放任何一个站点的值、也不放任何 CSS 框架的 class**。
+往这个文件里加 `Jade Dungeon`、加导航项、加 `navbar-*` 都是在倒退 ——
+这三样刚从里面清出去（`docs/refactor-20261101.md` 第 15 节）。
+
+### 站点配置
+
+```
+site.config.ts 的 JADE_DUNGEON_SITE  →  initPageFrame / initWikiPage 的 site 形参
+                                     →  page.renderTopNav(site, ...) / page.bindChangeTheme(site.themes)
+```
+
+- 库层只有 `SiteConfig` 接口（`brandName` / `brandLink` / `navItems` / `themes`）
+- 值在 `site.config.ts`，**不在 `exports` 里**，不随 npm 包发布
+- 入口函数的 `site` 形参都带默认值 `JADE_DUNGEON_SITE`、都在参数表末尾，
+  所以 HTML 页面和外部 vimwiki 项目的调用都不用改
+- **导航树的 `id` 与 `themes[].elemSlt` 是一一对应的**：导航项渲染出带 id 的
+  `<a>`，`bindChangeTheme()` 再按选择器找它绑点击。改一边必须改另一边，
+  否则主题菜单点了没反应且不报错。`test/blog.selectors.test.ts` 有一条用例盯这个
+
+### 导航栏模板
+
+导航栏骨架是 `TopNavRenderer`（纯函数，`TopNavContext` → HTML 字符串），两套实现：
+
+| 模板 | 位置 | 用在哪 |
+|------|------|--------|
+| `WebHtmlPage.renderPlainTopNav` | 库层，`renderTopNav` 的默认值 | 零框架 class，给不用 Bootstrap 的消费方 |
+| `BootStrapHelper.renderTopNav` | `3rdLibTool.ts` | 本项目的页面都用这个 |
+
+本项目的页面是 BS3 的，所以调用处要显式传：
+
+```typescript
+page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
+```
+
+**不传就会丢掉 navbar 样式**（导航栏变成没样式的裸列表）。三处调用点：
+`blog/common.ts`、`blog/wiki.ts`、`testJadeUtils.ts`。
+
+### blog 层的页面选择器
+
+`#widget-username` 这类 id 收在 `blog/common.ts` 的 `DEFAULT_BLOG_SELECTORS` 里，
+共 11 项。`BlogSelectors` 全部字段可选，`blogSelectors()` 负责合并：
+
+```typescript
+BlogCommon.loadUserInfo(apiRoot, userId, { userName: '#my-name' });
+```
+
+两个例外要记住：
+
+- **`photoFrameId` 是元素 id，不带 `#`** —— `BootStrapHelper.initPhotoFrame()`
+  自己拼 `#${id}`，带 `#` 会拼成 `##`
+- **`lazyImage` 只写容器内的部分** —— 实际用的是 `${articleList} ${lazyImage}`
+
+`loadArticleList()` 的分页回调递归调自己，**选择器要一起往下传**，
+否则翻页之后退回默认选择器。
 
 ## 主题系统
 
