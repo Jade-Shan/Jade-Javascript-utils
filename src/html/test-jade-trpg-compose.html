@@ -3,6 +3,7 @@
 
 <head>
 	<meta charset="UTF-8">
+	@@include('./src/html/parts/importmap.html', { })
 	<title>test-trpg-compose</title>
 	<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 </head>
@@ -51,7 +52,7 @@
 
 </body>
 <script type="module">
-	import { TestJadeTRPG } from "@@staticRoot/scripts/ts/trpg/testJadeTRPG.js";
+	import { TestJadeTRPG } from "@jade-dungeon/jade-utils/trpg/testJadeTRPG.js";
 	window.onload = function () { TestJadeTRPG.testTrpgCompose(); }
 </script>
 

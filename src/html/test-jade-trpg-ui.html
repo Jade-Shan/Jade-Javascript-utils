@@ -2,6 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
+		@@include('./src/html/parts/importmap.html', { })
 		<title>test-trpg</title>
 		<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 
@@ -20,7 +21,7 @@ html,body {width:99%; height: 99%; overflow: auto;}
 <div id="test-desktop-01" class="desktop dock-content"></div>
 	</body>
 	<script type="module">
-		import { TestJadeTRPG } from "@@staticRoot/scripts/ts/trpg/testJadeTRPG.js";
+		import { TestJadeTRPG } from "@jade-dungeon/jade-utils/trpg/testJadeTRPG.js";
 		window.onload = function() { TestJadeTRPG.testTrpgUI(); }
 	</script> 
 

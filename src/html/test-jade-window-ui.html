@@ -2,6 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
+		@@include('./src/html/parts/importmap.html', { })
 		<title>test-win-98</title>
 		<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 
@@ -21,7 +22,7 @@
 		<h1>test-destop-02</h1><div class="desktop-out"><div id="test-desktop-02" class="desktop dock-content"></div></div>
 	</body>
 	<script type="module">
-		import { TestJadeUI } from "@@staticRoot/scripts/ts/ui/testJadeUI.js";
+		import { TestJadeUI } from "@jade-dungeon/jade-utils/ui/testJadeUI.js";
 		// $(window).load(function() { TestJadeUtils.testJadeWindowUI(); });
 		window.onload = function() { TestJadeUI.testWindowUI(); TestJadeUI.testCanvasWindow(); }
 	</script> 

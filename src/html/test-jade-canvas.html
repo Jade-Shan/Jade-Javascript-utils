@@ -2,6 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
+		@@include('./src/html/parts/importmap.html', { })
 		<title>test canvas</title>
 		<link rel="icon" type="image/x-icon" href="@@staticRoot/themes/window-ui/images/favicon.ico?v=@@buildversion">
 
@@ -51,7 +52,7 @@
 
 	</body>
 	<script type="module">
-		import { TestJadeUtils } from "@@staticRoot/scripts/ts/testJadeUtils.js";
+		import { TestJadeUtils } from "@jade-dungeon/jade-utils/testJadeUtils.js";
 		// $(window).load(function() { TestJadeUtils.testCanvas(); });
 		window.onload = function () { TestJadeUtils.testCanvas(); }
 	</script> 

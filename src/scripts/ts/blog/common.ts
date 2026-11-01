@@ -5,8 +5,19 @@ import { WebUtil, HttpResponse } from "../web.js"
 import { SimpleMap } from '../dataStructure.js'
 
 
-/** 后端 API 根路径 */
-export const API_ROOT = "//www.jade-dungeon.cn:8088/";
+/**
+ * 规整 API 根路径，保证以 `/` 结尾
+ *
+ * 调用处用 `${apiRoot}api/blog/xxx` 拼接，所以根路径必须带尾斜杠。
+ * 而 `envs.js` 里的 `apiRoot` 是不带的（如 `//localhost:8082`），在此补上。
+ *
+ * @param apiRoot - 调用方传入的根路径，空值退化为同源根路径 `/`
+ * @returns {string} 以 `/` 结尾的根路径
+ */
+export function normalizeApiRoot(apiRoot: string): string {
+	if (!apiRoot || apiRoot.length < 1) { return "/"; }
+	return apiRoot.endsWith("/") ? apiRoot : apiRoot + "/";
+}
 
 
 /** 相册缩略图的占位图（懒加载前显示） */

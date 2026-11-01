@@ -49,8 +49,8 @@
 <script type="text/javascript" src="../scripts/ts/wiki.js" ></script>
 -->
 <script type="module">
-		import { WebUtil  } from "@@staticRoot/scripts/ts/web.js";
-		import { BlogPage } from "@@staticRoot/scripts/ts/blog/blog.js";
+		import { WebUtil  } from "@jade-dungeon/jade-utils/web";
+		import { BlogPage } from "@jade-dungeon/jade-utils/blog";
 
 		let currPage = 1;
 		let currUser = WebUtil.loadCookieValue('data.currUser');
@@ -69,7 +69,7 @@
 			currPage = pmPage;
 		}
 
-		await BlogPage.initBlogPage('', '温其如玉', currUser, currPage);
+		await BlogPage.initBlogPage('@@apiRoot', '温其如玉', currUser, currPage);
 
 </script> 
 </html>
