@@ -13,6 +13,7 @@
 		"./ui-resource":    { "types": "./dist/ui/uiResource.d.ts",     "default": "./dist/ui/uiResource.js" },
 		"./resource":       { "types": "./dist/resource.d.ts",          "default": "./dist/resource.js" },
 		"./3rd-lib-tool":   { "types": "./dist/3rdLibTool.d.ts",        "default": "./dist/3rdLibTool.js" },
+		"./bootstrap-template": { "types": "./dist/ui/bootstrapTemplate.d.ts", "default": "./dist/ui/bootstrapTemplate.js" },
 		"./geo2d":          { "types": "./dist/ui/geo2d.d.ts",          "default": "./dist/ui/geo2d.js" },
 		"./canvas":         { "types": "./dist/ui/canvas.d.ts",         "default": "./dist/ui/canvas.js" },
 		"./ui-window":      { "types": "./dist/ui/UIWindow.d.ts",       "default": "./dist/ui/UIWindow.js" },

@@ -1,5 +1,7 @@
 import { PageConfig, SiteConfig, WebHtmlPage } from '../ui/webHtmlPage.js';
 
+// 导航栏模板在库侧，要全局脚本的那些在 3rdLibTool.ts，见第 18 节的决定 6 / 14
+import { BootStrapTemplate } from '../ui/bootstrapTemplate.js';
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from '../3rdLibTool.js';
 
 import { WebUtil } from '../web.js';
@@ -76,7 +78,7 @@ export class WikiPage {
 		let page = new WebHtmlPage(cfg);
 		page.renderSubTitle();
 		// 页面是 Bootstrap 3 的，所以显式传 BS3 的导航栏模板
-		page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
+		page.renderTopNav(site, "#topnav", BootStrapTemplate.renderTopNav);
 
 		//
 		DataTableHelper.bindInitDataTable();

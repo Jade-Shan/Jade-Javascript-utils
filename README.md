@@ -97,6 +97,7 @@ import { NumUtil, SimpleMap, Point2D } from '@jade-dungeon/jade-utils';
 | `/ui-window` | `ui/UIWindow.ts` | `UIDesktop`、`DockBar`、`JadeWindowUI` | 浏览器 |
 | `/web-html-page` | `ui/webHtmlPage.ts` | `WebHtmlPage`、`PageConfig`、`SiteConfig`、`NavTreeNode`、`ThemeBinding`、`TopNavRenderer` | 浏览器 |
 | `/sandtable` | `trpg/sandtable.ts` | `SandTable`、`CircleToken`、`RectangleToken`、`LineToken` | 浏览器 |
+| `/bootstrap-template` | `ui/bootstrapTemplate.ts` | `BootStrapTemplate`（BS3 导航栏模板，纯函数） | 任意（零全局变量） |
 | `/3rd-lib-tool` | `3rdLibTool.ts` | `SyntaxHighlighterHelper`、`MathJaxHelper`、`BootStrapHelper`、`DataTableHelper`、`ShowdownUtils` | 浏览器 + 全局脚本 |
 | `/blog` | `blog/blog.ts` | `BlogPage` | 浏览器 |
 | `/wiki` | `blog/wiki.ts` | `WikiPage` | 浏览器 |
@@ -186,8 +187,8 @@ page.bindChangeTheme(site.themes);
 
 ```typescript
 // 用 Bootstrap 3 的话，本库带了一份现成的
-import { BootStrapHelper } from '@jade-dungeon/jade-utils/3rd-lib-tool';
-page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
+import { BootStrapTemplate } from '@jade-dungeon/jade-utils/bootstrap-template';
+page.renderTopNav(site, "#topnav", BootStrapTemplate.renderTopNav);
 
 // 或者自己写，拿到的是渲染所需的全部输入
 page.renderTopNav(site, "#topnav", (ctx) =>
@@ -232,7 +233,9 @@ GPL 兼容协议开源。仅内部使用、不对外分发则不受此约束。
 basic.ts                          (无依赖)
 dataStructure.ts                  (无依赖)
 
-3rdLibTool.ts                     (第三方库用全局声明，不 import)
+3rdLibTool.ts                     (第三方库用全局声明，无内部 import)
+
+bootstrapTemplate.ts              (BS3 导航栏模板，纯函数)
 └── basic.ts                      (StrUtil，用于转义)
     (另 import type webHtmlPage.ts 的 NavTreeNode / TopNavContext，编译后擦除)
 
@@ -279,16 +282,18 @@ blog.ts
 ├── web.ts → basic.ts, dataStructure.ts
 ├── webHtmlPage.ts → basic.ts, web.ts
 ├── site.config.ts → webHtmlPage.ts
+├── bootstrapTemplate.ts → basic.ts
 └── common.ts → 上述全部 + 3rdLibTool.ts
 
 wiki.ts
 ├── web.ts → basic.ts, dataStructure.ts
 ├── webHtmlPage.ts → basic.ts, web.ts
 ├── site.config.ts → webHtmlPage.ts
-└── 3rdLibTool.ts → basic.ts
+├── bootstrapTemplate.ts → basic.ts
+└── 3rdLibTool.ts （全局声明，无内部 import）
 
 ── 测试/Demo 文件 ──
-testJadeUtils.ts → basic, dataStructure, web, geo2d, webHtmlPage, 3rdLibTool, canvas
+testJadeUtils.ts → basic, dataStructure, web, geo2d, webHtmlPage, bootstrapTemplate, 3rdLibTool, canvas
 testJadeUI.ts    → resource → dataStructure + web
 testJadeTRPG.ts  → basic, resource → dataStructure + web
 ```

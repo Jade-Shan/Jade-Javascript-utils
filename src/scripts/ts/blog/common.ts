@@ -1,5 +1,8 @@
 import { StrUtil } from '../basic.js';
 import { PageConfig, SiteConfig, WebHtmlPage } from '../ui/webHtmlPage.js';
+// 导航栏模板在库侧（纯字符串拼接），要 jQuery 的那些在应用层的 3rdLibTool.ts。
+// 分两处的理由见 docs/refactor-20261101.md 第 18 节的决定 6 / 14
+import { BootStrapTemplate } from '../ui/bootstrapTemplate.js';
 import { ShowdownUtils, BootStrapHelper } from '../3rdLibTool.js';
 import { WebUtil, HttpResponse } from "../web.js"
 import { SimpleMap } from '../dataStructure.js'
@@ -380,7 +383,7 @@ export class BlogCommon {
 		page.renderSubTitle();
 		// 页面是 Bootstrap 3 的，所以显式传 BS3 的导航栏模板。
 		// 库层的默认模板不带框架 class，换框架只改这一个参数
-		page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
+		page.renderTopNav(site, "#topnav", BootStrapTemplate.renderTopNav);
 
 		//
 		BootStrapHelper.initPhotoFrame(s.photoFrameId);

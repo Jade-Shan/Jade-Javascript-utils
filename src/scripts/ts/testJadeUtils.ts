@@ -2,6 +2,8 @@ import { ColorRGB, NumUtil, StrUtil, TimeUtil } from './basic.js';
 import { SimpleMap, SimpleStack, SimpleQueue } from './dataStructure.js'
 import { HttpRequest, HttpResponse, WebUtil } from './web.js';
 import { PageConfig, SiteConfig, WebHtmlPage } from './ui/webHtmlPage.js';
+// 导航栏模板在库侧，要全局脚本的那些在 3rdLibTool.ts，见第 18 节的决定 6 / 14
+import { BootStrapTemplate } from './ui/bootstrapTemplate.js';
 import { SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper } from './3rdLibTool.js';
 import { CanvasCircle2D, CanvasLine2D, CanvasPoint2D, CanvasRay2D, CanvasRectangle2D, CanvasUtils, ICanvasRay2D, ICanvasRectangle2D } from './ui/canvas.js';
 import { Circle2D, Geo2DUtils, GeoShape2D, IRay2D, Line2D, Point2D, Ray2D } from './ui/geo2d.js';
@@ -318,7 +320,7 @@ class TestWebHtmlPage {
 				{ elemSlt: "#switch-theme-paper-print", themeName: "paper-print" },
 			],
 		};
-		page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
+		page.renderTopNav(site, "#topnav", BootStrapTemplate.renderTopNav);
 
 		//
 		// _1_ 2 3 4 5 6 ... 20

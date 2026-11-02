@@ -82,7 +82,7 @@ npm run build:test    # 只编译，不跑
 - `.test-build/package.json` 里要有 `{"type":"module"}`，否则 Node 把 ESM 产物当 CJS 解析。
   这一步由 `build:test` 脚本自动写入，和 `build:pkg` 对 `dist/` 做的是同一件事
 
-当前覆盖范围（263 个用例）：
+当前覆盖范围（268 个用例）：
 
 | 模块 | 需要 jsdom |
 |------|-----------|
@@ -90,7 +90,8 @@ npm run build:test    # 只编译，不跑
 | `dataStructure`（SimpleMap / SimpleStack / SimpleQueue） | 否 |
 | `ui/geo2d`（Geo2DUtils + 四个几何类 + revolveRay） | 否 |
 | `web` 的纯函数部分（校验、Base64、Unicode 转换） | 否 |
-| 两套导航栏模板（`renderPlainTopNav` / `BootStrapHelper.renderTopNav`） | 否（纯函数，只在断言 DOM 结构时用） |
+| 两套导航栏模板（`renderPlainTopNav` / `BootStrapTemplate.renderTopNav`） | 否（纯函数，只在断言 DOM 结构时用） |
+| 切分边界的架构约束（`arch.split.test.ts`，**测源码不测产物**） | 否 |
 | `site.config` 的导航树与主题选择器一致性 | 否 |
 | `web` 的 Cookie 读写、`initCustomElements()`、懒加载 | 是 |
 | `ui/webHtmlPage`（DOM 操作、分页、导航、主题切换） | 是 |
@@ -161,7 +162,8 @@ document 或 cookie 互相影响。异步场景用 `withDomAsync()`。
 ### Web 页面层
 - `ui/webHtmlPage.ts` — 通用 HTML 页面框架：PageConfig、NavTreeNode、ThemeBinding、SiteConfig、TopNavContext、TopNavRenderer 接口，WebHtmlPage 类（导航栏渲染、分页渲染、副标题、目录面板展开折叠、主题切换）。**只定义类型，不带任何站点的值、也不带 CSS 框架的 class**（见「站点配置与导航栏模板」一节）。依赖 basic 和 web
 - `site.config.ts` — 本站（jade-dungeon）的站点配置 `JADE_DUNGEON_SITE`：品牌名、导航树、主题列表。**不在 `exports` 里**，和 `env.demo.ts` 一样不随 npm 包发布。依赖 ui/webHtmlPage（仅类型）
-- `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper, DataTableHelper, ShowdownUtils。包装全局脚本库（jQuery `$`、MathJax、SyntaxHighlighter、showdown）。两个 import：`StrUtil`（运行时）和 ui/webHtmlPage 的 `NavTreeNode` / `TopNavContext`（`import type`，编译后擦除）
+- `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper（`initPhotoFrame` / `viewPic` / `bindImageFrame`）, DataTableHelper, ShowdownUtils。**每个类都依赖全局脚本变量**（jQuery `$`、MathJax、SyntaxHighlighter、showdown），所以按 `docs/refactor-20261101.md` 3.4 节不发包、切 workspaces 时归 web 项目。无内部 import
+- `ui/bootstrapTemplate.ts` — `BootStrapTemplate.renderTopNav()`，Bootstrap 3 的导航栏骨架。**纯字符串拼接、零全局变量**，所以留在库侧（原来在 `3rdLibTool.ts` 里，第 18 节决定 6 / 14 拆出来）。依赖 basic（`StrUtil`）+ ui/webHtmlPage 的类型（`import type`，编译后擦除）
 
 ### 业务应用层
 - `blog/common.ts` — 博客与相册共用逻辑：BlogCommon（用户信息加载、文章渲染、分页列表加载、页面框架初始化）、`normalizeApiRoot()`（规整 API 根路径）、页面选择器表 `BlogSelectors` / `DEFAULT_BLOG_SELECTORS` / `blogSelectors()`。依赖 basic、dataStructure、web、ui/webHtmlPage、3rdLibTool、site.config
@@ -295,6 +297,39 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 - **应用入口** — `WikiPage.initWikiPage()`、`BlogPage.initBlogPage()`、`GalleryPage.initGalleryPage()` 是页面级入口，各自组织完整页面的初始化流程。博客与相册的共用部分抽到 `BlogCommon`
 - **DOM 求值推迟到方法内** — 浏览器 API（`HTMLElement`、`document`）不在模块顶层求值，而是放进需要显式调用的方法里（`WebUtil.initCustomElements()`、`initWorkItems()`），这样无 DOM 的环境（Node / SSR / 单元测试）import 不会抛 `ReferenceError`
 - **路径配置集中在 envs.js** — 页面里不写死产物路径。模块路径走 import map（基址 `importMapRoot`），第三方库和主题走 `@@cdn3rd` / `@@staticRoot`
+
+## 切分边界：库 vs web 项目（阶段 2 进行中）
+
+代码正在切成两块 —— **公用 TypeScript 库**和 **web 项目**。目录还没搬
+（第 4 步），但代码层面的边界已经立起来了，`test/arch.split.test.ts` 钉着它。
+
+归库侧的 11 个文件：
+
+```
+basic.ts  dataStructure.ts  web.ts  resource.ts  index.ts
+ui/geo2d.ts  ui/canvas.ts  ui/webHtmlPage.ts  ui/uiResource.ts
+ui/UIWindow.ts  ui/bootstrapTemplate.ts
+```
+
+归 web 侧的 14 个：`blog/*`、`trpg/*`、`workout/*`、`site.config.ts`、
+`testJadeUtils.ts`、`ui/testJadeUI.ts`、`3rdLibTool.ts`。
+`env.demo.ts` 两边各留一份。
+
+三条硬约束，**改之前先看 `test/arch.split.test.ts` 会不会失败**：
+
+- **库侧不能 import web 侧的任何模块** —— 这是切分的硬前提，
+  破坏了切开之后编译不过。最容易踩的是往 `index.ts` 加一行 `export *`
+- **库侧不能依赖全局脚本变量**（`$` / `MathJax` / `SyntaxHighlighter` /
+  `showdown`）。这是 `3rdLibTool.ts` 拆成两半的目的 ——
+  纯模板函数进了 `ui/bootstrapTemplate.ts`，其余留在 `3rdLibTool.ts` 归 web
+- **新增 `.ts` 文件要在两处登记归属**：`docs/refactor-20261101.md` 第 18 节
+  和 `test/arch.split.test.ts` 的 `LIB` / `WEB` 清单。不登记那条测试会失败
+
+`index.ts` 是**库的**汇总入口，只汇总库模块。web 侧的汇总入口等第 4 步
+建目录时再加（决定 2：两边各一个）。
+
+完整的 16 条决定、文件级分配、剩余步骤都在
+`docs/refactor-20261101.md` 第 18 节。
 
 ## 窗口 UI 的资源注册表
 

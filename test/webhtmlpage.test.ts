@@ -10,7 +10,7 @@ import { withDom } from './_jsdom-setup.js';
 import {
 	WebHtmlPage, PageConfig, SiteConfig, NavTreeNode, TopNavRenderer,
 } from '../src/scripts/ts/ui/webHtmlPage.js';
-import { BootStrapHelper } from '../src/scripts/ts/3rdLibTool.js';
+import { BootStrapTemplate } from '../src/scripts/ts/ui/bootstrapTemplate.js';
 
 const cfg = (): PageConfig => ({
 	apiRoot: '/', pageTitle: 'T', subTitle: 'S', ajaxTimeout: 500,
@@ -264,7 +264,7 @@ describe('导航栏模板', () => {
 	/** 两套模板都要满足的契约 */
 	const shared: Array<[string, TopNavRenderer]> = [
 		['renderPlainTopNav', WebHtmlPage.renderPlainTopNav],
-		['BootStrapHelper.renderTopNav', BootStrapHelper.renderTopNav],
+		['BootStrapTemplate.renderTopNav', BootStrapTemplate.renderTopNav],
 	];
 
 	for (const [name, render] of shared) {
@@ -332,8 +332,8 @@ describe('导航栏模板', () => {
 		}
 	});
 
-	test('BootStrapHelper.renderTopNav 产出 BS3 骨架', () => {
-		const html = BootStrapHelper.renderTopNav({
+	test('BootStrapTemplate.renderTopNav 产出 BS3 骨架', () => {
+		const html = BootStrapTemplate.renderTopNav({
 			items: items, brandName: 'B', brandLink: '/', activeTitle: 'T',
 		});
 		for (const bs of ['navbar-header', 'navbar-toggle', 'navbar-brand',

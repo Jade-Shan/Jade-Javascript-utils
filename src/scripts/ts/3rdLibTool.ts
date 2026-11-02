@@ -1,6 +1,16 @@
-import { StrUtil } from './basic.js';
-// 只用类型，编译后不留 import 语句，所以这里不构成对 page-kit 的运行时依赖
-import type { NavTreeNode, TopNavContext } from './ui/webHtmlPage.js';
+/**
+ * 第三方全局脚本库的封装
+ *
+ * 这里的每个类都依赖**通过 `<script>` 标签加载的全局变量**
+ * （`$` / `MathJax` / `SyntaxHighlighter` / `showdown`），所以按
+ * `docs/refactor-20261101.md` 第 3.4 节这个文件不该发 npm 包 ——
+ * 切 workspaces 时整个归 web 项目。
+ *
+ * **`BootStrapHelper.renderTopNav` 已挪到库侧的
+ * [ui/bootstrapTemplate.ts](ui/bootstrapTemplate.ts)**，
+ * 因为它是纯字符串拼接、零全局变量，而且是 `TopNavRenderer` 的一个实现。
+ * 用法从 `BootStrapHelper.renderTopNav` 改成 `BootStrapTemplate.renderTopNav`。
+ */
 
 /**
  * SyntaxHighlighter 代码高亮库的声明
@@ -207,57 +217,6 @@ declare function $(cc: any): any;
  * 参考：https://getbootstrap.com/docs/3.4/javascript/
  */
 export class BootStrapHelper {
-
-	/**
-	 * Bootstrap 3 的导航栏模板
-	 *
-	 * 原来这段骨架写在 `WebHtmlPage.renderTopNav` 里，库层因此硬绑定 Bootstrap 3。
-	 * 挪到这里之后，页面层显式选框架：
-	 *
-	 * ```typescript
-	 * page.renderTopNav(site, "#topnav", BootStrapHelper.renderTopNav);
-	 * ```
-	 *
-	 * 目标元素要带 `.navbar` 系的 class（见 `blog.html` 的 `<nav id="topnav">`），
-	 * 折叠按钮的 `data-target` 与容器 id 要对上，否则小屏下展不开。
-	 *
-	 * @param ctx - 渲染所需的导航树与品牌信息
-	 * @returns {string} Bootstrap 3 骨架的导航栏 HTML
-	 */
-	static renderTopNav(ctx: TopNavContext): string {
-		let esc = StrUtil.escapeHtml;
-		let addLink = (item: NavTreeNode): string => {
-			// title 为空串是分隔符，不是导航项
-			if (item.title === "") { return '<li class="divider"></li>'; }
-			let html = ctx.activeTitle === item.title ? '<li class="active">' : '<li>';
-			html = html + '<a';
-			if (item.isNewWin) { html = html + ' target="_blank"'; }
-			if (item.id) { html = html + ' id="' + esc(item.id) + '"'; }
-			return html + ' href="' + esc(item.link || '') + '">' + esc(item.title) + '</a></li>';
-		};
-		let addSub = (item: NavTreeNode): string => {
-			let html = '<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">' +
-				esc(item.title) + '<b class="caret"></b></a><ul class="dropdown-menu">';
-			if (item.subs && item.subs.length > 0) {
-				item.subs.forEach((sub) => { html = html + addLink(sub); });
-			}
-			return html + '</ul></li>';
-		};
-
-		let navhtml = '<div class="navbar-header"> ' +
-			'<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#example-navbar-collapse"> ' +
-			'<span class="sr-only">切换导航</span> <span class="icon-bar"></span> ' +
-			'<span class="icon-bar"></span> <span class="icon-bar"></span> </button> ' +
-			'<a class="navbar-brand" href="' + esc(ctx.brandLink) + '">' + esc(ctx.brandName) + '</a> </div> ' +
-			'<div class="collapse navbar-collapse" id="example-navbar-collapse"> <ul class="nav navbar-nav">';
-		if (ctx.items && ctx.items.length > 0) {
-			ctx.items.forEach((item) => {
-				if (item.link) { navhtml = navhtml + addLink(item); }
-				else if (item.subs) { navhtml = navhtml + addSub(item); }
-			});
-		}
-		return navhtml + '</ul></div>';
-	}
 
 	/**
 	 * 初始化 Bootstrap 图片查看模态框
