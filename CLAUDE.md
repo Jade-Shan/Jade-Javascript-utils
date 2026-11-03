@@ -25,10 +25,11 @@ nvm use
 # ── 根上的命令 ──
 npm run build          # 两边都构建（先 common-utils 后 site-page）
 npm run build:pkg      # 只打库的 npm 包 → common-utils/dist/
-npm test               # 跑三组测试：库 230 + 站点 33 + 架构 19
+                       # **编译 site-page 之前必须先跑这个**，见下
+npm test               # 跑三组测试：库 230 + 站点 33 + 架构 22
 npm run test:arch      # 只跑跨两边的架构约束测试
 
-# 全量 CDN 构建 + 合并产物 + 部署到本地 nginx
+# 全量 CDN 构建 + 分别部署到本地 nginx 的两个目标
 bash build.sh          # 在 .gitignore 里，首次用 cp build.sample.sh build.sh
 
 # ── 单独构建某一边 ──
@@ -61,10 +62,36 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
   **`common-utils` 不需要它** —— 库侧的 gulp 任务全是相对自己目录的路径，
   不读部署地址（见 `docs/refactor-20261101.md` 21.4 节）。
   `build.sh` 同理，从 `build.sample.sh` 复制
-- **构建顺序不能反**：`site-page` 用包名 import 库，解析走
-  `node_modules/@jade-dungeon/jade-utils` 符号链接 → `common-utils/dist/`，
-  所以**编译 site-page 之前库必须先 `build:pkg`**。
-  根上的 `npm run build` 和 `build.sh` 已排好顺序，单独跑 site-page 时要自己注意
+- **构建顺序不能反：编译 site-page 之前，库必须先 `build:pkg`。**
+  `site-page` 用包名 import 库，解析链有四环，缺任何一环都编译不过：
+
+  ```
+  import { NumUtil } from '@jade-dungeon/jade-utils/basic'
+      ↓  ① node_modules/@jade-dungeon/jade-utils  ← npm install 建的符号链接
+      ↓                                              指向 ../../common-utils/
+      ↓  ② common-utils/package.json 的 exports['./basic']
+      ↓        { "types": "./dist/basic.d.ts", "default": "./dist/basic.js" }
+      ↓  ③ common-utils/dist/basic.d.ts           ← **build:pkg 生成的**
+      ↓  ④ tsc 拿到类型，site-page 编译通过
+  ```
+
+  **第 ③ 环是唯一需要「先构建」的** —— ①由 `npm install` 建、②在源码里，
+  只有 `dist/` 是产物。`tsc` 要的是 `.d.ts`（`types` 字段），不是 `.js`。
+
+  ```bash
+  npm run build:pkg -w common-utils    # 先这个
+  cd site-page && npx gulp             # 再这个
+  ```
+
+  根上的 `npm run build` 和 `build.sample.sh` 已排好顺序，
+  **单独跑 site-page 时要自己注意**。
+- **漏了 `build:pkg` 的报错会把人带偏** —— 实测删掉 `dist/` 编译 site-page：
+  **185 个错，只有 31 个是 `TS2307`（找不到模块）**，
+  其余 131 个 `TS2339`「属性不存在」+ 19 个 `TS7006`「隐式 any」
+  都是类型解析失败的**连带效应**。
+  报错列表最前面几行是 TS2307，往下翻全是看着像「代码写错了」的东西。
+  **看到成片的 TS2339 先确认 `common-utils/dist/` 在不在**，
+  别一头扎进业务代码
 - **用 `-w` 之前先确认符号链接在**（`ls node_modules/@jade-dungeon/`）。
   链接不在时 `npm run build:pkg -w common-utils` 解析不到 workspace，
   会**回退去跑根自己的同名 script**，自我调用成无限递归。踩过一次，
@@ -111,9 +138,13 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
   **改 `rootDir` 会同时改掉产物布局和测试的 import 路径**，两边要一起算
 - **`site-page` 不配 `paths`，走符号链接** — 它用包名 import 库，由
   `npm install` 建的 `node_modules/@jade-dungeon/jade-utils → ../../common-utils/`
-  解析，然后走 `exports` 找 `dist/*.js` 和同名 `.d.ts`。
+  解析，然后走 `exports` 的 `types` 字段找 `dist/*.d.ts`（和同名 `.js`）。
   这样解析路径和 npm 消费方完全一致；试过 `paths` 指向库源码，
   会把库文件拉进 site-page 的编译单元、落在 `rootDir` 之外，报一片 TS6059
+- **这条链的代价是「site-page 依赖库的产物，不是库的源码」** ——
+  改了库的 `.ts` 之后，site-page **要等 `build:pkg` 重新生成 `dist/*.d.ts`
+  才看得到**。这是选符号链接 + `exports` 换来的（解析路径和 npm 消费方一致），
+  不是 bug。顺序和漏跑时的报错形状见「构建命令」一节
 - **两个包各自导出子路径** — `common-utils` 11 条（`./basic`、`./geo2d`、
   `./ui-window` 等）、`site-page` 14 条（`./blog`、`./sandtable`、demo 脚本等）。
   `files` 只含 `dist`。用法见 `README.md`
@@ -124,7 +155,7 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
 ## 单元测试
 
 ```bash
-npm test                     # 三组全跑：库 230 + 站点 33 + 架构 19
+npm test                     # 三组全跑：库 230 + 站点 33 + 架构 22
 npm test -w common-utils     # 只跑库的
 npm test -w site-page        # 只跑站点的
 npm run test:arch            # 只跑跨两边的架构约束
@@ -137,7 +168,7 @@ npm run build:test -w common-utils   # 只编译，不跑
 |------|-------|-------|
 | `common-utils/src/test/ts/` | 230 | 库的 14 个用例文件 + `_jsdom-setup.ts` |
 | `site-page/src/test/ts/` | 33 | 站点的 3 个用例文件 + `_jsdom-setup.ts`（各留一份） |
-| `test/`（根） | 19 | `arch.split.test.ts` —— 跨两边的边界约束 |
+| `test/`（根） | 22 | `arch.split.test.ts` —— 跨两边的边界约束 |
 
 - 命名为 `<模块>.<主题>.test.ts`
 - 用 Node 内置的 `node:test` + `node:assert/strict`，**不装测试框架**
@@ -151,7 +182,7 @@ npm run build:test -w common-utils   # 只编译，不跑
   指向文档的链接是不是坏的），产物里看不出来。
   它有独立的 `tsconfig.arch.json`，输出到根上的 `.arch-build/`
 
-当前覆盖范围（282 个用例）：
+当前覆盖范围（285 个用例）：
 
 | 模块 | 需要 jsdom |
 |------|-----------|
@@ -400,7 +431,7 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | `site-page/src/test/ts/` | web 的测试：3 个用例文件 + `_jsdom-setup.ts`，33 个用例 |
 | `site-page/webroot/` | web 的 CDN 产物（gitignore） |
 | `site-page/envs.js` | **构建期的环境配置**（gitignore，从 `envs.sample.js` 复制）。只有 site-page 的 gulpfile 读它 —— 库侧不需要 |
-| `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，19 个用例 |
+| `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，22 个用例 |
 | `docs/` | **关于 lib + web 全局或与代码无关的文档**：refactor-20261101.md（拆分方案）、plan-url-config-20261101.md（地址清理）、styles.md（两套主题系统）、tsconfig-info.md、doc-uml.md、svg-img.md、node-env-cfg.md、ssh-secure.md、study-jsx.md、`uml/`（通用 plantuml） |
 | `context/` | 需求与进度记录 |
 

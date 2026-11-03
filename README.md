@@ -32,10 +32,40 @@ cp site-page/envs.sample.js site-page/envs.js
 
 ```bash
 nvm use                      # 切到 .nvmrc 指定的 Node 版本（v22.22.2）
-npm test                     # 跑单元测试（库 230 + 站点 33 + 架构 9）
-bash build.sh                # 两边 CDN 构建 + 合并产物（先 cp build.sample.sh build.sh）
+npm test                     # 跑单元测试（库 230 + 站点 33 + 架构 22）
 npm run build:pkg            # 构建 npm 包到 common-utils/dist/
+bash build.sh                # 两边 CDN 构建 + 分别部署（先 cp build.sample.sh build.sh）
 ```
+
+### ⚠ 构建顺序：库必须先 `build:pkg`
+
+`site-page` 用**包名**（`@jade-dungeon/jade-utils/basic`）import 库，
+解析链是：
+
+```
+node_modules/@jade-dungeon/jade-utils      ← npm install 建的符号链接
+  → common-utils/package.json 的 exports
+    → common-utils/dist/basic.d.ts         ← build:pkg 生成的
+```
+
+前两环现成（一个由 `npm install` 建、一个在源码里），
+**只有 `dist/` 是产物** —— 所以：
+
+```bash
+npm run build:pkg -w common-utils    # 先这个，生成 dist/*.d.ts
+cd site-page && npx gulp             # 再编译站点
+```
+
+根上的 `npm run build` 和 `build.sh` 已经排好顺序，
+**单独构建 site-page 时才需要自己注意**。
+
+另外：**改了库的 `.ts` 之后要重跑 `build:pkg`，site-page 才看得到** ——
+它依赖的是库的产物而不是源码。
+
+漏跑的话报错会把人带偏：实测 185 个错里只有 31 个是
+`TS2307`（找不到模块），其余是 131 个 `TS2339`「属性不存在」+
+19 个 `TS7006`「隐式 any」—— 全是类型解析失败的连带效应，
+看着像业务代码写错了。**成片 TS2339 先确认 `common-utils/dist/` 在不在**。
 
 构建命令的完整清单见 `CLAUDE.md` 的「构建命令」一节。
 
