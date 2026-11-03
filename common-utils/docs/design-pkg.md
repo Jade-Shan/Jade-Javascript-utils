@@ -126,8 +126,13 @@ static initCustomElements(): void {
 
 ### 4.4 webroot/ 被 gitignore
 
-产物目录不入版本控制，因此必须配 `prepublishOnly` 脚本在发布前编译，
-不能依赖仓库里已有的产物。
+产物目录不入版本控制，因此必须配发布前编译的钩子，不能依赖仓库里已有的产物。
+
+> **落地时选的是 `prepare` 而不是 `prepublishOnly`**（2026-11-03）——
+> `prepare` 覆盖 `prepublishOnly` 的全部场合，另外还管
+> `npm install` / `npm ci` / 被 `file:` 或 git URL 装这几种情况。
+> 代价是「库的 TS 编译不过时 `npm install` 整体失败」。
+> 详见 `docs/refactor-20261101.md` 26.7 节。
 
 ### 4.5 gulpfile 依赖 gitignored 的 envs.js
 

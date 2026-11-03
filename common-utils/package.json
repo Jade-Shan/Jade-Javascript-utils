@@ -67,6 +67,6 @@
 		"build:pkg": "tsc -p tsconfig.build.json && node -e \"require('fs').writeFileSync('dist/package.json','{\\\"type\\\":\\\"module\\\"}\\n')\"",
 		"build:test": "tsc -p tsconfig.test.json && node -e \"require('fs').writeFileSync('.test-build/package.json','{\\\"type\\\":\\\"module\\\"}\\n')\"",
 		"test": "npm run build:test && node --test \".test-build/src/test/ts/**/*.test.js\"",
-		"prepublishOnly": "npm run build:pkg"
+		"prepare": "npm run build:pkg"
 	}
 }

@@ -26,7 +26,7 @@ nvm use
 npm run build          # 两边都构建（先 common-utils 后 site-page）
 npm run build:pkg      # 只打库的 npm 包 → common-utils/dist/
                        # **编译 site-page 之前必须先跑这个**，见下
-npm test               # 跑三组测试：库 230 + 站点 33 + 架构 22
+npm test               # 跑三组测试：库 230 + 站点 33 + 架构 20
 npm run test:arch      # 只跑跨两边的架构约束测试
 
 # 全量 CDN 构建 + 分别部署到本地 nginx 的两个目标
@@ -54,14 +54,31 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
                                                   # rls 段不维护，见下文
 ```
 
-五个构建期注意事项：
+六个构建期注意事项：
 
-- 首次克隆仓库后必须先 `cp site-page/envs.sample.js site-page/envs.js` ——
-  它在 `.gitignore` 中，而 `site-page/gulpfile.js` 顶层 `require('./envs')`，
-  缺该文件时 **site-page 的**所有 gulp 任务都会挂。
+- **从 git 新拉下来的代码要做四步准备**（详见 `README.md` 与
+  `docs/refactor-20261101.md` 第 26 节）：
+
+  ```bash
+  nvm use                                        # .nvmrc 的 v22.22.2
+  npm install                                    # 根上跑，建 @jade-dungeon/* 符号链接
+  cp site-page/envs.sample.js site-page/envs.js  # 它在 .gitignore 里
+  cp build.sample.sh build.sh                    # 想部署时才需要
+  ```
+
+  `site-page/envs.js` 缺了的话 **site-page 的**所有 gulp 任务都会挂
+  （`site-page/gulpfile.js` 顶层 `require('./envs')`），报错只说找不到模块。
   **`common-utils` 不需要它** —— 库侧的 gulp 任务全是相对自己目录的路径，
   不读部署地址（见 `docs/refactor-20261101.md` 21.4 节）。
-  `build.sh` 同理，从 `build.sample.sh` 复制
+  **`common-utils/dist/` 不用手动管** —— 两道保险都会生成它：
+  `npm install` 的 `prepare` 钩子、库的 `build.sh` 第一步
+  （2026-11-03 改，见第 26 节）
+- **`npm install` 会顺便编译库的 TypeScript** ——
+  `common-utils/package.json` 的 `"prepare": "npm run build:pkg"`。
+  **所以库的 TS 编译不过时，`npm install` 整体失败、`node_modules` 一个都不装。**
+  从编译坏了的分支切过来想装依赖时会撞上，绕过要用
+  `npm install --workspaces=false`（**`--ignore-scripts` 对 workspace 成员的
+  `prepare` 不生效**，实测 npm 10.9.7）。详见 26.7 节
 - **构建顺序不能反：编译 site-page 之前，库必须先 `build:pkg`。**
   `site-page` 用包名 import 库，解析链有四环，缺任何一环都编译不过：
 
@@ -78,13 +95,22 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
   **第 ③ 环是唯一需要「先构建」的** —— ①由 `npm install` 建、②在源码里，
   只有 `dist/` 是产物。`tsc` 要的是 `.d.ts`（`types` 字段），不是 `.js`。
 
+  **走 `build.sh` 的路径不用操心**（2026-11-03 起）——
+  `common-utils/build.sh` 第一步就是 `npm run build:pkg`，
+  所以 `bash build.sh`（根）、`bash common-utils/build.sh`、
+  `npm run build -w common-utils` 都会先把 `dist/` 生成出来。
+
+  **只有绕过 build.sh 直接跑 gulp 时才要自己排顺序**：
+
   ```bash
   npm run build:pkg -w common-utils    # 先这个
   cd site-page && npx gulp             # 再这个
   ```
 
-  根上的 `npm run build` 和 `build.sample.sh` 已排好顺序，
-  **单独跑 site-page 时要自己注意**。
+  漏了的话 `site-page/build.sh` 会在构建开始**之前**拦住并提示该跑什么 ——
+  它按 `tsc` 真实的解析顺序查三个位置（根 `node_modules`、
+  本目录 `node_modules`、兄弟目录），换依赖形态不用改。
+  直接跑 `npx gulp` 绕过了这道检查，那才会撞上下面那堆报错。
 - **漏了 `build:pkg` 的报错会把人带偏** —— 实测删掉 `dist/` 编译 site-page：
   **185 个错，只有 31 个是 `TS2307`（找不到模块）**，
   其余 131 个 `TS2339`「属性不存在」+ 19 个 `TS7006`「隐式 any」
@@ -155,7 +181,7 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
 ## 单元测试
 
 ```bash
-npm test                     # 三组全跑：库 230 + 站点 33 + 架构 22
+npm test                     # 三组全跑：库 230 + 站点 33 + 架构 20
 npm test -w common-utils     # 只跑库的
 npm test -w site-page        # 只跑站点的
 npm run test:arch            # 只跑跨两边的架构约束
@@ -168,7 +194,7 @@ npm run build:test -w common-utils   # 只编译，不跑
 |------|-------|-------|
 | `common-utils/src/test/ts/` | 230 | 库的 14 个用例文件 + `_jsdom-setup.ts` |
 | `site-page/src/test/ts/` | 33 | 站点的 3 个用例文件 + `_jsdom-setup.ts`（各留一份） |
-| `test/`（根） | 22 | `arch.split.test.ts` —— 跨两边的边界约束 |
+| `test/`（根） | 20 | `arch.split.test.ts` —— 跨两边的边界约束 |
 
 - 命名为 `<模块>.<主题>.test.ts`
 - 用 Node 内置的 `node:test` + `node:assert/strict`，**不装测试框架**
@@ -179,10 +205,11 @@ npm run build:test -w common-utils   # 只编译，不跑
   这一步由 `build:test` 脚本自动写入，和 `build:pkg` 对 `dist/` 做的是同一件事
 - **`arch.split.test.ts` 是唯一测源码而不测产物的** —— 它检查的是源码结构
   （有没有跨界的相对 import、库侧有没有全局脚本依赖、页面用对了 root、
-  指向文档的链接是不是坏的），产物里看不出来。
-  它有独立的 `tsconfig.arch.json`，输出到根上的 `.arch-build/`
+  页面用片段不手写、库先 `build:pkg`），产物里看不出来。
+  它有独立的 `tsconfig.arch.json`，输出到根上的 `.arch-build/`。
+  **原来还查「指向文档的链接」，2026-11-03 删了那 2 条**（见第 27 节）
 
-当前覆盖范围（285 个用例）：
+当前覆盖范围（283 个用例）：
 
 | 模块 | 需要 jsdom |
 |------|-----------|
@@ -431,7 +458,7 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | `site-page/src/test/ts/` | web 的测试：3 个用例文件 + `_jsdom-setup.ts`，33 个用例 |
 | `site-page/webroot/` | web 的 CDN 产物（gitignore） |
 | `site-page/envs.js` | **构建期的环境配置**（gitignore，从 `envs.sample.js` 复制）。只有 site-page 的 gulpfile 读它 —— 库侧不需要 |
-| `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，22 个用例 |
+| `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，20 个用例 |
 | `docs/` | **关于 lib + web 全局或与代码无关的文档**：refactor-20261101.md（拆分方案）、plan-url-config-20261101.md（地址清理）、styles.md（两套主题系统）、tsconfig-info.md、doc-uml.md、svg-img.md、node-env-cfg.md、ssh-secure.md、study-jsx.md、`uml/`（通用 plantuml） |
 | `context/` | 需求与进度记录 |
 
@@ -454,7 +481,8 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | `docs/`（根） | ❌ **不发** | 讲架构与重构过程,读者是开发者,在 git 里看 |
 
 所以**往根 `docs/` 新加的文档不能被页面链接** —— 要给访客看就放
-`common-utils/docs/`。架构用例盯着这条。
+`common-utils/docs/`。**原来有架构用例盯着这条,2026-11-03 删了**
+（页面链接改成绝对 URL 之后那条用例失效,见第 27 节）—— 现在靠人记得。
 
 ## 部署
 
@@ -552,25 +580,27 @@ site-page/src/main/html/
   ```
 
   漏了不报错，`<title>` 静默变空
-- **指向文档的链接按页面深度算 `../`** —— 页面在 `webroot/html/` 下、
-  文档在 `webroot/docs/` 下，所以**在 `html/` 根上也要一层 `../`**：
-  `index.html` 写 `../docs/...`，`blog/`、`demo/` 下的写 `../../docs/...`。
-  `test/arch.split.test.ts` 有 2 个用例盯这个，层数算错会失败并报出该写几层
+- **指向文档的链接现在是写死的绝对 URL**（2026-11-03 改，见第 27 节）——
+  `index.html` 那 5 条写
+  `http://www.jade-dungeon.cn:8081/jadesites.v5/docs/xxx.md`，
+  不再按页面深度算 `../`。原来盯层数的 2 条架构用例已经删掉
+  （一条空转、一条假通过，见 27.2 节），所以**改这些链接没有用例兜底了**
 - **`webroot/docs/` 里装的是库的文档**,由 `site-page/build.sh` 拷：
 
   ```bash
   cp -r ../common-utils/docs    webroot/      # → webroot/docs/geo.md 等
   ```
 
-  **注意没有 `common-utils/` 这一层** —— 写 `../docs/geo.md`,
-  不是 `../docs/common-utils/geo.md`（这个坑踩过,见 22.9 节）。
-  库的文档和页面发到**同一个 CDN**（site-page 的）,所以相对路径成立,
-  不需要 `@@libRoot` 绝对 URL
+  **这一步不能省** —— 那 5 条链接指向的是 `jadesites.v5/docs/`，
+  也就是 **site-page 自己的 CDN**，而文件来源是 `common-utils/docs/`。
+  **链接是绝对 URL 不代表不用搬**，那只是把地址写死了，
+  文件还是得送到那个地址去。
+  **注意没有 `common-utils/` 这一层**（这个坑踩过,见 22.9 节）
 - **根 `docs/` 不发到 CDN,所以页面里不能链它** —— 那是架构与重构记录
   （`refactor-20261101.md` 等）,读者是开发者而不是站点访客,在 git 仓库里看。
   链了会 404,而且**只在部署之后才看得到**。
-  `test/arch.split.test.ts` 的「链接指向的文档文件存在」**只认
-  `common-utils/docs/`**,链到根 `docs/` 下的文档会失败并提示两种修法
+  原来有一条用例盯这个（只认 `common-utils/docs/`）,
+  **链接改成绝对 URL 之后那条用例失效、已删** —— 现在靠人记得
 
 ## 切分边界：common-utils vs site-page
 
