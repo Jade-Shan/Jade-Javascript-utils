@@ -5,6 +5,42 @@ Jade-Javascript-Utils
 
 ---
 
+## 本地开发
+
+### 首次克隆后的必做一步
+
+```bash
+cp site-page/envs.sample.js site-page/envs.js
+```
+
+`site-page/envs.js` 在 `.gitignore` 中（各环境的地址不同，不入版本控制），
+而 `site-page/gulpfile.js` 顶层就 `require("./envs")`。
+**缺这个文件时 site-page 的所有 gulp 任务都会挂**，
+报错信息只提示找不到模块，不会说清该怎么办。
+
+**只有 site-page 需要它** —— `common-utils` 的 gulp 任务全是相对自己目录的路径，
+不读部署地址，所以库侧单独构建不需要这个文件。
+
+拷完按实际环境改里面的值。两个容易填错的地方：
+
+- **所有地址都要带主机名。** 写成 `//:8081/xxx`（省略主机）不是合法 URL，
+  `new URL()` 会抛 `Invalid URL`，浏览器也解析不了
+- **`staticRoot` 不要填 `"."`。** 页面与静态资源分属不同服务时（比如页面在 8082、
+  资源在 8081），相对路径会拼到页面所在的服务上，取不到资源
+
+### 常用命令
+
+```bash
+nvm use                      # 切到 .nvmrc 指定的 Node 版本（v22.22.2）
+npm test                     # 跑单元测试（库 230 + 站点 33 + 架构 9）
+bash build.sh                # 两边 CDN 构建 + 合并产物（先 cp build.sample.sh build.sh）
+npm run build:pkg            # 构建 npm 包到 common-utils/dist/
+```
+
+构建命令的完整清单见 `CLAUDE.md` 的「构建命令」一节。
+
+---
+
 ## 作为 npm 包使用
 
 包名 `@jade-dungeon/jade-utils`，纯 ESM，需 Node 18+ 或支持原生 ESM 的打包器。
@@ -16,8 +52,8 @@ Jade-Javascript-Utils
 
 ```bash
 nvm use                    # 切到 .nvmrc 指定的 v22.22.2
-npm run build:pkg          # 编译 dist/ 并生成 dist/package.json
-npm pack                   # 得到 jade-dungeon-jade-utils-3.0.0.tgz
+npm run build:pkg          # 编译 common-utils/dist/ 并生成其 package.json
+npm pack -w common-utils   # 得到 jade-dungeon-jade-utils-3.0.0.tgz
 ```
 
 再到使用方项目安装：
@@ -59,16 +95,19 @@ import { NumUtil, SimpleMap, Point2D } from '@jade-dungeon/jade-utils';
 | `/data` | `dataStructure.ts` | `SimpleMap`、`SimpleStack`、`SimpleQueue` | 任意 |
 | `/geo2d` | `ui/geo2d.ts` | `Point2D`、`Line2D`、`Rectangle2D`、`Circle2D`、`Polygon2D`、`Ray2D`、`Geo2DUtils` | 任意 |
 | `/web` | `web.ts` | `WebUtil`（HTTP 请求、Base64 图片） | 浏览器 |
-| `/resource` | `resource.ts` | `DefaultIconGroup`、`IconGroup`、`JadeUIResource` | 浏览器 |
+| `/ui-resource` | `ui/uiResource.ts` | `IconGroup`、`IUIResourceProvider`、`registerUIResourceProvider`、`pickIconSize` | 任意（只有接口，零图片数据） |
+| `/resource` | `resource.ts` | `DefaultIconGroup`、`JadeUIResource`、`registerDefaultUIResource` | 浏览器，**含 27.8 KB base64** |
 | `/canvas` | `ui/canvas.ts` | `ICanvas2D`、`CanvasShape2D`、`ImageClip`、`CanvasUtils` | 浏览器 |
 | `/ui-window` | `ui/UIWindow.ts` | `UIDesktop`、`DockBar`、`JadeWindowUI` | 浏览器 |
-| `/web-html-page` | `ui/webHtmlPage.ts` | `WebHtmlPage`、`PageConfig` | 浏览器 |
+| `/web-html-page` | `ui/webHtmlPage.ts` | `WebHtmlPage`、`PageConfig`、`SiteConfig`、`NavTreeNode`、`ThemeBinding`、`TopNavRenderer` | 浏览器 |
 | `/sandtable` | `trpg/sandtable.ts` | `SandTable`、`CircleToken`、`RectangleToken`、`LineToken` | 浏览器 |
+| `/bootstrap-template` | `ui/bootstrapTemplate.ts` | `BootStrapTemplate`（BS3 导航栏模板，纯函数） | 任意（零全局变量） |
 | `/3rd-lib-tool` | `3rdLibTool.ts` | `SyntaxHighlighterHelper`、`MathJaxHelper`、`BootStrapHelper`、`DataTableHelper`、`ShowdownUtils` | 浏览器 + 全局脚本 |
 | `/blog` | `blog/blog.ts` | `BlogPage` | 浏览器 |
 | `/wiki` | `blog/wiki.ts` | `WikiPage` | 浏览器 |
-| `/workout` | `workout/workout.ts` | `workItems`、`initWorkItems` | 浏览器 |
-| `/workout-data` | `workout/workoutData.ts` | `muscleInfo`、`fontMuscleImgs`、`backMuscleimgs` | 任意 |
+| `/workout` | `workout/workout.ts` | `workItems`、`initWorkItems`、`loadMuscleSvg`、`mergePathWithStyle`、`loadPoseSvg` | 浏览器 |
+| `/workout-data` | `workout/workoutData.ts` | `muscleInfo`、`fontMuscleImgs`、`backMuscleimgs`、`strenghtWorkoutArr` | 任意 |
+| `/workout-pose` | `workout/workoutPoseData.ts` | `strengthPoseSvgArr` | 任意 |
 
 「任意」= 零 DOM 依赖，Node / SSR / 单元测试里都能直接 import。
 
@@ -90,6 +129,112 @@ console.log(workItems.length);
 
 两个方法都是幂等的，重复调用无副作用。
 
+### 窗口 UI 的图标：按需加载
+
+`/ui-window` 不依赖 `/resource`。那个子路径有 27.8 KB base64 图标，
+只想要窗口管理器的话不会被连带下载 —— 代价是**默认没有图标和桌面背景**。
+
+想用内置的那套，显式注册：
+
+```typescript
+import { registerDefaultUIResource } from '@jade-dungeon/jade-utils/resource';
+import { UIDesktop } from '@jade-dungeon/jade-utils/ui-window';
+
+// 必须在构造窗口之前调：窗口的默认图标是构造时向注册表取的
+registerDefaultUIResource();
+const desktop = new UIDesktop(document.getElementById('desk')!);
+```
+
+想用自己的图标，实现 `IUIResourceProvider`：
+
+```typescript
+import {
+	registerUIResourceProvider, IconGroup,
+} from '@jade-dungeon/jade-utils/ui-resource';
+
+registerUIResourceProvider({
+	// name 省略时返回默认图标；不认识的名字返回 undefined
+	getIconGroup: (name) => myIcons[name ?? 'default'],
+	getDesktopBackground: () => myWallpaper,
+});
+```
+
+什么都不注册也能跑：窗口的图标位会带上 `.no-icon` class，
+桌面不设置 `background-image`，外观交给 CSS。
+
+### 页面框架：站点配置与导航栏模板
+
+`/web-html-page` 不带任何站点的值，也不带任何 CSS 框架的 class。
+导航栏要两样东西：一份 `SiteConfig`，和一个产出骨架 HTML 的模板函数。
+
+```typescript
+import { WebHtmlPage, SiteConfig } from '@jade-dungeon/jade-utils/web-html-page';
+
+const site: SiteConfig = {
+	brandName: "My Site",
+	brandLink: "/",
+	navItems: [
+		{ title: "Home", link: "/" },
+		{ title: "More", subs: [{ title: "Github", link: "//github.com/me/", isNewWin: true }] },
+	],
+	// elemSlt 要对上 navItems 里某个子项的 id
+	themes: [{ elemSlt: "#switch-theme-dark", themeName: "dark" }],
+};
+
+const page = new WebHtmlPage({ apiRoot: "/", pageTitle: "Home", subTitle: "", ajaxTimeout: 500 });
+page.renderTopNav(site);          // 默认模板：语义结构，零框架 class
+page.bindChangeTheme(site.themes);
+```
+
+默认模板产出 `a.nav-brand` + `ul.nav-list`（子菜单是 `ul.nav-sub`），样式自己写。
+想换骨架就传第三个参数：
+
+```typescript
+// 用 Bootstrap 3 的话，本库带了一份现成的
+import { BootStrapTemplate } from '@jade-dungeon/jade-utils/bootstrap-template';
+page.renderTopNav(site, "#topnav", BootStrapTemplate.renderTopNav);
+
+// 或者自己写，拿到的是渲染所需的全部输入
+page.renderTopNav(site, "#topnav", (ctx) =>
+	`<h1>${ctx.brandName}</h1>` + ctx.items.map(i => `<a href="${i.link}">${i.title}</a>`).join(''));
+```
+
+自己写模板时记得转义 —— 库里两份实现都过 `StrUtil.escapeHtml`。
+
+### `/ui-window` 需要 98.css（可选 peer 依赖）
+
+窗口 UI 的**外观**来自 [98.css](https://jdan.github.io/98.css/)。
+`UIWindow.ts` 往 DOM 上加 13 个 class，其中 3 个（`title-bar`、
+`title-bar-text`、`inactive`）本项目完全不定义，另有 `window` / `window-body`
+只在复合选择器里出现、视觉仍靠 98.css。
+
+所以它声明成**可选的 peer 依赖**：
+
+```json
+"peerDependencies":     { "98.css": "^0.1.19" },
+"peerDependenciesMeta": { "98.css": { "optional": true } }
+```
+
+下界是 **0.1.19**，实测出来的：`desktop.less` 用到 `--text-color`、
+demo 用到 `.sunken-panel`，这两样 0.1.18 及更早都没有。
+
+标 `optional` 是因为**不装也能跑** —— 拖拽、缩放、最小化、Dock 栏的行为
+全在 TS 里，98.css 只管边框和标题栏的样子。
+
+**但不装的话窗口没有边框和标题栏，看起来像坏了。** 要装：
+
+```bash
+npm install 98.css
+```
+
+然后在页面里引入它（放在本项目的 `window-ui` 主题样式**之前**，
+那套样式里有依赖 98.css 的 CSS 变量如 `--dialog-blue`）：
+
+```html
+<link rel="stylesheet" href="node_modules/98.css/dist/98.css">
+<link rel="stylesheet" href=".../themes/window-ui/styles/all.min.css">
+```
+
 ### 第三方全局依赖
 
 `/3rd-lib-tool` 包装的是传统 `<script>` 标签加载的全局变量
@@ -103,6 +248,16 @@ console.log(workItems.length);
 Less 主题（`src/themes/`，含 5.3 MB 图片）不在 npm 包里，`files` 只含 `dist`。
 主题仍走 CDN 引用，构建流程见下方「构建命令」。
 
+目录按应用分四组，产物同构：
+
+| 源码 | 产物 | 说明 |
+|------|------|------|
+| `src/themes/blog/comm.less` | （concat 进各主题） | 三套内容主题共用的结构层 |
+| `src/themes/blog/<theme>/` | `webroot/themes/blog/<theme>/` | hobbit / lo-fi / paper-print |
+| `src/themes/window-ui/` | `webroot/themes/window-ui/` | 窗口 UI 样式 + 站点 favicon |
+| `src/themes/workout/` | `webroot/themes/workout/` | 肌肉图配色 |
+| `src/themes/trpg/` | `webroot/themes/trpg/` | 沙盘素材，纯图片无 Less |
+
 ### 许可证
 
 GPLv3（见 [LICENSE](LICENSE)）。GPL 有传染性：使用本库的项目分发时也须以
@@ -115,7 +270,12 @@ GPL 兼容协议开源。仅内部使用、不对外分发则不受此约束。
 ```
 basic.ts                          (无依赖)
 dataStructure.ts                  (无依赖)
-3rdLibTool.ts                     (无依赖 - 使用全局声明)
+
+3rdLibTool.ts                     (第三方库用全局声明，无内部 import)
+
+bootstrapTemplate.ts              (BS3 导航栏模板，纯函数)
+└── basic.ts                      (StrUtil，用于转义)
+    (另 import type webHtmlPage.ts 的 NavTreeNode / TopNavContext，编译后擦除)
 
 geo2d.ts
 └── basic.ts
@@ -124,21 +284,29 @@ web.ts
 ├── basic.ts
 └── dataStructure.ts
 
-resource.ts
-├── dataStructure.ts
+uiResource.ts                     (资源注册表，只有接口无数据)
 └── web.ts
 
+resource.ts                       (内置图标，27.8 KB base64，opt-in)
+├── dataStructure.ts
+├── web.ts
+└── uiResource.ts → web.ts
+
 webHtmlPage.ts
+├── basic.ts
 └── web.ts
+
+site.config.ts                    (本站配置，不在 exports 里)
+└── webHtmlPage.ts                (仅 SiteConfig 类型)
 
 canvas.ts
 ├── geo2d.ts → basic.ts
 └── web.ts → basic.ts, dataStructure.ts
 
-UIWindow.ts
+UIWindow.ts                       (注意：不依赖 resource.ts)
 ├── dataStructure.ts
 ├── geo2d.ts → basic.ts
-├── resource.ts → dataStructure.ts, web.ts
+├── uiResource.ts → web.ts
 └── web.ts → basic.ts, dataStructure.ts
 
 sandtable.ts
@@ -148,16 +316,22 @@ sandtable.ts
 └── web.ts → basic.ts, dataStructure.ts
 
 blog.ts
+├── basic.ts
 ├── web.ts → basic.ts, dataStructure.ts
-├── webHtmlPage.ts → web.ts
-└── 3rdLibTool.ts
+├── webHtmlPage.ts → basic.ts, web.ts
+├── site.config.ts → webHtmlPage.ts
+├── bootstrapTemplate.ts → basic.ts
+└── common.ts → 上述全部 + 3rdLibTool.ts
 
 wiki.ts
-├── webHtmlPage.ts → web.ts
-└── 3rdLibTool.ts
+├── web.ts → basic.ts, dataStructure.ts
+├── webHtmlPage.ts → basic.ts, web.ts
+├── site.config.ts → webHtmlPage.ts
+├── bootstrapTemplate.ts → basic.ts
+└── 3rdLibTool.ts （全局声明，无内部 import）
 
 ── 测试/Demo 文件 ──
-testJadeUtils.ts → basic, dataStructure, web, geo2d, webHtmlPage, 3rdLibTool, canvas
+testJadeUtils.ts → basic, dataStructure, web, geo2d, webHtmlPage, bootstrapTemplate, 3rdLibTool, canvas
 testJadeUI.ts    → resource → dataStructure + web
 testJadeTRPG.ts  → basic, resource → dataStructure + web
 ```
@@ -168,7 +342,7 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 |----|------|------|
 | L0 基础 | `basic.ts`, `dataStructure.ts`, `3rdLibTool.ts` | 零内部依赖 |
 | L1 核心 | `geo2d.ts`, `web.ts` | 仅依赖 L0 |
-| L2 资源 | `resource.ts`, `webHtmlPage.ts` | 依赖 L0+L1 |
+| L2 资源 | `uiResource.ts`, `resource.ts`, `webHtmlPage.ts`, `site.config.ts` | 依赖 L0+L1 |
 | L3 图形 | `canvas.ts` | 依赖 geo2d + web |
 | L4 应用 | `UIWindow.ts`, `sandtable.ts`, `blog.ts`, `wiki.ts` | 依赖 L0~L3 |
 | L5 测试 | `testJade*.ts` | 依赖所有上层 |
@@ -181,8 +355,8 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 
 | API | 问题 | 前端影响 | 状态 |
 |-----|------|---------|------|
-| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
-| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog.ts` 第 154 行对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog/blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
+| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog/common.ts` 的 `loadArticleList()` 里对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
 
 ---
 

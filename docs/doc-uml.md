@@ -7,7 +7,7 @@
 - 思源黑体 = **Noto Sans CJK SC**（含 Regular / Bold 两个字重，Bold 已确认存在）
 - 思源宋体 = **Noto Serif CJK SC**（含 Regular / Bold）
 
-现在需要让时序图 [docs/uml/src/ui-style-win98.plantuml](../workspace/node-dev/Jade-Javascript-utils/docs/uml/src/ui-style-win98.plantuml) 的中文使用思源字体，并做字体分层：
+现在需要让时序图 [docs/uml/src/ui-style-win98.plantuml](../common-utils/docs/uml/src/ui-style-win98.plantuml) 的中文使用思源字体，并做字体分层：
 
 - **粗体元素**（标题 title、participant/actor 名称、`== 分节 ==` divider）→ 思源黑体加粗字重 `Noto Sans CJK SC` + `bold`
 - **非粗体元素**（消息文本、alt/else 分支标签）→ 思源宋体 `Noto Serif CJK SC`
