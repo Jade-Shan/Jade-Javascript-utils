@@ -10,12 +10,16 @@ Jade-Javascript-Utils
 ### 首次克隆后的必做一步
 
 ```bash
-cp envs.sample.js envs.js
+cp site-page/envs.sample.js site-page/envs.js
 ```
 
-`envs.js` 在 `.gitignore` 中（各环境的地址不同，不入版本控制），
-而 `gulpfile.js` 顶层就 `require("./envs")`。**缺这个文件时所有 gulp 任务都会挂**，
+`site-page/envs.js` 在 `.gitignore` 中（各环境的地址不同，不入版本控制），
+而 `site-page/gulpfile.js` 顶层就 `require("./envs")`。
+**缺这个文件时 site-page 的所有 gulp 任务都会挂**，
 报错信息只提示找不到模块，不会说清该怎么办。
+
+**只有 site-page 需要它** —— `common-utils` 的 gulp 任务全是相对自己目录的路径，
+不读部署地址，所以库侧单独构建不需要这个文件。
 
 拷完按实际环境改里面的值。两个容易填错的地方：
 
@@ -28,9 +32,9 @@ cp envs.sample.js envs.js
 
 ```bash
 nvm use                      # 切到 .nvmrc 指定的 Node 版本（v22.22.2）
-npm test                     # 跑单元测试
-bash build.sh                # CDN 构建
-npm run build:pkg            # 构建 npm 包到 dist/
+npm test                     # 跑单元测试（库 230 + 站点 33 + 架构 9）
+bash build.sh                # 两边 CDN 构建 + 合并产物（先 cp build.sample.sh build.sh）
+npm run build:pkg            # 构建 npm 包到 common-utils/dist/
 ```
 
 构建命令的完整清单见 `CLAUDE.md` 的「构建命令」一节。
@@ -48,8 +52,8 @@ npm run build:pkg            # 构建 npm 包到 dist/
 
 ```bash
 nvm use                    # 切到 .nvmrc 指定的 v22.22.2
-npm run build:pkg          # 编译 dist/ 并生成 dist/package.json
-npm pack                   # 得到 jade-dungeon-jade-utils-3.0.0.tgz
+npm run build:pkg          # 编译 common-utils/dist/ 并生成其 package.json
+npm pack -w common-utils   # 得到 jade-dungeon-jade-utils-3.0.0.tgz
 ```
 
 再到使用方项目安装：
@@ -196,6 +200,40 @@ page.renderTopNav(site, "#topnav", (ctx) =>
 ```
 
 自己写模板时记得转义 —— 库里两份实现都过 `StrUtil.escapeHtml`。
+
+### `/ui-window` 需要 98.css（可选 peer 依赖）
+
+窗口 UI 的**外观**来自 [98.css](https://jdan.github.io/98.css/)。
+`UIWindow.ts` 往 DOM 上加 13 个 class，其中 3 个（`title-bar`、
+`title-bar-text`、`inactive`）本项目完全不定义，另有 `window` / `window-body`
+只在复合选择器里出现、视觉仍靠 98.css。
+
+所以它声明成**可选的 peer 依赖**：
+
+```json
+"peerDependencies":     { "98.css": "^0.1.19" },
+"peerDependenciesMeta": { "98.css": { "optional": true } }
+```
+
+下界是 **0.1.19**，实测出来的：`desktop.less` 用到 `--text-color`、
+demo 用到 `.sunken-panel`，这两样 0.1.18 及更早都没有。
+
+标 `optional` 是因为**不装也能跑** —— 拖拽、缩放、最小化、Dock 栏的行为
+全在 TS 里，98.css 只管边框和标题栏的样子。
+
+**但不装的话窗口没有边框和标题栏，看起来像坏了。** 要装：
+
+```bash
+npm install 98.css
+```
+
+然后在页面里引入它（放在本项目的 `window-ui` 主题样式**之前**，
+那套样式里有依赖 98.css 的 CSS 变量如 `--dialog-blue`）：
+
+```html
+<link rel="stylesheet" href="node_modules/98.css/dist/98.css">
+<link rel="stylesheet" href=".../themes/window-ui/styles/all.min.css">
+```
 
 ### 第三方全局依赖
 

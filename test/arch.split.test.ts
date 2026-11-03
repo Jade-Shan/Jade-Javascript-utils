@@ -1,17 +1,23 @@
 /**
- * 切分边界的架构约束
+ * 切分边界的架构约束（跨 common-utils/ 与 site-page/）
  *
- * 阶段 2 要把代码切成「库」和「web 项目」两块
- * （`docs/refactor-20261101.md` 第 18 节，16 条决定）。切分的硬前提是
- * **库不能依赖 web 项目** —— 否则两边编译不开。
+ * 阶段 2 把代码切成 `common-utils/`（公用库）和 `site-page/`（站点）两块，
+ * 见 `docs/refactor-20261101.md` 第 18 节的 16 条决定。
  *
- * 这个前提靠人记是记不住的：往库的 `index.ts` 加一行 `export *`
- * 就能悄悄破坏它，而且在目录还没切开的现在，TypeScript 查不出任何问题。
- * 所以用测试钉住。
+ * **目录切开之后，大部分约束由类型系统自己保证了** ——
+ * `common-utils/tsconfig.json` 的 `include` 只有 `src`，库侧根本看不见 `site-page/`。
+ * 这个文件盯的是类型系统**看不出来**的那几条：
  *
- * 测的是**源码的 import 关系**，不是编译产物 —— 这是本项目唯一一个
- * 这样做的测试文件（其余都测 `.test-build/` 下的产物，见 12.2 节）。
- * 因为约束本身是关于源码结构的。
+ * - 库侧有没有用相对路径偷偷引用 `../web/`（能绕过包名解析）
+ * - 库侧有没有出现全局脚本变量（配了 `declare` 就能编过）
+ * - site-page 侧引用库是不是统一走包名，没有混用相对路径
+ * - 库的 `exports` 和实际文件对不对得上
+ *
+ * 这是本仓库唯一一个**测源码而不测编译产物**的测试文件
+ * （其余都测各自 `.test-build/` 下的产物，见 12.2 节）——
+ * 因为约束本身是关于源码结构和配置的。
+ *
+ * 跑法：`npm run test:arch`（根上），它有独立的 `tsconfig.arch.json`。
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,138 +25,562 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
- * 源码根
+ * 仓库根
  *
- * 用 `process.cwd()` 而不是 `import.meta.dirname` —— 本项目的
- * `module` 是 `ES6`，TS 不允许 `import.meta`（TS1343）。
- * `npm test` 是从仓库根跑的，所以 cwd 就是仓库根。
+ * 用 `process.cwd()` 而不是 `import.meta.dirname` —— 本项目的 `module`
+ * 是 `ES6`，TS 不允许 `import.meta`（TS1343）。`npm run test:arch`
+ * 从仓库根跑，所以 cwd 就是仓库根。
  */
-const ROOT = path.resolve(process.cwd(), 'src/scripts/ts');
+const ROOT = process.cwd();
+const LIB_SRC = path.join(ROOT, 'common-utils/src/main/ts');
+const WEB_SRC = path.join(ROOT, 'site-page/src/main/ts');
 
-/** 第 18 节决定归库侧的文件 */
-const LIB: ReadonlySet<string> = new Set([
-	'basic.ts', 'dataStructure.ts', 'web.ts', 'resource.ts', 'index.ts',
-	'ui/geo2d.ts', 'ui/canvas.ts', 'ui/webHtmlPage.ts', 'ui/uiResource.ts',
-	'ui/UIWindow.ts', 'ui/bootstrapTemplate.ts',
-]);
+/** 库的包名 */
+const PKG = '@jade-dungeon/jade-utils';
 
-/** 第 18 节决定归 web 侧的文件 */
-const WEB: ReadonlySet<string> = new Set([
-	'blog/blog.ts', 'blog/common.ts', 'blog/gallery.ts', 'blog/wiki.ts',
-	'trpg/sandtable.ts', 'trpg/testJadeTRPG.ts',
-	'workout/workout.ts', 'workout/workoutData.ts', 'workout/workoutPoseData.ts',
-	'workout/testWorkout.ts',
-	'site.config.ts', 'testJadeUtils.ts', 'ui/testJadeUI.ts',
-	'3rdLibTool.ts',
-]);
-
-/** 两边各留一份的 */
-const BOTH: ReadonlySet<string> = new Set(['env.demo.ts']);
-
-/** 全局脚本变量。库侧不该出现这些 */
+/** 全局脚本变量。库侧不该出现 */
 const GLOBAL_LIBS = ['SyntaxHighlighter', 'MathJax', 'showdown'];
 
-/** 列出 `src/scripts/ts` 下全部 `.ts`，路径用 `/` 分隔、相对源码根 */
-function listTs(dir: string = ROOT): Array<string> {
+/** 递归列出某目录下的 `.ts`（不含 `.d.ts`），路径相对该目录、用 `/` 分隔 */
+function listTs(base: string, dir: string = base): Array<string> {
+	if (!fs.existsSync(dir)) { return []; }
 	const out: Array<string> = [];
 	for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
 		const p = path.join(dir, e.name);
-		if (e.isDirectory()) { out.push(...listTs(p)); }
-		else if (e.name.endsWith('.ts')) {
-			out.push(path.relative(ROOT, p).split(path.sep).join('/'));
+		if (e.isDirectory()) { out.push(...listTs(base, p)); }
+		else if (e.name.endsWith('.ts') && !e.name.endsWith('.d.ts')) {
+			out.push(path.relative(base, p).split(path.sep).join('/'));
 		}
 	}
 	return out;
 }
 
-/**
- * 取一个文件的内部 import 目标（相对路径的那些），解析成相对源码根的路径
- *
- * `import type` 不算 —— 它编译后被擦除，不构成运行时依赖。
- */
-function internalImports(rel: string): Array<string> {
-	const txt = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-	const out: Array<string> = [];
-	// 跳过 import type，它不产生运行时依赖
-	const re = /^\s*import\s+(?!type\s)[^;]*?from\s*['"](\.[^'"]+)['"]/gm;
-	for (const m of txt.matchAll(re)) {
-		let t = path.posix.normalize(
-			path.posix.join(path.posix.dirname(rel), m[1]));
-		if (t.endsWith('.js')) { t = t.slice(0, -3) + '.ts'; }
-		out.push(t);
-	}
-	return out;
+/** 读文件，顺便去掉整行注释（避免注释里提到类名被误判成依赖） */
+function codeOf(base: string, rel: string): string {
+	const txt = fs.readFileSync(path.join(base, rel), 'utf8');
+	return txt.split('\n')
+		.filter(l => !/^\s*(\*|\/\/|\/\*)/.test(l))
+		.join('\n');
 }
 
-/** 文件归哪边 */
-function side(rel: string): 'LIB' | 'WEB' | 'BOTH' | 'UNASSIGNED' {
-	if (LIB.has(rel)) { return 'LIB'; }
-	if (WEB.has(rel)) { return 'WEB'; }
-	if (BOTH.has(rel)) { return 'BOTH'; }
-	return 'UNASSIGNED';
+/** 取一个文件里所有 import 的来源字符串（含相对路径和包名） */
+function importSpecs(base: string, rel: string): Array<string> {
+	const txt = fs.readFileSync(path.join(base, rel), 'utf8');
+	return [...txt.matchAll(/^\s*import\s[^;]*?from\s*['"]([^'"]+)['"]/gm)]
+		.map(m => m[1]);
 }
 
-describe('切分边界：库不能依赖 web 项目', () => {
+describe('库侧（common-utils/）的边界', () => {
 
-	test('每个 .ts 文件都有明确归属', () => {
-		// 新增文件时忘了归类，这条会失败 —— 提醒去更新第 18 节和本文件
-		const un = listTs().filter(f => side(f) === 'UNASSIGNED');
-		assert.deepEqual(un, [],
-			`这些文件还没定归属，去 docs/refactor-20261101.md 第 18 节补上：${un.join(', ')}`);
-	});
-
-	test('库侧没有指向 web 侧的运行时 import', () => {
-		// 这是切分的硬前提。往库的 index.ts 加一行 export * 就会破坏它
+	test('不用相对路径引用 site-page/', () => {
+		// 类型系统拦不住这个：`../../site-page/src/xxx.js` 是合法的相对路径，
+		// 只要文件存在就能编过。而它会让库依赖站点代码
 		const bad: Array<string> = [];
-		for (const f of listTs()) {
-			if (side(f) !== 'LIB') { continue; }
-			for (const d of internalImports(f)) {
-				if (side(d) === 'WEB') { bad.push(`${f} → ${d}`); }
+		for (const f of listTs(LIB_SRC)) {
+			for (const s of importSpecs(LIB_SRC, f)) {
+				if (s.startsWith('.') && s.includes('site-page/')) {
+					bad.push(`${f} → ${s}`);
+				}
 			}
 		}
 		assert.deepEqual(bad, [],
-			`库侧出现了指向 web 的依赖，切开之后会编译不过：\n  ${bad.join('\n  ')}`);
+			`库侧出现了指向 web 的相对 import：\n  ${bad.join('\n  ')}`);
 	});
 
-	test('库侧不依赖任何全局脚本变量', () => {
-		// 决定 6 把 renderTopNav 拆进库、其余留 web，就是为了这一条
+	test('不 import 库自己的包名（应该用相对路径）', () => {
+		// 库内部引用自己要用相对路径。写包名会绕一圈 node_modules 符号链接
+		// 回到自己，产生一份重复的模块实例 —— 注册表那种模块级单例会失效
 		const bad: Array<string> = [];
-		for (const f of listTs()) {
-			if (side(f) !== 'LIB') { continue; }
-			const txt = fs.readFileSync(path.join(ROOT, f), 'utf8');
-			// 去掉注释行再查：注释里提到类名不算依赖
-			const code = txt.split('\n')
-				.filter(l => !/^\s*(\*|\/\/|\/\*)/.test(l)).join('\n');
+		for (const f of listTs(LIB_SRC)) {
+			for (const s of importSpecs(LIB_SRC, f)) {
+				if (s.startsWith(PKG)) { bad.push(`${f} → ${s}`); }
+			}
+		}
+		assert.deepEqual(bad, [],
+			`库内部应该用相对路径，不该走包名：\n  ${bad.join('\n  ')}`);
+	});
+
+	test('不依赖任何全局脚本变量', () => {
+		// 决定 6 把 3rdLibTool 拆两半就是为了这一条。
+		// 配了 declare 之后类型系统查不出来，所以要测
+		const bad: Array<string> = [];
+		for (const f of listTs(LIB_SRC)) {
+			const code = codeOf(LIB_SRC, f);
 			for (const g of GLOBAL_LIBS) {
 				if (code.includes(g)) { bad.push(`${f} 用了 ${g}`); }
 			}
-			// jQuery 的 $(...) 调用
 			if (/[^\w$]\$\(/.test(code)) { bad.push(`${f} 用了 jQuery 的 $()`); }
 		}
 		assert.deepEqual(bad, [],
 			`库侧出现了全局脚本依赖：\n  ${bad.join('\n  ')}`);
 	});
 
-	test('库的 index.ts 只汇总库模块', () => {
-		// 决定 2：那 6 个 web 模块的 export * 已删掉
-		const txt = fs.readFileSync(path.join(ROOT, 'index.ts'), 'utf8');
-		const leaked: Array<string> = [];
-		for (const m of txt.matchAll(/^export \* from '\.\/(.+)\.js';/gm)) {
-			const rel = m[1] + '.ts';
-			if (side(rel) !== 'LIB') { leaked.push(rel); }
-		}
-		assert.deepEqual(leaked, [],
-			`库的汇总入口不该 re-export 这些：${leaked.join(', ')}`);
+	test('没有 test*.ts（demo 脚本都归了 site-page）', () => {
+		// 决定 8：库是纯 TypeScript 库，零 HTML、零 demo 脚本
+		const t = listTs(LIB_SRC).filter(f => path.basename(f).startsWith('test'));
+		assert.deepEqual(t, [], `这些该在 site-page 侧：${t.join(', ')}`);
 	});
 
-	test('web → 库的依赖是允许的（确认方向判断没写反）', () => {
-		// 反向的自检：这个方向应该存在不少条，如果是 0 说明上面的解析逻辑坏了
-		let n = 0;
-		for (const f of listTs()) {
-			if (side(f) !== 'WEB') { continue; }
-			n += internalImports(f).filter(d => side(d) === 'LIB').length;
+});
+
+describe('site-page 侧（site-page/）引用库的方式', () => {
+
+	test('引用库统一走包名，不用相对路径', () => {
+		// 混用的话有两份库代码进产物，模块级单例（如资源注册表）会失效
+		const bad: Array<string> = [];
+		for (const f of listTs(WEB_SRC)) {
+			for (const s of importSpecs(WEB_SRC, f)) {
+				if (s.startsWith('.') && s.includes('common-utils/')) {
+					bad.push(`${f} → ${s}`);
+				}
+			}
 		}
-		assert.ok(n > 10, `web → 库应该有很多条依赖，实际只有 ${n} 条，解析逻辑可能坏了`);
+		assert.deepEqual(bad, [],
+			`site-page 侧应该用包名引用库：\n  ${bad.join('\n  ')}`);
+	});
+
+	test('用到的包名子路径都在库的 exports 里', () => {
+		// 写错子路径名的话浏览器端要到运行时才报 404，
+		// 而 tsc 走的是 node_modules 符号链接，本地能过
+		const pkg = JSON.parse(
+			fs.readFileSync(path.join(ROOT, 'common-utils/package.json'), 'utf8'));
+		const valid = new Set(
+			Object.keys(pkg.exports).map((s: string) =>
+				s === '.' ? PKG : PKG + s.slice(1)));
+		const bad: Array<string> = [];
+		for (const f of listTs(WEB_SRC)) {
+			for (const s of importSpecs(WEB_SRC, f)) {
+				if (s.startsWith(PKG) && !valid.has(s)) {
+					bad.push(`${f} → ${s}`);
+				}
+			}
+		}
+		assert.deepEqual(bad, [],
+			`这些子路径不在库的 exports 里：\n  ${bad.join('\n  ')}`);
+	});
+
+	test('确实在用库（自检：方向判断没写反）', () => {
+		let n = 0;
+		for (const f of listTs(WEB_SRC)) {
+			n += importSpecs(WEB_SRC, f).filter(s => s.startsWith(PKG)).length;
+		}
+		assert.ok(n > 20,
+			`web 应该有很多处引用库，实际只有 ${n} 处，解析逻辑可能坏了`);
+	});
+
+});
+
+describe('页面引用资源时用对了 root', () => {
+
+	/**
+	 * 两边的产物部署到不同路径（第 18 节决定 12），页面侧对应两个变量：
+	 *
+	 *   `@@libRoot`     → 库的产物（themes/window-ui 的样式）
+	 *   `@@staticRoot`  → site-page 的产物（blog/workout/trpg/site 主题）
+	 *
+	 * **用错了的话 dev 环境可能看不出来** —— 两个变量填同一个值时
+	 * 哪个都能解析到。只有真的分开部署（如 jadeutils.v5 / jadesites.v5）
+	 * 才会 404。这正是实际踩到的：18.13 节写了那 3 处要改成 `@@libRoot`，
+	 * 但当时没改，而验证脚本把两个 webroot 合成一棵树查「文件在不在」，
+	 * 所以查不出来。
+	 *
+	 * 这里直接查源码模板里的 `@@xxxRoot`，不依赖构建产物。
+	 */
+
+	/** 库侧 themes 下有哪些子目录 —— 这些必须走 libRoot */
+	function libThemeDirs(): Array<string> {
+		const d = path.join(ROOT, 'common-utils/src/main/themes');
+		return fs.existsSync(d)
+			? fs.readdirSync(d, { withFileTypes: true })
+				.filter(e => e.isDirectory()).map(e => e.name)
+			: [];
+	}
+
+	/** site-page 侧 themes 下有哪些子目录 —— 这些必须走 staticRoot */
+	function siteThemeDirs(): Array<string> {
+		const d = path.join(ROOT, 'site-page/src/main/themes');
+		return fs.existsSync(d)
+			? fs.readdirSync(d, { withFileTypes: true })
+				.filter(e => e.isDirectory()).map(e => e.name)
+			: [];
+	}
+
+	/** 列出 html 模板里所有 `@@<root>/themes/<dir>` 引用 */
+	function themeRefs(): Array<{ file: string, root: string, dir: string }> {
+		const out: Array<{ file: string, root: string, dir: string }> = [];
+		const base = path.join(ROOT, 'site-page/src/main/html');
+		const walk = (d: string) => {
+			for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+				const p = path.join(d, e.name);
+				if (e.isDirectory()) { walk(p); continue; }
+				if (!e.name.endsWith('.html')) { continue; }
+				const txt = fs.readFileSync(p, 'utf8');
+				for (const m of txt.matchAll(/@@(\w+Root)\/themes\/([\w.-]+)/g)) {
+					out.push({ file: e.name, root: m[1], dir: m[2] });
+				}
+			}
+		};
+		walk(base);
+		return out;
+	}
+
+	test('库的主题走 @@libRoot', () => {
+		const lib = new Set(libThemeDirs());
+		const bad = themeRefs()
+			.filter(r => lib.has(r.dir) && r.root !== 'libRoot')
+			.map(r => `${r.file}: @@${r.root}/themes/${r.dir}`);
+		assert.deepEqual(bad, [],
+			`这些引用的是库的主题，必须走 @@libRoot：\n  ${bad.join('\n  ')}`);
+	});
+
+	test('site-page 的主题走 @@staticRoot', () => {
+		const site = new Set(siteThemeDirs());
+		const lib = new Set(libThemeDirs());
+		const bad = themeRefs()
+			// 两边同名的目录不判（目前没有）
+			.filter(r => site.has(r.dir) && !lib.has(r.dir)
+				&& r.root !== 'staticRoot')
+			.map(r => `${r.file}: @@${r.root}/themes/${r.dir}`);
+		assert.deepEqual(bad, [],
+			`这些引用的是 site-page 的主题，必须走 @@staticRoot：\n  ${bad.join('\n  ')}`);
+	});
+
+	test('两边的 themes 子目录没有同名的', () => {
+		// 有同名的话上面两条判不了，得先解决命名冲突
+		const dup = libThemeDirs().filter(d => siteThemeDirs().includes(d));
+		assert.deepEqual(dup, [],
+			`两边有同名主题目录，页面引用无法按名字判断该走哪个 root：${dup.join(', ')}`);
+	});
+
+	test('site-page/envs.js 的两个 root 都有定义', () => {
+		// 缺 libRoot 的话 @@libRoot 会被原样留在产物里，变成坏链。
+		// 配置在 site-page/ 下 —— 只有它的 gulpfile require envs（21.4 选项 1）
+		const p = path.join(ROOT, 'site-page/envs.js');
+		if (!fs.existsSync(p)) { return; }   // 它在 .gitignore 里，CI 上可能没有
+        const txt = fs.readFileSync(p, 'utf8');
+		for (const k of ['staticRoot', 'libRoot', 'importMapRoot',
+			'libImportMapRoot']) {
+			assert.ok(new RegExp('\\b' + k + '\\s*:').test(txt),
+				`envs.js 缺 ${k} —— 页面里的 @@${k} 会原样留在产物里`);
+		}
+	});
+
+	/**
+	 * 只查 `dev` 段。
+	 *
+	 * **`rls` 段不查,也不维护** —— 生产环境的配置永远不进本仓库,
+	 * 生产的工作流与项目源码无关（它自己注入 `envs.js`）。
+	 * 所以 `rls` 里是什么值都不影响本项目的检查与编译,
+	 * 别给它加约束、也别因为它「看起来没填」去补。
+	 * 见 docs/refactor-20261101.md 24 节。
+	 *
+	 * 按文本解析而不是 `require` —— 测试产物是 ESM，没有 `require`。
+	 */
+	test('envs.js 的 dev 段齐全，没有 TODO 占位', () => {
+		const p = path.join(ROOT, 'site-page/envs.js');
+		if (!fs.existsSync(p)) { return; }   // 在 .gitignore 里，CI 上可能没有
+		const txt = fs.readFileSync(p, 'utf8');
+		const KEYS = ['buildversion', 'webRoot', 'staticRoot', 'libRoot',
+			'importMapRoot', 'libImportMapRoot', 'apiRoot', 'cdnRoot', 'cdn3rd'];
+
+		// 取 `dev: {` 到配平的 `}` 之间那一段
+		const start = txt.search(/\bdev\s*:\s*\{/);
+		assert.ok(start >= 0, 'site-page/envs.js 缺 dev 段');
+		let depth = 0, end = start;
+		for (let i = txt.indexOf('{', start); i < txt.length; i++) {
+			if (txt[i] === '{') { depth++; }
+			else if (txt[i] === '}') { depth--; if (!depth) { end = i; break; } }
+		}
+		const body = txt.slice(start, end);
+
+		const miss = KEYS.filter(k =>
+			!new RegExp('\\b' + k + '\\s*:\\s*["\']').test(body));
+		assert.deepEqual(miss, [],
+			`envs.js 的 dev 段缺这些键：${miss.join(', ')}`
+			+ ` —— 页面里对应的 @@xxx 会原样留在产物里`);
+
+		const todo = KEYS.filter(k => new RegExp(
+			'\\b' + k + '\\s*:\\s*["\'][^"\']*TODO').test(body));
+		assert.deepEqual(todo, [],
+			`envs.js 的 dev 段这些键还是 TODO 占位：${todo.join(', ')}`);
+	});
+
+});
+
+describe('window-ui 对 98.css 的依赖', () => {
+
+	/**
+	 * `desktop.less` 直接用 98.css 的 CSS 变量，而 98.css 是**可选**的
+	 * peer 依赖 —— 少一个变量不会让构建失败，`var()` 只是静默回退到继承值。
+	 *
+	 * 实际踩到的（20.8 节）：`color: var(--text-color)` 没写兜底，
+	 * 而 `--text-color` 是 0.1.19 才加的。按当时以为的「CDN 上是 0.1.18」
+	 * 去把 `peerDependencies` 放到 `^0.1.18`，就会把下界放到一个
+	 * **二级菜单白底白字**的版本上。
+	 *
+	 * **这条用例查的是「本地装的那版有没有」**，查不出
+	 * 「`peerDependencies` 的下界那版有没有」—— 本地装的（^0.1.21）
+	 * 比声明的下界（^0.1.19）新。要查下界得真去装那一版，
+	 * 代价不值。加新变量时请手动确认它是哪版引入的。
+	 */
+
+	test('desktop.less 用到的 CSS 变量，98.css 里都有', () => {
+		const less = path.join(ROOT,
+			'common-utils/src/main/themes/window-ui/styles/desktop.less');
+		const css = path.join(ROOT, 'node_modules/98.css/style.css');
+		// 98.css 是可选 peer 依赖，没装就跳过
+		if (!fs.existsSync(css)) { return; }
+
+		const txt = fs.readFileSync(less, 'utf8');
+		// desktop.less 自己定义的不算外部依赖
+		const own = new Set(Array.from(txt.matchAll(/(--[\w-]+)\s*:/g),
+			m => m[1]));
+		const used = new Set(Array.from(txt.matchAll(/var\((--[\w-]+)/g),
+			m => m[1]));
+
+		const theirs = new Set(Array.from(
+			fs.readFileSync(css, 'utf8').matchAll(/(--[\w-]+)\s*:/g),
+			m => m[1]));
+
+		const missing = Array.from(used)
+			.filter(v => !own.has(v) && !theirs.has(v));
+		assert.deepEqual(missing, [],
+			`desktop.less 用了 98.css 里没有的变量：${missing.join(', ')}\n`
+			+ `  —— var() 不会报错，只会静默回退成继承值。`
+			+ `要么写兜底值 var(${missing[0]}, xxx)，`
+			+ `要么提高 peerDependencies 的下界`);
+	});
+
+});
+
+describe('HTML 页面用片段而不是手写', () => {
+
+	/**
+	 * 6.3 把 `head.html` 拆成片段，目的是让那 9 个「各写一套 head」的
+	 * demo 页按需组合。但片段建好之后**页面没跟着改** ——
+	 * 只有 1 个页面在用，其余 8 个照旧手写，33 处重复。
+	 * 片段存在 ≠ 有人用它，这条用例盯的是后半句。
+	 *
+	 * 查源码模板里有没有「本该用片段却手写」的行。
+	 */
+
+	/** 片段名 → 它负责的内容特征（出现在页面里就说明是手写的） */
+	const OWNED: Array<[string, RegExp]> = [
+		['meta-charset',            /<meta\s+charset=/],
+		['favicon',                 /rel="icon"/],
+		['vendor-jquery',           /@@v-jquery/],
+		['vendor-bootstrap',        /@@v-bootstrap\/css\/bootstrap\.min\.css/],
+		['vendor-bootstrap-theme',  /bootstrap-theme\.min\.css/],
+		['vendor-datatable',        /@@v-datatable/],
+		['vendor-syntaxhighlighter', /@@v-syntaxhighlighter/],
+		['vendor-showdown',         /@@v-showdown/],
+		['vendor-mathjax',          /@@v-mathjax/],
+		['vendor-98css',            /@@v-98css/],
+		['theme-window-ui',         /themes\/window-ui\/styles/],
+		['theme-workout',           /themes\/workout\/styles/],
+		['theme-blog',              /themes\/blog\/[\w-]+\/styles/],
+	];
+
+	/** head.html 会间接带进来的片段 */
+	const VIA_HEAD = new Set(['meta-charset', 'meta-page', 'favicon',
+		'importmap', 'vendor-jquery', 'vendor-bootstrap', 'vendor-datatable',
+		'vendor-syntaxhighlighter', 'vendor-showdown', 'vendor-mathjax',
+		'vendor-98css', 'theme-blog', 'theme-window-ui', 'theme-workout']);
+
+	test('没有页面手写片段已经管了的东西', () => {
+		const base = path.join(ROOT, 'site-page/src/main/html');
+		const bad: Array<string> = [];
+		const walk = (d: string) => {
+			for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+				const p = path.join(d, e.name);
+				if (e.isDirectory()) {
+					if (e.name !== 'parts') { walk(p); }   // 片段自己不算页面
+					continue;
+				}
+				if (!e.name.endsWith('.html')) { continue; }
+				const txt = fs.readFileSync(p, 'utf8');
+				const inc = new Set(Array.from(
+					txt.matchAll(/parts\/([\w.-]+)\.html/g), m => m[1]));
+				if (inc.has('head')) {
+					for (const f of VIA_HEAD) { inc.add(f); }
+				}
+				// 把 include 那几行摘掉再查，免得 include 自己被当成手写
+				const body = txt.replace(/@@include\([^)]*\)/g, '');
+				for (const [frag, pat] of OWNED) {
+					if (inc.has(frag)) { continue; }
+					if (pat.test(body)) {
+						bad.push(`${e.name}: 手写了 ${frag} 管的内容`);
+					}
+				}
+			}
+		};
+		walk(base);
+		assert.deepEqual(bad, [],
+			`这些页面该用 parts/ 下的片段，不要手写：\n  ${bad.join('\n  ')}\n`
+			+ `  —— 手写的那份不会跟着 envs.js 的版本号走，升级库时会漏`);
+	});
+
+});
+
+describe('页面指向 docs/ 的链接', () => {
+
+	/**
+	 * 这条链路坏过三次，每次原因都不同：
+	 *
+	 * 1. 18.16 把只讲库的文档挪进 `common-utils/docs/`，页面没跟着改（路径不对）
+	 * 2. 阶段 4 把页面挪进 `html/<组>/`，`../` 的层数不对了
+	 * 3. 部署模型改成两个 CDN 各自独立（第 22 节），
+	 *    `site-page/build.sh` 改为自己 `cp -r ../common-utils/docs webroot/` ——
+	 *    **库的文档落在 `webroot/docs/` 下，不再有 `common-utils/` 这一层**
+	 *
+	 * 所以现在的事实是：
+	 *
+	 *   site-page/build.sh:  cp -r ../common-utils/docs  webroot/
+	 *                        → webroot/docs/{geo.md, ui-style-win98.md, win98-menu/, ...}
+	 *
+	 * 库的文档和页面**发到同一个 CDN**（site-page 的），所以相对路径仍然成立，
+	 * 不需要改成绝对 URL。层数按页面自己的深度算，不写死。
+	 *
+	 * 查源码而不查产物 —— `webroot/docs/` 只在 `build.sh` 跑过之后才有，
+	 * 而 `build.sh` 末尾会 scp 到生产，不能在测试里跑。
+	 */
+
+	/** 列出 html 模板里所有指向 docs/ 的链接，带页面自己的相对目录 */
+	function docRefs(): Array<{ file: string, dir: string, href: string }> {
+		const out: Array<{ file: string, dir: string, href: string }> = [];
+		const base = path.join(ROOT, 'site-page/src/main/html');
+		const walk = (d: string) => {
+			for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+				const p = path.join(d, e.name);
+				if (e.isDirectory()) { walk(p); continue; }
+				if (!e.name.endsWith('.html')) { continue; }
+				const txt = fs.readFileSync(p, 'utf8');
+				for (const m of txt.matchAll(/href="([^"#:]*docs\/[^"]+)"/g)) {
+					out.push({
+						file: e.name,
+						dir: path.relative(base, d).split(path.sep).join('/'),
+						href: m[1],
+					});
+				}
+			}
+		};
+		walk(base);
+		return out;
+	}
+
+	test('链接指向的文档文件存在', () => {
+		const bad: Array<string> = [];
+		for (const r of docRefs()) {
+			// 部署后的树：webroot/{html/<组>/page.html, docs/...}
+			// 所以从页面出发解析一次，看落到 docs/ 下的哪里
+			const from = r.dir ? 'html/' + r.dir : 'html';
+			const land = path.posix.normalize(path.posix.join(from, r.href));
+			// 再还原成源码树里的位置。**`webroot/docs/` 只有一个来源**：
+			//   site-page/build.sh:  cp -r ../common-utils/docs  webroot/
+			// 根 docs/ **不发到 CDN**（22.9 节的决定：那是架构/重构记录，
+			// 读者是开发者而不是站点访客），所以链它必定 404。
+			if (!land.startsWith('docs/')) {
+				const depth = r.dir ? r.dir.split('/').length : 0;
+				bad.push(`${r.dir}/${r.file}: ${r.href} —— 解析到 `
+					+ `${land}，不在 docs/ 下。该页面深 ${depth} 层，`
+					+ `要写 ${'../'.repeat(depth + 1)}docs/...`);
+				continue;
+			}
+			const rel = land.slice('docs/'.length);
+			if (fs.existsSync(path.join(ROOT, 'common-utils/docs/' + rel))) {
+				continue;                                     // 可达
+			}
+			// 不在库的文档树里。分两种情况报错，因为修法完全不同
+			if (fs.existsSync(path.join(ROOT, 'docs/' + rel))) {
+				bad.push(`${r.dir}/${r.file}: ${r.href} → 这是**根 docs/** 下的`
+					+ `文档，而根 docs/ 不发到 CDN（22.9），链接必定 404。`
+					+ `要么别从页面链它，要么把它挪进 common-utils/docs/`);
+			} else {
+				bad.push(`${r.dir}/${r.file}: ${r.href} → `
+					+ `common-utils/docs/${rel} 不存在`);
+			}
+		}
+		assert.deepEqual(bad, [],
+			`这些指向 docs/ 的链接是坏的：\n  ${bad.join('\n  ')}`);
+	});
+
+	test('build.sample.sh 不再合并两边的产物', () => {
+		// 两边发到不同的 CDN（第 22 节），根上那棵合并树已经删掉。
+		// 恢复合并会让「@@libRoot / @@staticRoot 用错了」重新变成
+		// 不可观测的问题 —— 合并之后哪个 root 都能解析到（19.8 节踩过）
+		const txt = fs.readFileSync(path.join(ROOT, 'build.sample.sh'), 'utf8');
+		const live = txt.split('\n')
+			.filter(l => !/^\s*#/.test(l))        // 注释不算
+			.join('\n');
+		const bad = [
+			/cp\s+-r\s+common-utils\/webroot\/\*\s+webroot\//,
+			/cp\s+-r\s+site-page\/webroot\/\*\s+webroot\//,
+			/^\s*mkdir\s+-p\s+webroot\s*$/m,
+		].filter(re => re.test(live));
+		assert.deepEqual(bad.map(String), [],
+			'build.sample.sh 又在往根 webroot/ 合并产物了 ——'
+			+ ' 两边现在各自发到不同的 CDN，根上不该有合并树');
+	});
+
+	test('site-page/build.sh 把库的文档拷进自己的产物', () => {
+		// 页面链接指向 ../docs/xxx，而那些文件来自 common-utils/docs/。
+		// 两个 CDN 各自独立之后，这一步由 site-page 的构建脚本负责 ——
+		// 漏了页面上那 5 条文档链接全是 404。
+		// build.sh 在 .gitignore 里，所以优先查它、没有就查 sample
+		for (const f of ['site-page/build.sh', 'site-page/build.sample.sh']) {
+			const p = path.join(ROOT, f);
+			if (!fs.existsSync(p)) { continue; }
+			const txt = fs.readFileSync(p, 'utf8');
+			assert.ok(/cp\s+-r\s+\.\.\/common-utils\/docs\s+webroot\//.test(txt),
+				`${f} 没把 ../common-utils/docs 拷进 webroot/ ——`
+				+ ` html/index.html 里指向 ../docs/ 的链接会全部 404`);
+			return;
+		}
+		// 两个都不存在就跳过（新克隆的仓库还没 cp build.sample.sh）
+	});
+
+});
+
+describe('库的 exports 与实际文件', () => {
+
+	test('每条 exports 都指向真实存在的源文件', () => {
+		// exports 指的是 dist/ 下的产物，这里回推到 src/ 看源文件在不在。
+		// 漏建文件或改名忘了同步时，npm 消费方会拿到解析失败的子路径
+		const pkg = JSON.parse(
+			fs.readFileSync(path.join(ROOT, 'common-utils/package.json'), 'utf8'));
+		const bad: Array<string> = [];
+		for (const [sub, cond] of Object.entries(pkg.exports)) {
+			const file = typeof cond === 'string'
+				? cond : (cond as { default: string }).default;
+			const m = /^\.\/dist\/(.+)\.js$/.exec(file);
+			if (!m) { bad.push(`${sub} 的路径格式不对: ${file}`); continue; }
+			const src = path.join(LIB_SRC, m[1] + '.ts');
+			if (!fs.existsSync(src)) {
+				bad.push(`${sub} → 源文件不存在: common-utils/src/${m[1]}.ts`);
+			}
+		}
+		assert.deepEqual(bad, [], `exports 与实际文件不符：\n  ${bad.join('\n  ')}`);
+	});
+
+	test('库侧每个源文件都有对应的 exports 子路径', () => {
+		// 反向检查：新增模块忘了加 exports 的话，CDN 的 import map
+		// 里就没有它（映射表从 exports 派生，见 9.2 节），页面 import 会失败
+		const pkg = JSON.parse(
+			fs.readFileSync(path.join(ROOT, 'common-utils/package.json'), 'utf8'));
+		const exported = new Set<string>();
+		for (const cond of Object.values(pkg.exports)) {
+			const file = typeof cond === 'string'
+				? cond : (cond as { default: string }).default;
+			const m = /^\.\/dist\/(.+)\.js$/.exec(file);
+			if (m) { exported.add(m[1]); }
+		}
+		// env.demo.ts 刻意不在 exports 里（demo 专用，见第 11 节）
+		const SKIP = new Set(['env.demo']);
+		const missing = listTs(LIB_SRC)
+			.map(f => f.slice(0, -3))
+			.filter(m => !exported.has(m) && !SKIP.has(m));
+		assert.deepEqual(missing, [],
+			`这些库模块没有 exports 子路径，CDN 的 import map 里会缺：${missing.join(', ')}`);
 	});
 
 });

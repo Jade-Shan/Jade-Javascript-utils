@@ -15,74 +15,143 @@ jadeutils.v3 是一个个人前端工具库，作为 CDN 静态资源部署到 n
 
 ## 构建命令
 
+仓库是 npm workspaces，两个模块：`common-utils/`（公用库）和 `site-page/`（站点）。
+根上的命令转发给它们。
+
 ```bash
 # 使用 .nvmrc 指定的 Node 版本 (v22.22.2)
 nvm use
 
-# CDN 构建：编译 window-ui 主题 + TS（含压缩）+ HTML 模板 → webroot/
-# 注意：脚本里内容主题、workout/trpg 主题、gnuplot/plantuml 作图、
-#       拷贝到 nginx 这几段都是注释状态，要用时需手动取消注释
-bash build.sh
+# ── 根上的命令 ──
+npm run build          # 两边都构建（先 common-utils 后 site-page）
+npm run build:pkg      # 只打库的 npm 包 → common-utils/dist/
+npm test               # 跑三组测试：库 230 + 站点 33 + 架构 19
+npm run test:arch      # 只跑跨两边的架构约束测试
 
-# 仅编译 TypeScript（含类型声明 .d.ts）
-npx gulp process-typescript
+# 全量 CDN 构建 + 合并产物 + 部署到本地 nginx
+bash build.sh          # 在 .gitignore 里，首次用 cp build.sample.sh build.sh
 
-# 编译并压缩 TypeScript（.min.js）
-npx gulp compress-typescript
+# ── 单独构建某一边 ──
+npm run build -w common-utils      # window-ui 主题 + TS
+npm run build -w site-page         # 三套内容主题 + workout/trpg/site + TS
+bash common-utils/build.sh         # 同上，走脚本
+bash site-page/build.sh
 
-# default 任务：并行跑全部主题 + TypeScript 编译与压缩（不含 HTML）
-npx gulp
+# ── 进到某一边跑单个 gulp 任务 ──
+cd common-utils && npx gulp        # default：window-ui 主题 + TS（含压缩）
+cd common-utils && npx gulp compress-typescript
+cd common-utils && npx gulp process-style-window-ui
 
-# 单独编译某套主题
-npx gulp process-style-hobbit       # 内容主题，另有 lo-fi / paper-print
-npx gulp process-images-hobbit      # 只拷该主题图片
-npx gulp process-style-window-ui    # 窗口 UI 主题
-npx gulp process-style-workout      # workout 主题
-
-# 拷贝 TRPG 主题图片（无 Less，纯拷贝）
-npx gulp process-style-trpg
-
-# HTML 模板展开（@@ 变量替换，取值见 envs.js）
-npx gulp include-html-dev           # dev 环境
-npx gulp process-html-rls           # rls 环境，额外跑 processhtml
-
-# npm 包构建：编译 dist/ 并写入 dist/package.json
-npm run build:pkg
+cd site-page && npx gulp          # default：全部主题 + TS（含压缩，不含 HTML）
+cd site-page && npx gulp process-style-hobbit     # 另有 lo-fi / paper-print
+cd site-page && npx gulp process-images-hobbit    # 只拷该主题图片
+cd site-page && npx gulp process-style-workout
+cd site-page && npx gulp process-style-trpg       # 纯拷图片
+cd site-page && npx gulp process-style-site       # favicon
+cd site-page && npx gulp include-html-dev         # HTML 模板展开，dev
+cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 build 块；
+                                                  # rls 段不维护，见下文
 ```
 
-两个构建期注意事项：
+五个构建期注意事项：
 
-- 首次克隆仓库后必须先 `cp envs.sample.js envs.js` —— `envs.js` 在 `.gitignore` 中，
-  而 `gulpfile.js` 第 20 行顶层 `require("./envs")`，缺该文件时所有 gulp 任务都会挂
-- `default` 任务是 `gulp.parallel(themeTasks)`，而 `themeTasks` 同时含 `process-typescript`
-  和 `compress-typescript`，后者又是 `gulp.series('process-typescript', ...)`。
-  也就是说 `npx gulp` 会让 `process-typescript`（含 `clean-typescript` 删目录）并发跑两次。
-  要稳定产出 TS 产物时单独跑 `npx gulp compress-typescript`，这也是 `build.sh` 的做法
+- 首次克隆仓库后必须先 `cp site-page/envs.sample.js site-page/envs.js` ——
+  它在 `.gitignore` 中，而 `site-page/gulpfile.js` 顶层 `require('./envs')`，
+  缺该文件时 **site-page 的**所有 gulp 任务都会挂。
+  **`common-utils` 不需要它** —— 库侧的 gulp 任务全是相对自己目录的路径，
+  不读部署地址（见 `docs/refactor-20261101.md` 21.4 节）。
+  `build.sh` 同理，从 `build.sample.sh` 复制
+- **构建顺序不能反**：`site-page` 用包名 import 库，解析走
+  `node_modules/@jade-dungeon/jade-utils` 符号链接 → `common-utils/dist/`，
+  所以**编译 site-page 之前库必须先 `build:pkg`**。
+  根上的 `npm run build` 和 `build.sh` 已排好顺序，单独跑 site-page 时要自己注意
+- **用 `-w` 之前先确认符号链接在**（`ls node_modules/@jade-dungeon/`）。
+  链接不在时 `npm run build:pkg -w common-utils` 解析不到 workspace，
+  会**回退去跑根自己的同名 script**，自我调用成无限递归。踩过一次，
+  32 分钟 fork 出 721 个进程，只能按进程组 `kill -9 -$PGID` 清。
+  详见 `docs/refactor-20261101.md` 18.17 节
+- `default` 任务里**只放了 `compress-typescript`，没放 `process-typescript`** ——
+  后者是前者的 series 前置步骤，两个都放进 `gulp.parallel` 会让它并发跑两次，
+  而 `ts.createProject` 的实例不能同时用于两次编译。切分前这里是坏的，重写 gulpfile 时修掉了
+- **根 `package.json` 的 `overrides` 不要删** —— `gulp-processhtml@1.2.0`
+  声明的是 `"through2": "latest"`，会装到 v5。而 through2 从 v5 起是**纯 ESM**，
+  CJS 的 `require('through2')` 拿到 namespace 对象、取不到挂在 default export
+  上的 `.obj`，`process-html-rls` 就报 `through.obj is not a function`。
+  `overrides` 把它钉在 `^4.0.2`（最后一个 CJS 大版本）。
+  详见 `docs/refactor-20261101.md` 20.9 节
 
 ## 编译配置
 
-- **两份 tsconfig** — `tsconfig.json` 给 gulp 的 CDN 构建用（`target: "ES6"`, `module: "ES6"`, `moduleResolution: "bundler"`, `strict: true`, `declaration: true`, `sourceMap: true`），输出 `webroot/scripts/ts/`，含 `test*.ts`；`tsconfig.build.json` 继承前者给 npm 打包用，输出 `dist/`，排除 `test*.ts`、不带 sourcemap。`gulpfile.js` 通过 `ts.createProject('tsconfig.json')` 复用主配置
-- **`package.json` scripts 只管 npm 打包** — `build:pkg`（`tsc -p tsconfig.build.json`）和 `prepublishOnly`。CDN 构建不走 `npm run`，由 `build.sh` 直接调 `npx gulp`
-- **npm 包按子路径导出** — `exports` 配了 17 个子路径（`./basic`、`./geo2d`、`./ui-window` 等），`files` 只含 `dist`。用法见 `README.md`
+- **七份 tsconfig**，共享选项在根上的 `tsconfig.base.json`（`target: "ES6"`,
+  `module: "ES6"`, `moduleResolution: "bundler"`, `strict: true`,
+  `declaration: true`, `sourceMap: true`），各自只覆盖路径相关的项：
+
+  | 文件 | outDir（相对自己所在目录） | 用途 |
+  |------|------------------------|------|
+  | `common-utils/tsconfig.json` | `webroot/scripts/ts` | 库的 CDN 构建，gulp 用 |
+  | `common-utils/tsconfig.build.json` | `dist` | 库的 npm 打包，不带 sourcemap |
+  | `common-utils/tsconfig.test.json` | `.test-build` | 库的单元测试 |
+  | `site-page/tsconfig.json` | `webroot/scripts/ts` | 站点的 CDN 构建 |
+  | `site-page/tsconfig.test.json` | `.test-build` | 站点的单元测试 |
+  | `tsconfig.arch.json`（根） | `.arch-build` | 跨两边的架构约束测试 |
+
+  `site-page` 不发 npm 包，所以没有 `tsconfig.build.json`。
+  两边的 `gulpfile.js` 各自 `ts.createProject('tsconfig.json')` 复用主配置。
+  **`outDir` 都是相对各自目录的** —— 根上不再有 `dist/` 或 `.test-build/`
+- **`rootDir` 的两种取值是有意不同的**：
+
+  | tsconfig | `rootDir` | 产物形状 |
+  |----------|-----------|---------|
+  | 主配置 / build | `src/main/ts` | 平铺，不带 `src/main/ts` 这一层 |
+  | test | `.`（继承） | **保留** `src/main/ts` 和 `src/test/ts` 两棵子树 |
+
+  CDN 和 npm 产物要平铺（消费方写 `@jade-dungeon/jade-utils/basic`，
+  不该看到源码目录结构）；测试产物要保留层级，
+  这样测试里的 `../../main/ts/basic.js` 在编译后仍然指得对。
+  **改 `rootDir` 会同时改掉产物布局和测试的 import 路径**，两边要一起算
+- **`site-page` 不配 `paths`，走符号链接** — 它用包名 import 库，由
+  `npm install` 建的 `node_modules/@jade-dungeon/jade-utils → ../../common-utils/`
+  解析，然后走 `exports` 找 `dist/*.js` 和同名 `.d.ts`。
+  这样解析路径和 npm 消费方完全一致；试过 `paths` 指向库源码，
+  会把库文件拉进 site-page 的编译单元、落在 `rootDir` 之外，报一片 TS6059
+- **两个包各自导出子路径** — `common-utils` 11 条（`./basic`、`./geo2d`、
+  `./ui-window` 等）、`site-page` 14 条（`./blog`、`./sandtable`、demo 脚本等）。
+  `files` 只含 `dist`。用法见 `README.md`
 - **无打包器** — 不使用 Webpack/Rollup/Vite，TypeScript 编译为 ES6 模块后由浏览器原生 `<script type="module">` 直接加载
 - **单元测试用 Node 内置的 `node:test`** — 零新增运行时依赖，不引入 vitest/jest（那会带来 Vite 等打包工具，与「无打包器」的原则冲突）。`npm test` 即可跑，详见下面「单元测试」一节
-- **浏览器手动测试页另算** — `testJadeUtils.ts`、`testJadeUI.ts`、`testJadeTRPG.ts`、`testWorkout.ts` 是 demo/手动验证脚本，不是自动化测试。随 CDN 构建一起编译（npm 包里排除），通过 `src/html/` 下的 HTML 页面在浏览器中运行
+- **浏览器手动测试页另算** — `testJadeUtils.ts`、`testJadeUI.ts`、`testJadeTRPG.ts`、`testWorkout.ts` 是 demo/手动验证脚本，不是自动化测试。**全在 `site-page/src/main/ts/` 下**（第 18 节决定 8），通过 `site-page/src/main/html/` 下的页面在浏览器中运行
 
 ## 单元测试
 
 ```bash
-npm test              # 编译 + 跑全部测试
-npm run build:test    # 只编译，不跑
+npm test                     # 三组全跑：库 230 + 站点 33 + 架构 19
+npm test -w common-utils     # 只跑库的
+npm test -w site-page        # 只跑站点的
+npm run test:arch            # 只跑跨两边的架构约束
+npm run build:test -w common-utils   # 只编译，不跑
 ```
 
-- 测试文件在根目录的 `test/` 下，命名为 `<模块>.<主题>.test.ts`
+测试分三处：
+
+| 位置 | 用例数 | 测什么 |
+|------|-------|-------|
+| `common-utils/src/test/ts/` | 230 | 库的 14 个用例文件 + `_jsdom-setup.ts` |
+| `site-page/src/test/ts/` | 33 | 站点的 3 个用例文件 + `_jsdom-setup.ts`（各留一份） |
+| `test/`（根） | 19 | `arch.split.test.ts` —— 跨两边的边界约束 |
+
+- 命名为 `<模块>.<主题>.test.ts`
 - 用 Node 内置的 `node:test` + `node:assert/strict`，**不装测试框架**
-- `tsconfig.test.json` 把 `src/` 和 `test/` 一起编到 `.test-build/`（gitignore），
-  再由 `node --test` 跑产物。**测的是编译产物，不是源码** —— 和 npm 消费方拿到的是同一种东西
+- 各自的 `tsconfig.test.json` 把 `src/` 和 `test/` 一起编到**自己目录下的**
+  `.test-build/`（gitignore），再由 `node --test` 跑产物。
+  **测的是编译产物，不是源码** —— 和 npm 消费方拿到的是同一种东西
 - `.test-build/package.json` 里要有 `{"type":"module"}`，否则 Node 把 ESM 产物当 CJS 解析。
   这一步由 `build:test` 脚本自动写入，和 `build:pkg` 对 `dist/` 做的是同一件事
+- **`arch.split.test.ts` 是唯一测源码而不测产物的** —— 它检查的是源码结构
+  （有没有跨界的相对 import、库侧有没有全局脚本依赖、页面用对了 root、
+  指向文档的链接是不是坏的），产物里看不出来。
+  它有独立的 `tsconfig.arch.json`，输出到根上的 `.arch-build/`
 
-当前覆盖范围（268 个用例）：
+当前覆盖范围（282 个用例）：
 
 | 模块 | 需要 jsdom |
 |------|-----------|
@@ -142,7 +211,7 @@ document 或 cookie 互相影响。异步场景用 `withDomAsync()`。
 
 ## 源码架构
 
-`src/scripts/ts/` 下共 21 个 `.ts` 文件（9732 行），其中 4 个 `test*.ts` 占 1897 行。
+两边的 `src/main/ts/` 下共 21 个 `.ts` 文件（9732 行），其中 4 个 `test*.ts` 占 1897 行。
 按子目录组织：根目录放基础层，`ui/`、`blog/`、`trpg/`、`workout/` 各放一类。
 依赖方向严格单向、无循环。
 
@@ -162,7 +231,7 @@ document 或 cookie 互相影响。异步场景用 `withDomAsync()`。
 ### Web 页面层
 - `ui/webHtmlPage.ts` — 通用 HTML 页面框架：PageConfig、NavTreeNode、ThemeBinding、SiteConfig、TopNavContext、TopNavRenderer 接口，WebHtmlPage 类（导航栏渲染、分页渲染、副标题、目录面板展开折叠、主题切换）。**只定义类型，不带任何站点的值、也不带 CSS 框架的 class**（见「站点配置与导航栏模板」一节）。依赖 basic 和 web
 - `site.config.ts` — 本站（jade-dungeon）的站点配置 `JADE_DUNGEON_SITE`：品牌名、导航树、主题列表。**不在 `exports` 里**，和 `env.demo.ts` 一样不随 npm 包发布。依赖 ui/webHtmlPage（仅类型）
-- `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper（`initPhotoFrame` / `viewPic` / `bindImageFrame`）, DataTableHelper, ShowdownUtils。**每个类都依赖全局脚本变量**（jQuery `$`、MathJax、SyntaxHighlighter、showdown），所以按 `docs/refactor-20261101.md` 3.4 节不发包、切 workspaces 时归 web 项目。无内部 import
+- `3rdLibTool.ts` — 第三方库封装：SyntaxHighlighterHelper, MathJaxHelper, BootStrapHelper（`initPhotoFrame` / `viewPic` / `bindImageFrame`）, DataTableHelper, ShowdownUtils。**每个类都依赖全局脚本变量**（jQuery `$`、MathJax、SyntaxHighlighter、showdown），所以按 `docs/refactor-20261101.md` 3.4 节不发包、切 workspaces 时归 site-page 项目。无内部 import
 - `ui/bootstrapTemplate.ts` — `BootStrapTemplate.renderTopNav()`，Bootstrap 3 的导航栏骨架。**纯字符串拼接、零全局变量**，所以留在库侧（原来在 `3rdLibTool.ts` 里，第 18 节决定 6 / 14 拆出来）。依赖 basic（`StrUtil`）+ ui/webHtmlPage 的类型（`import type`，编译后擦除）
 
 ### 业务应用层
@@ -180,7 +249,7 @@ document 或 cookie 互相影响。异步场景用 `withDomAsync()`。
 - `index.ts` — `export *` 汇总全部模块，供不带子路径的 `import ... from '@jade-dungeon/jade-utils'` 使用。没有打包器做 tree-shaking，所以推荐优先用子路径导入
 
 ### 测试/Demo（编译但不互相依赖）
-- `testJadeUtils.ts`、`ui/testJadeUI.ts`、`trpg/testJadeTRPG.ts`、`workout/testWorkout.ts` — 浏览器手动测试/Demo 脚本，非自动化测试。通过 `src/html/` 下的 HTML 页面使用 `<script type="module">` 加载。`testJadeTRPG.ts` 里有 5 处写死的生产环境图片 URL
+- `testJadeUtils.ts`、`ui/testJadeUI.ts`、`trpg/testJadeTRPG.ts`、`workout/testWorkout.ts` — 浏览器手动测试/Demo 脚本，非自动化测试。通过 `site-page/src/main/html/demo/` 下的 HTML 页面使用 `<script type="module">` 加载。`testJadeTRPG.ts` 里有 5 处写死的生产环境图片 URL
 
 ### TypeScript 声明引用
 - `src/scripts/include/refTypes.d.ts` — 外部类型声明（目前为空，曾被用于 jQuery 声明）
@@ -214,7 +283,7 @@ import { WebUtil } from '@jade-dungeon/jade-utils/web';   // 与 npm 消费方�
 - 末尾有一条带尾斜杠的前缀键兜住 `exports` 里没列的模块（`test*.js` 等）。
   解析规则是精确键优先于前缀键
 - `initCurrEnv()` 把 JSON 注入 fileinclude 的 context（`gulp-file-include` 原样插入、不转义引号）
-- `src/html/parts/importmap.html` 输出 `<script type="importmap">` 标签，
+- `site-page/src/main/html/parts/importmap.html` 输出 `<script type="importmap">` 标签，
   10 个有模块 import 的页面各 include 一次
 
 两个硬约束：**必须在页面第一个 `<script type="module">` 之前**，且**一个文档只能有一个 import map**。
@@ -251,40 +320,129 @@ demo / 测试脚本不写死后端和 CDN 地址，由页面从 `envs.js` 注入
 envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参  →  发请求的方法
 ```
 
-- `src/scripts/ts/env.demo.ts` 定义 `DemoEnvConfig`（`apiRoot` / `themeRoot` / `cdn3rd`）和取值函数 `demoEnv()`。**不在 `exports` 里**，不随 npm 包发布
+- `src/main/ts/env.demo.ts` 定义 `DemoEnvConfig`（`apiRoot` / `themeRoot` / `cdn3rd`）和取值函数 `demoEnv()`。**不在 `exports` 里**，不随 npm 包发布
 - `DemoEnvConfig.themeRoot` 在 `envs.js` 里**没有同名键** —— 它就是 `staticRoot` 加 `/themes`，页面侧传 `'@@staticRoot/themes'` 拼出来，不另设配置项
 - 入口函数签名形如 `testTrpgUI(env?: DemoEnvConfig)`，形参要继续往内层函数传
 - 缺值时 `demoEnv()` 返回空串，不兜底成生产地址 —— 兜底会让「忘了传参」静默变成「偷偷打生产环境」
 - `trpg/testJadeTRPG.ts` 的 `testSceneData` 刻意保持明文写死的 URL，它是改造后端时的对比样本
-- `envs.js` 的 `rls` 段当前是 `TODO-生产环境确定` 占位，开发期只测 `dev`
+- **`envs.js` 只维护 `dev` 段，`rls` 段本仓库不管** ——
+  生产环境的配置永远不进这个仓库，生产的工作流与项目源码无关，
+  它自己提供 `envs.js`。所以：
+
+  | | |
+  |---|---|
+  | ✅ 维护 `dev` 段 | 检查、编译、测试都只针对它 |
+  | ❌ 不管 `rls` 段 | 里面是什么值都不影响本项目 |
+
+  **不要给 `rls` 加约束，也不要「补全」它** —— `envs.sample.js` 的
+  `rls` 段缺 `libRoot` / `libImportMapRoot` 两个键是**有意的**，不是漏了。
+  架构用例只查 `dev` 段。详见 `docs/refactor-20261101.md` 第 24 节
+- `npx gulp process-html-rls` **保留**，但它验的是 processhtml 的 build 块
+  （`all.css` → `all.min.css`）走不走通 —— 那是**构建逻辑**，不是生产配置。
+  跑它用的那组 `rls` 值只是占位
 
 ## 编译输出
 
+**两边各自输出到自己的 `webroot/`**（第 18 节决定 12），
+**各自部署到不同的 CDN 服务器,不再合并**。
+`dist/` 和 `.test-build/` 也都在各模块里面。
+
+**根目录下没有 `webroot/`** —— 原来那棵合并树在 2026-11-03 删掉了
+（部署改成两个 CDN 各自独立,见 `docs/refactor-20261101.md` 22.2 节）。
+`build.sample.sh` 不再合并产物,`test/arch.split.test.ts` 有一条用例盯着别恢复。
+
 - TypeScript 编译为 ES6 模块（`target: "ES6"`, `module: "ES6"`），输出 `.js`、`.d.ts` 和 `.js.map`
-  到 `webroot/scripts/ts/`（CDN 构建），或 `.js` + `.d.ts` 到 `dist/`（npm 打包，无 sourcemap）
+  到 `<模块>/webroot/scripts/ts/`（CDN 构建）；库另有 `common-utils/dist/`
+  放 `.js` + `.d.ts`（npm 打包，无 sourcemap）
 - 严格模式：`noImplicitAny: true`, `strict: true`
 - 压缩产物 `.min.js` 由 `compress-typescript` 任务用 uglify 生成，只在 CDN 构建里有
-- Less 主题编译为合并后的 `all.css` 和 `all.min.css`。三套内容主题输出到 `webroot/themes/blog/<theme>/styles/`，window-ui / workout 输出到 `webroot/themes/<name>/styles/`
+- Less 主题编译为合并后的 `all.css` 和 `all.min.css`。三套内容主题输出到
+  `site-page/webroot/themes/blog/<theme>/styles/`，workout 到
+  `site-page/webroot/themes/workout/styles/`，window-ui 到
+  `common-utils/webroot/themes/window-ui/styles/`
 
 ## 目录结构
 
+**两个模块的源码都按 Maven 风格分层**（`src/main` 放产品代码、`src/test` 放测试）：
+
+```
+<模块>/src/
+├── main/
+│   ├── ts/          TypeScript 源码
+│   ├── themes/      Less + 图片
+│   └── html/        HTML 模板（只有 site-page 有）
+└── test/
+    └── ts/          单元测试
+```
+
+三条要记住的：
+
+- **产物里不带 `src/main` 这一层** —— `src/main/ts/basic.ts` 编译到
+  `webroot/scripts/ts/basic.js`，`src/main/themes/blog/` 输出到
+  `webroot/themes/blog/`。gulpfile 里源和产物各有一个路径常量
+  （`blogThemeSrc` / `blogThemeDst`），**不要合成一个**
+- **测试 import 被测代码走 `../../main/ts/xxx.js`** ——
+  `tsc` 的 `rootDir: "."` 会把 `src/main/ts` 和 `src/test/ts` 两棵子树
+  原样搬到 `.test-build/` 下，所以编译产物里的相对距离和源码一致
+- **`@@include` 的路径是相对 gulp 的 cwd**（`basepath: '@root'`），
+  所以片段写 `./src/main/html/parts/xxx.html`，不是 `./html/parts/`
+
 | 目录 | 用途 |
 |------|------|
-| `src/scripts/ts/` | TypeScript 源码，分 `ui/`、`blog/`、`trpg/`、`workout/` 四个子目录 |
-| `src/scripts/include/` | 外部类型声明 |
-| `src/themes/` | 按应用分四组：`blog/`（comm.less + hobbit / lo-fi / paper-print）、`window-ui/`、`workout/`、`trpg/`（纯图片）。含约 5.3 MB 图片资源 |
-| `src/html/` | HTML 页面：3 个真实页面（index / blog / gallery）+ 9 个 `test-*` 演示页 + `parts/` 下 5 个片段 |
-| `webroot/` | CDN 构建产物输出目录（gitignore） |
-| `dist/` | npm 包构建产物输出目录（gitignore） |
-| `docs/` | 文档：geo.md（几何库）、design-pkg.md（npm 打包可行性）、refactor-20261101.md（拆分方案研究）、tsconfig-info.md、styles.md、ui-style-win98.md、svg-img.md、doc-uml.md、node-env-cfg.md、study-jsx.md、ssh-secure.md、`img-plt/`（gnuplot 数学图表）、`uml/`（plantuml）、`win98-menu/`、cric.tt01.png |
+| `common-utils/src/main/ts/` | 库的 TypeScript 源码：11 个 `.ts`（6 个在 `ui/` 下）+ `env.demo.ts` |
+| `common-utils/src/main/themes/window-ui/styles/` | 窗口 UI 样式 `desktop.less`（没有 `images/` —— favicon 归 site-page） |
+| `common-utils/src/test/ts/` | 库的测试：14 个用例文件 + `_jsdom-setup.ts`，230 个用例 |
+| `common-utils/docs/` | **只关于库的文档**：geo.md（几何库）、design-pkg.md（npm 打包可行性）、ui-style-win98.md（窗口 UI 实现分析）、win-ui-css.md + `win98-menu/`（98.css 菜单移植）、`img-plt/`（gnuplot 图）、`uml/`（plantuml） |
+| `common-utils/webroot/`、`common-utils/dist/` | 库的 CDN / npm 产物（gitignore） |
+| `site-page/src/main/ts/` | site-page 项目的 TypeScript：`blog/`、`trpg/`、`workout/`、`ui/`、`include/` + 根上 4 个 |
+| `site-page/src/main/themes/` | 按应用分四组：`blog/`（theme-core + hobbit / lo-fi / paper-print）、`workout/`、`trpg/`（纯图片）、`site/`（favicon）。含约 5.3 MB 图片资源 |
+| `site-page/src/main/html/` | HTML 页面：`index.html`（站点入口，在根上）、`blog/`（blog / gallery 两个模板页）、`demo/`（9 个 `test-*` 演示页），外加 `parts/` 下 20 个片段 |
+| `site-page/src/test/ts/` | web 的测试：3 个用例文件 + `_jsdom-setup.ts`，33 个用例 |
+| `site-page/webroot/` | web 的 CDN 产物（gitignore） |
+| `site-page/envs.js` | **构建期的环境配置**（gitignore，从 `envs.sample.js` 复制）。只有 site-page 的 gulpfile 读它 —— 库侧不需要 |
+| `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，19 个用例 |
+| `docs/` | **关于 lib + web 全局或与代码无关的文档**：refactor-20261101.md（拆分方案）、plan-url-config-20261101.md（地址清理）、styles.md（两套主题系统）、tsconfig-info.md、doc-uml.md、svg-img.md、node-env-cfg.md、ssh-secure.md、study-jsx.md、`uml/`（通用 plantuml） |
 | `context/` | 需求与进度记录 |
+
+**新增文档放哪**：只讲库的放 `common-utils/docs/`，讲两边或讲环境/工具的放 `docs/`。
+判断依据是「文档的主题是谁」，不是「提到了谁」—— 比如
+`refactor-20261101.md` 大量提到库的文件，但它的主题是**整个拆分**，所以在 `docs/`。
+
+**site-page 目前没有专属文档** —— 2026-11-03 逐篇查过根 `docs/` 下 9 篇,
+按主题判没有一篇只属于 site-page（最像的两篇：`plan-url-config` 含库侧
+`web.ts` 的实质修复、`styles.md` 含 window-ui 一节,都跨两边）。
+真要加就建 `site-page/docs/`,第一个住户大概会是
+「沙盘视野算法」或「wiki 初始化流程」这类**只讲站点业务**的文档。
+判定过程见 `docs/refactor-20261101.md` 22.10 节。
+
+**两棵文档树的发布待遇不同**（2026-11-03 定,见 `docs/refactor-20261101.md` 22.9）：
+
+| 文档树 | 发不发 | 为什么 |
+|-------|-------|-------|
+| `common-utils/docs/` | ✅ 发 —— `site-page/build.sh` 拷进自己的 `webroot/docs/` | 讲库的用法,`html/index.html` 链接了其中 5 篇 |
+| `docs/`（根） | ❌ **不发** | 讲架构与重构过程,读者是开发者,在 git 里看 |
+
+所以**往根 `docs/` 新加的文档不能被页面链接** —— 要给访客看就放
+`common-utils/docs/`。架构用例盯着这条。
 
 ## 部署
 
-- 生产部署作为 CDN 静态资源，通过 `webroot/jadeutils.v3/` 路径提供服务
-- 拷贝到本地 nginx 的逻辑在 `build.sh` 末尾，当前是注释状态：
-  目标路径 `~/workspace/nginx/jadecdn/webroot/jadeutils.v3/`
-- 历史上有一个 `deploy-test.sh` 做部署，被 `.gitignore` 忽略，当前工作区中不存在该文件
+**两边各自发到不同的 CDN 服务器,不合并。** 两个模块的 `build.sh` 末尾各自 scp：
+
+| 模块 | 目标 | 对应 envs 的 root |
+|------|------|------------------|
+| `common-utils` | `jadecdn/webroot/jadeutils.v5` | `@@libRoot` / `@@libImportMapRoot` |
+| `site-page` | `jadecdn/webroot/jadesites.v5` | `@@staticRoot` / `@@importMapRoot` |
+
+- **`libRoot` 和 `staticRoot` 必须填不同的值** —— 填同值就退化成合并部署,
+  而且会让「用错 root」这类 bug 变得不可观测(踩过,见 19.8 节)
+- 两边的 `build.sh` 都在 `.gitignore` 里,从各自的 `build.sample.sh` 复制
+- 历史上有一个 `deploy-test.sh` 做部署,被 `.gitignore` 忽略,当前工作区中不存在该文件
+
+- **`build.sample.sh` 只做两件事**：排好构建顺序（库先 `build:pkg`）、
+  把两边的产物分别拷到本地 nginx 的 `jadeutils.v5` / `jadesites.v5`。
+  **它不再合并产物,根上也没有 `webroot/`** ——
+  恢复合并会让「用错 root」重新变成不可观测的问题,有架构用例盯着
 
 ## 编码模式
 
@@ -296,12 +454,97 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 - **静态方法工具类** — 基础层的 `NumUtil`、`StrUtil`、`TimeUtil`、`WebUtil` 等使用全静态方法的类
 - **应用入口** — `WikiPage.initWikiPage()`、`BlogPage.initBlogPage()`、`GalleryPage.initGalleryPage()` 是页面级入口，各自组织完整页面的初始化流程。博客与相册的共用部分抽到 `BlogCommon`
 - **DOM 求值推迟到方法内** — 浏览器 API（`HTMLElement`、`document`）不在模块顶层求值，而是放进需要显式调用的方法里（`WebUtil.initCustomElements()`、`initWorkItems()`），这样无 DOM 的环境（Node / SSR / 单元测试）import 不会抛 `ReferenceError`
-- **路径配置集中在 envs.js** — 页面里不写死产物路径。模块路径走 import map（基址 `importMapRoot`），第三方库和主题走 `@@cdn3rd` / `@@staticRoot`
+- **路径配置集中在 envs.js** — 页面里不写死产物路径。模块路径走 import map，第三方库走 `@@cdn3rd`，主题按归属走 `@@libRoot` 或 `@@staticRoot`（见下）
 
-## 切分边界：库 vs web 项目（阶段 2 进行中）
+## 页面引资源：按归属选 root
 
-代码正在切成两块 —— **公用 TypeScript 库**和 **web 项目**。目录还没搬
-（第 4 步），但代码层面的边界已经立起来了，`test/arch.split.test.ts` 钉着它。
+两个模块的产物部署到**不同路径**，所以 `envs.js` 里有两组 root：
+
+| 变量 | 指向 | 给谁用 |
+|------|------|-------|
+| `@@libRoot` | 库的产物（如 `jadeutils.v5`） | `themes/window-ui/` 的样式 |
+| `@@staticRoot` | site-page 的产物（如 `jadesites.v5`） | `themes/{blog,workout,trpg,site}/` |
+| `@@libImportMapRoot` | 库的 `scripts/ts/` | import map 里库的模块 |
+| `@@importMapRoot` | site-page 的 `scripts/ts/` | import map 里 site-page 的模块 |
+
+**判断依据是「这个文件是哪一边构建出来的」**，不是「这个页面属于哪一边」——
+site-page 的页面引用库的窗口 UI 样式，那也得走 `@@libRoot`。
+
+```html
+<!-- 窗口 UI 样式是库的产物 -->
+<link rel="stylesheet" href="@@libRoot/themes/window-ui/styles/all.min.css">
+<!-- favicon、内容主题是 site-page 的产物 -->
+<link rel="icon" href="@@staticRoot/themes/site/images/favicon.ico">
+<link rel="stylesheet" href="@@staticRoot/themes/blog/hobbit/styles/all.min.css">
+```
+
+**用错了在 dev 可能看不出来** —— 两个 root 填同一个值时，哪个都能解析到。
+只有真的分开部署才 404。这个坑踩过（`docs/refactor-20261101.md` 19.8 节），
+所以 `test/arch.split.test.ts` 有 4 个用例直接查**源码模板**里的 `@@xxxRoot`，
+按两边 `themes/` 下的实际目录名判断对不对。
+
+## HTML 页面的组织
+
+站点入口在 `html/` 根上，其余按用途分两组，`parts/` 下 20 个片段按需组合：
+
+```
+site-page/src/main/html/
+├── index.html                                        ← 站点入口
+├── blog/     blog.html  gallery.html                 ← 博客的两个模板页
+├── demo/     test-*.html ×9                          ← demo / 手动验证页
+└── parts/    meta-{charset,page}  favicon  importmap
+             vendor-{jquery,bootstrap,bootstrap-theme,datatable,syntaxhighlighter,showdown,mathjax,98css}
+             theme-{blog,window-ui,workout}
+             head  footer  blog-main  side-index  side-blog-index
+```
+
+- **12 个页面全部用片段组合 `<head>`，不要手写** —— 手写的那份不跟着
+  `envs.js` 的版本号走，升级库时会漏。`test/arch.split.test.ts` 有一条用例
+  按「片段负责的内容特征」反查页面，手写了会失败。
+  `vendor-bootstrap.html` **不含** `bootstrap-theme.min.css`，
+  要的页面另外 include `vendor-bootstrap-theme.html`（只有
+  `index.html` 和 `demo/test-jade-cdn.html` 要）
+
+- **`index.html` 在根上，别的页面深一层** —— 写相对链接前先看清在哪一层。
+  `parts/footer.html` 只被深一层的页面 include（`blog/` 两个 +
+  `demo/test-jade-blog.html`），所以里面写 `../index.html`
+- **第三方库版本号不写在页面里**，走 `envs.js` 的 `exports.vendors`（7 个键，
+  `v-` 前缀）：`@@cdn3rd/@@v-jquery/jquery.min.js`。
+  升级库只改 `envs.js` 一处
+- **嵌套 include 不继承外层 context** —— `@@page-title` 这些是 include 的
+  局部变量，不自动往下传。`head.html` 调 `meta-page.html` 时要显式递：
+
+  ```
+  @@include('./html/parts/meta-page.html', {
+      "page-title": "@@page-title", "description": "@@description"
+  })
+  ```
+
+  漏了不报错，`<title>` 静默变空
+- **指向文档的链接按页面深度算 `../`** —— 页面在 `webroot/html/` 下、
+  文档在 `webroot/docs/` 下，所以**在 `html/` 根上也要一层 `../`**：
+  `index.html` 写 `../docs/...`，`blog/`、`demo/` 下的写 `../../docs/...`。
+  `test/arch.split.test.ts` 有 2 个用例盯这个，层数算错会失败并报出该写几层
+- **`webroot/docs/` 里装的是库的文档**,由 `site-page/build.sh` 拷：
+
+  ```bash
+  cp -r ../common-utils/docs    webroot/      # → webroot/docs/geo.md 等
+  ```
+
+  **注意没有 `common-utils/` 这一层** —— 写 `../docs/geo.md`,
+  不是 `../docs/common-utils/geo.md`（这个坑踩过,见 22.9 节）。
+  库的文档和页面发到**同一个 CDN**（site-page 的）,所以相对路径成立,
+  不需要 `@@libRoot` 绝对 URL
+- **根 `docs/` 不发到 CDN,所以页面里不能链它** —— 那是架构与重构记录
+  （`refactor-20261101.md` 等）,读者是开发者而不是站点访客,在 git 仓库里看。
+  链了会 404,而且**只在部署之后才看得到**。
+  `test/arch.split.test.ts` 的「链接指向的文档文件存在」**只认
+  `common-utils/docs/`**,链到根 `docs/` 下的文档会失败并提示两种修法
+
+## 切分边界：common-utils vs site-page
+
+代码已经切成两块 —— `common-utils/`（公用 TypeScript 库）和 `site-page/`（站点），
+npm workspaces 管理。`test/arch.split.test.ts` 钉着边界约束。
 
 归库侧的 11 个文件：
 
@@ -311,21 +554,21 @@ ui/geo2d.ts  ui/canvas.ts  ui/webHtmlPage.ts  ui/uiResource.ts
 ui/UIWindow.ts  ui/bootstrapTemplate.ts
 ```
 
-归 web 侧的 14 个：`blog/*`、`trpg/*`、`workout/*`、`site.config.ts`、
+归 site-page 侧的 14 个：`blog/*`、`trpg/*`、`workout/*`、`site.config.ts`、
 `testJadeUtils.ts`、`ui/testJadeUI.ts`、`3rdLibTool.ts`。
 `env.demo.ts` 两边各留一份。
 
 三条硬约束，**改之前先看 `test/arch.split.test.ts` 会不会失败**：
 
-- **库侧不能 import web 侧的任何模块** —— 这是切分的硬前提，
+- **库侧不能 import site-page 侧的任何模块** —— 这是切分的硬前提，
   破坏了切开之后编译不过。最容易踩的是往 `index.ts` 加一行 `export *`
 - **库侧不能依赖全局脚本变量**（`$` / `MathJax` / `SyntaxHighlighter` /
   `showdown`）。这是 `3rdLibTool.ts` 拆成两半的目的 ——
-  纯模板函数进了 `ui/bootstrapTemplate.ts`，其余留在 `3rdLibTool.ts` 归 web
+  纯模板函数进了 `ui/bootstrapTemplate.ts`，其余留在 `3rdLibTool.ts` 归 site-page
 - **新增 `.ts` 文件要在两处登记归属**：`docs/refactor-20261101.md` 第 18 节
   和 `test/arch.split.test.ts` 的 `LIB` / `WEB` 清单。不登记那条测试会失败
 
-`index.ts` 是**库的**汇总入口，只汇总库模块。web 侧的汇总入口等第 4 步
+`index.ts` 是**库的**汇总入口，只汇总库模块。site-page 侧的汇总入口等第 4 步
 建目录时再加（决定 2：两边各一个）。
 
 完整的 16 条决定、文件级分配、剩余步骤都在
@@ -462,54 +705,114 @@ BlogCommon.loadUserInfo(apiRoot, userId, { userName: '#my-name' });
 
 ## 主题系统
 
-项目有四套独立的主题/资源体系，目录按「属于哪个应用」分组：
+项目有四套独立的主题/资源体系，按「属于哪个模块」分在两边：
 
 ```
-src/themes/
-├── blog/              # 三套内容主题 + 它们共用的 comm.less
-│   ├── comm.less
-│   ├── hobbit/
+common-utils/src/main/themes/   ← 库侧
+└── window-ui/styles/
+    └── desktop.less            408 行。外观主要来自 98.css（可选 peer 依赖），
+                                本文件只补它没有的部分 + 98.css 菜单移植
+
+site-page/src/main/themes/      ← 站点侧
+├── blog/                       三套内容主题 + 它们共用的 theme-core/
+│   ├── theme-core/             variables.less（默认值）+ structure.less（结构）
+│   ├── hobbit/                 各主题的 index.less 写死加载顺序
 │   ├── lo-fi/
 │   └── paper-print/
-├── window-ui/         # 独立：窗口 UI 样式 + 站点 favicon（favicon 待挪走，见下）
-├── trpg/              # 独立：沙盘素材，纯图片无 Less
-└── workout/           # 独立：肌肉图配色
+├── workout/                    独立：肌肉图配色（muscle.less，7 行）
+├── trpg/                       独立：沙盘素材，纯图片无 Less
+└── site/                       站点级资源：favicon.ico
 ```
 
-**产物同构**：`webroot/themes/blog/<theme>/styles/all.css`，
-其余三套仍在 `webroot/themes/<name>/`（深度没变）。
-页面引用也跟着带 `blog/`，见 `src/html/parts/head.html`。
+**产物各自输出到自己的 `webroot/`**，`build.sh` 部署时合并：
 
-**`window-ui/images/favicon.ico` 是待挪走的**：它是站点级资源，和窗口 UI 无关，
-放这里纯属历史沿革。阶段 2 切 workspaces 时挪到 web 项目侧
-（已定案，见 `docs/refactor-20261101.md` 18.5-4 和 18.12-(3)）。
-**现在不要单独挪** —— 它牵动 10 个页面的 `<link rel="icon">`，
-和切 workspaces 一起做才能一次验证完。
+| 源码 | 产物 |
+|------|------|
+| `common-utils/src/main/themes/window-ui/styles/` | `common-utils/webroot/themes/window-ui/styles/` |
+| `site-page/src/main/themes/blog/<theme>/` | `site-page/webroot/themes/blog/<theme>/` |
+| `site-page/src/main/themes/{workout,trpg,site}/` | `site-page/webroot/themes/{workout,trpg,site}/` |
+
+页面引用见 `site-page/src/main/html/parts/head.html`。
 
 ### 内容主题（hobbit / lo-fi / paper-print）
 
-定义在 `gulpfile.js` 的 `themes` 数组中，用于博客和 Wiki 页面。采用 **`comm.less` + `part.1.less`** 变量模式：
+定义在 `site-page/gulpfile.js` 的 `themes` 数组中，用于博客和 Wiki 页面。
+采用 **theme-core（默认值 + 结构）+ part.1.less（覆盖）** 的三层模式：
 
-- `src/themes/blog/comm.less` — 共享的结构样式（467 行），所有视觉属性通过 Less 变量引用（`@text-color-main`、`@page-bg-img`、`@title-color-fg-h1` 等共 86 个变量），只使用变量不定义值，因此无法独立编译
-- `src/themes/blog/<theme>/styles/part.1.less` — 各主题定义这些变量的具体值，通过不同的颜色/字体/图片实现视觉差异
-- 构建时 gulp 将两者 `concat` 成 `all.less`，编译为 `all.css` 和 `all.min.css`
-- **concat 顺序是主题文件在前、`comm.less` 在后**（`gulpfile.js` 第 76 行）。Less 变量是最后赋值生效，所以一旦给 `comm.less` 加默认值，默认值会盖掉主题的覆盖值。当前能跑是因为 `comm.less` 一个值都没定义
-- **那两个 glob 必须分开写，别合成 `src/themes/blog/**/*.less`** —— `comm.less` 的字典序排在 `hobbit/` 前面，合并之后 concat 顺序会反掉（主题色全失效），而且三套主题会被合进同一个文件。实测记录见 `docs/refactor-20261101.md` 第 17 节
+```
+site-page/src/main/themes/blog/
+├── theme-core/
+│   ├── variables.less     88 个变量的默认值（含 @asset-root）
+│   ├── structure.less     474 行结构规则，只引用变量、不定义值
+│   └── index.less         「只要默认外观」的独立入口
+└── <theme>/styles/
+    ├── index.less         ← **构建入口**，用 @import 写死加载顺序
+    ├── part.1.less        只覆盖本主题关心的变量
+    └── sh*.less           SyntaxHighlighter 主题
+```
+
+- **加载顺序由各主题的 `index.less` 写死，不再靠 gulp concat 的文件名排序**：
+
+  ```less
+  @import "../../theme-core/variables.less";   // 1. 默认值
+  @import "./part.1.less";                     // 2. 覆盖
+  @import "../../theme-core/structure.less";   // 3. 应用结构
+  ```
+
+  Less 是「最后赋值生效」，**顺序一反主题色就全失效**。
+  这是 2.4 节记的坑，阶段 3 换成 `@import` 才算根治
+- **gulp 只编译 `index.less` 一个入口**，产出仍叫 `all.css` / `all.min.css`，
+  页面引用没变。切分前是 concat 两个 glob
+- **新增主题只需覆盖想改的变量**，不用凑齐 87 个 —— 实测只定义 2 个变量
+  也能编出完整的 734 行样式
+- **三套主题的 `index.less` 顺序各不相同**：lo-fi 的 `green-code.less` 排在
+  `part.1.less` **之前**（照搬切分前的字典序 g < p）。
+  它只定义 `.syntaxhighlighter`、不碰变量，位置无关紧要，照搬是为了产物一致
+- **图片路径走 `@asset-root`**，默认 `"../images"`。换 CDN 就覆盖它。
+  改 `url()` 时**要保形** —— Less 保留源码的引号风格：
+  `url(~"@{asset-root}/x")` 产出不带引号、`url('...')` 单引号、`url("...")` 双引号
 
 ### window-ui 主题
 
-独立的窗口管理器 UI 样式，不参与 comm.less 体系：
-- `src/themes/window-ui/styles/desktop.less` — 桌面式窗口 UI 样式（`.desktop`、`.dock-bar`、`.title-bar-icon` 等），通过独立 gulp 任务 `process-style-window-ui` 编译
-- **对 98.css 有隐式依赖** — `UIWindow.ts` 往 DOM 上加 12 个 class，`desktop.less` 只定义了其中 7 个，剩下的 `window`、`window-body`、`title-bar`、`title-bar-text`、`inactive` 由第三方 98.css 提供。98.css 当前只是 `devDependencies` 的一项，测试页面从 `@@cdn3rd` 外链加载，`package.json` 里没有声明这层关系。不引 98.css 窗口就没有边框和标题栏
+独立的窗口管理器 UI 样式，**归库侧**，不参与 theme-core 的变量体系：
+
+- `common-utils/src/main/themes/window-ui/styles/desktop.less`（408 行、41 个规则块）——
+  通过 `common-utils/gulpfile.js` 的 `process-style-window-ui` 编译。
+  分两块：前 95 行是桌面/窗口/Dock，之后是 98.css 的菜单移植
+  （调研见 `common-utils/docs/win-ui-css.md`）
+- **98.css 是声明过的可选 peer 依赖**（`common-utils/package.json` 的
+  `peerDependencies` + `peerDependenciesMeta.optional`）。
+  实测 `UIWindow.ts` 往 DOM 上加 **13 个 class**，其中 10 个 `desktop.less`
+  自己定义，`title-bar` / `title-bar-text` / `inactive` **本项目完全不定义**；
+  另有 `window` / `window-body` 只出现在复合选择器里、视觉仍靠 98.css。
+  **不引 98.css 窗口就没有边框和标题栏**（行为不受影响，全在 TS 里）。
+  装法与加载顺序见 README
+- **`UIWindow.ts` 有两个常量在复述 98.css 的尺寸** ——
+  `WIN_BORDER_SIZE`（= `.window` 的 `padding: 3px` ×2，精确）和
+  `WIN_BODY_PADDING`（= `.window-body` 的 `margin: 8px` ×2 + 标题栏高度，
+  **后半是估值**）。换 98.css 版本时要重新量。两边都加了交叉注释。
+  （0.1.18→0.1.21 这两个值没变：`padding: 3px` 和
+  `--element-spacing: 8px` 两版相同）
+- **98.css 有三个版本号，含义不同，不要互相「对齐」**：
+
+  | 哪里 | 值 | 是什么 |
+  |------|-----|-------|
+  | `common-utils/package.json` 的 `peerDependencies` | `^0.1.19` | 真实下界。`desktop.less` 用 `--text-color`、demo 用 `.sunken-panel`，**0.1.19 才有** |
+  | 根 `package.json` 的 `devDependencies` | `^0.1.21` | 本地参考副本，给移植菜单时查样式用。构建**不读**它 |
+  | `envs.js` 的 `v-98css` | `0.1.18` | **CDN 上的目录名**，不是版本号 —— 那个目录里放的其实是 0.1.21 之后的源码版 |
+
+  **`v-98css` 不要跟着 package.json 改，改了会 404。**
+  要对齐得先在 CDN 上建按真实版本命名的目录。详见
+  `docs/refactor-20261101.md` 20.8 节
 
 ### workout 主题
 
-- `src/themes/workout/styles/muscle.less` — 肌肉图配色（7 行），通过 gulp 任务 `process-style-workout` 编译
-- `src/themes/workout/images/` — 约 1.9 MB 图片，是所有主题里体积最大的一套
+- `site-page/src/main/themes/workout/styles/muscle.less` — 肌肉图配色（7 行），通过 gulp 任务 `process-style-workout` 编译
+- `site-page/src/main/themes/workout/images/` — 约 1.9 MB 图片，是所有主题里体积最大的一套
 
 ### TRPG 资源（纯图片，无 CSS）
 
-`src/themes/trpg/` 仅包含 `images/` 目录下的 3 张图片（`default.jpg`、`icons.jpg`、`map.jpg`），供沙盘 Canvas 使用。无 `styles/` 目录，不参与 Less 编译。通过 gulp 任务 `process-style-trpg` 拷贝到 webroot。
+`site-page/src/main/themes/trpg/` 仅包含 `images/` 目录下的 3 张图片（`default.jpg`、`icons.jpg`、`map.jpg`），供沙盘 Canvas 使用。无 `styles/` 目录，不参与 Less 编译。通过 gulp 任务 `process-style-trpg` 拷贝到 webroot。
 
 ### 主题切换
 

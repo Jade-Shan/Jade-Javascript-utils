@@ -1,6 +1,11 @@
 # tsconfig.json 配置说明
 
-本文档记录 [tsconfig.json](../tsconfig.json) 中几个关键配置的决策原因与背景，便于后续维护。
+本文档记录 TypeScript 编译配置中几个关键选项的决策原因与背景，便于后续维护。
+
+切 workspaces 之后配置拆成了多份（见 `refactor-20261101.md` 第 18 节）：
+本文讲的这几项都在两边共享的 [tsconfig.base.json](../tsconfig.base.json) 里，
+各自的 [common-utils/tsconfig.json](../common-utils/tsconfig.json) /
+[site-page/tsconfig.json](../site-page/tsconfig.json) 只覆盖路径相关的项。
 
 ## 1. moduleResolution: "bundler"
 
