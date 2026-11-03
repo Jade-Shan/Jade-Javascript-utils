@@ -541,6 +541,69 @@ describe('页面指向 docs/ 的链接', () => {
 
 });
 
+describe('构建顺序：库先 build:pkg', () => {
+
+	/**
+	 * site-page 用包名 import 库，解析链四环：
+	 *
+	 *   node_modules/@jade-dungeon/jade-utils   ← npm install 建的符号链接
+	 *     → common-utils/package.json 的 exports（types 字段）
+	 *       → common-utils/dist/*.d.ts          ← **build:pkg 生成的**
+	 *         → tsc 拿到类型
+	 *
+	 * 前两环现成，只有 `dist/` 是产物 —— 所以**编译 site-page 之前
+	 * 库必须先 `build:pkg`**。顺序反了报 185 个错，其中只有 31 个
+	 * TS2307 指向真正的原因，131 个 TS2339 会把人带去查业务代码。
+	 *
+	 * 这条用例查的是**脚本里的顺序声明**，不实际跑构建。
+	 */
+
+	test('根上的 build 脚本把 build:pkg 排在 site-page 之前', () => {
+		const pkg = JSON.parse(
+			fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+		const build = pkg.scripts?.build as string | undefined;
+		assert.ok(build, '根 package.json 缺 build script');
+		const iLib = build.indexOf('common-utils');
+		const iWeb = build.indexOf('site-page');
+		assert.ok(iLib >= 0 && iWeb >= 0,
+			`build script 没有同时构建两边：${build}`);
+		assert.ok(iLib < iWeb,
+			`build script 把 site-page 排在了 common-utils 之前：${build}`
+			+ ' —— site-page 编译要用库的 dist/*.d.ts');
+	});
+
+	test('build.sample.sh 先 build:pkg 再构建 site-page', () => {
+		const txt = fs.readFileSync(path.join(ROOT, 'build.sample.sh'), 'utf8');
+		const live = txt.split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
+		const iPkg = live.search(/npm\s+run\s+build:pkg/);
+		const iWeb = live.search(/bash\s+site-page\/build\.sh/);
+		assert.ok(iPkg >= 0, 'build.sample.sh 里没有 build:pkg');
+		assert.ok(iWeb >= 0, 'build.sample.sh 里没有跑 site-page/build.sh');
+		assert.ok(iPkg < iWeb,
+			'build.sample.sh 把 site-page/build.sh 排在了 build:pkg 之前'
+			+ ' —— 站点编译要用库的 dist/*.d.ts');
+	});
+
+	test('exports 的 types 字段都指向 dist 下的 .d.ts', () => {
+		// 这是解析链的第 ② 环。types 写错或只写 default，
+		// tsc 拿不到类型，site-page 会报一片 TS2307 + TS2339
+		const pkg = JSON.parse(
+			fs.readFileSync(path.join(ROOT, 'common-utils/package.json'), 'utf8'));
+		const bad: Array<string> = [];
+		for (const [sub, v] of Object.entries(pkg.exports ?? {})) {
+			const e = v as Record<string, string>;
+			if (typeof e !== 'object' || !e.types) {
+				bad.push(`${sub}: 缺 types 字段`);
+			} else if (!/^\.\/dist\/.*\.d\.ts$/.test(e.types)) {
+				bad.push(`${sub}: types 不是 ./dist/*.d.ts（是 ${e.types}）`);
+			}
+		}
+		assert.deepEqual(bad, [],
+			`这些 exports 的 types 字段有问题：\n  ${bad.join('\n  ')}`);
+	});
+
+});
+
 describe('库的 exports 与实际文件', () => {
 
 	test('每条 exports 都指向真实存在的源文件', () => {

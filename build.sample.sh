@@ -1,23 +1,23 @@
 #!/bin/bash
-# 全量 CDN 构建 + 部署
+# site-page 项目的 CDN 构建
 #
-# 切 workspaces 之后这个脚本只做编排，实际构建在两边各自的 build.sh 里
-# （见 docs/refactor-20261101.md 第 18 节的决定 16）：
+# 三条链：主题 Less + 图片、TypeScript 编译（含压缩）、HTML 模板展开。
+# 产物在 site-page/webroot/。
 #
-#   common-utils/build.sh   window-ui 主题 + TS   → common-utils/webroot/
-#   site-page/build.sh   三套内容主题 + workout/trpg/site 图片 + TS + HTML
-#                                        → site-page/webroot/
+# **编译 TS 之前库必须先 build:pkg**。site-page 用包名 import 库，解析链：
 #
-# **顺序不能反**：site-page 侧用包名 import 库，要先有 common-utils/dist/ 才能编译。
+#   node_modules/@jade-dungeon/jade-utils   ← npm install 建的符号链接
+#     → common-utils/package.json 的 exports（types 字段）
+#       → common-utils/dist/*.d.ts          ← build:pkg 生成的，**唯一要先构建的一环**
 #
-# **两边各自发到不同的 CDN,不再合并**（第 22 节）。
-# 生产部署由两边自己的 build.sh 末尾 scp 完成：
+# 根上的 `npm run build` 和 build.sample.sh 已排好顺序。
+# 单独跑本脚本时，先 `npm run build:pkg -w common-utils`。
 #
-#   common-utils/webroot/  →  jadecdn/webroot/jadeutils.v5   （@@libRoot）
-#   site-page/webroot/     →  jadecdn/webroot/jadesites.v5   （@@staticRoot）
+# 漏跑的报错会带偏：实测 185 个错里只有 31 个 TS2307（找不到模块），
+# 其余 131 个 TS2339「属性不存在」都是类型解析失败的连带效应。
+# 看到成片 TS2339 先确认 common-utils/dist/ 在不在。
 #
-# 所以**根目录下不再有 webroot/** —— 原来那棵合并树已经没有用途了。
-# 本脚本只剩两件事：排好构建顺序、把两边的产物拷到本地 nginx 做开发期验证。
+# 用法：cd site-page && bash build.sh    或    npm run build -w site-page
 
 set -e
 cd "$(dirname "$0")"
