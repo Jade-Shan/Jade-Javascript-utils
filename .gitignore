@@ -6,7 +6,6 @@ package-lock.json
 deploy-test.sh
 upload.sh
 build.sh
-build.sh.backup
 envs.js
 jade-dungeon-jade-utils-*.tgz
 node_modules.backup.20260916.tar.gz 
