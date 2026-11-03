@@ -3,7 +3,7 @@
 
 ## 阻塞项：顶层 DOM 求值
 
-[web.ts:6](../src/scripts/ts/web.ts#L6) 的 `EscapeUnicode` 类写在模块顶层：
+[web.ts:6](../../common-utils/src/web.ts#L6) 的 `EscapeUnicode` 类写在模块顶层：
 
 ```typescript
 export class EscapeUnicode extends HTMLElement {
@@ -22,16 +22,16 @@ ES 模块的 `extends` 子句在**模块加载时**求值，而非实例化时�
 
 ### 1 影响范围会扩散
 
-[canvas.ts](../src/scripts/ts/ui/canvas.ts) 本身零 DOM 依赖（纯 Canvas 绘图抽象），
+[canvas.ts](../../common-utils/src/ui/canvas.ts) 本身零 DOM 依赖（纯 Canvas 绘图抽象），
 但因为 `import { WebUtil } from '../web.js'` 被连带污染。
-[UIWindow.ts](../src/scripts/ts/ui/UIWindow.ts) 同理。
+[UIWindow.ts](../../common-utils/src/ui/UIWindow.ts) 同理。
 
 纯浏览器环境使用不受影响，当前 CDN 部署方式也完全正常。
 但作为 npm 包，使用方一旦有 SSR（Next.js / Nuxt）、单元测试或 Node 脚本就会崩。
 
 ### 2 建议改法
 
-[web.ts:228](../src/scripts/ts/web.ts#L228) 的 `initCustomElements()` 本来就是需要显式调用的方法，
+[web.ts:228](../../common-utils/src/web.ts#L228) 的 `initCustomElements()` 本来就是需要显式调用的方法，
 把类定义挪进去，顶层只保留类型声明：
 
 ```typescript

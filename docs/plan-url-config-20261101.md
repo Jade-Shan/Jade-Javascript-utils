@@ -58,11 +58,11 @@ envs.js  →  gulp-file-include 的 @@变量  →  HTML 内联脚本  →  入�
 
 | 行 | 内容 | 类别 | 建议来源 |
 |----|------|------|---------|
-| [257](../src/scripts/ts/testJadeUtils.ts#L257) | `http://www.jade-dungeon.cn:8088/api/blog/loadUserById?userId=guest` | API 请求 | `apiRoot` |
-| [269](../src/scripts/ts/testJadeUtils.ts#L269) | `https://s21.ax1x.com/2024/06/29/pk6vkEF.jpg` | 外部图床图片 | **保留**，见 3.4 |
-| [270](../src/scripts/ts/testJadeUtils.ts#L270) | 同上，被注释掉的 `:8081/.../map.jpg` 备选 | 死代码 | 建议删除 |
-| [271](../src/scripts/ts/testJadeUtils.ts#L271) | `http://www.jade-dungeon.cn:8088/api/sandtable/parseImage?src=` | API 请求（图片代理） | `apiRoot` |
-| [332](../src/scripts/ts/testJadeUtils.ts#L332) | `loadCodeHightlight("http://www.jade-dungeon.cn:8081", "/3rd/SyntaxHighlighter/...")` | CDN 静态资源 | `cdn3rd` 或 `cdnRoot` |
+| [257](../site-page/src/testJadeUtils.ts#L257) | `http://www.jade-dungeon.cn:8088/api/blog/loadUserById?userId=guest` | API 请求 | `apiRoot` |
+| [269](../site-page/src/testJadeUtils.ts#L269) | `https://s21.ax1x.com/2024/06/29/pk6vkEF.jpg` | 外部图床图片 | **保留**，见 3.4 |
+| [270](../site-page/src/testJadeUtils.ts#L270) | 同上，被注释掉的 `:8081/.../map.jpg` 备选 | 死代码 | 建议删除 |
+| [271](../site-page/src/testJadeUtils.ts#L271) | `http://www.jade-dungeon.cn:8088/api/sandtable/parseImage?src=` | API 请求（图片代理） | `apiRoot` |
+| [332](../site-page/src/testJadeUtils.ts#L332) | `loadCodeHightlight("http://www.jade-dungeon.cn:8081", "/3rd/SyntaxHighlighter/...")` | CDN 静态资源 | `cdn3rd` 或 `cdnRoot` |
 
 第 332 行要注意：第二个参数 `/3rd/SyntaxHighlighter/2.1.364/scripts` 这个路径布局，
 与 HTML 里 `@@cdn3rd/SyntaxHighlighter/2.1.364/scripts` 的布局**不一致**（多了一层 `/3rd`）。
@@ -72,12 +72,12 @@ envs.js  →  gulp-file-include 的 @@变量  →  HTML 内联脚本  →  入�
 
 | 行 | 内容 | 类别 | 建议来源 |
 |----|------|------|---------|
-| [12](../src/scripts/ts/trpg/testJadeTRPG.ts#L12) | 代理 URL `:8088/api/sandtable/parseImage?src=` | API 请求 | `apiRoot` |
-| [15](../src/scripts/ts/trpg/testJadeTRPG.ts#L15) | `:8081/jadeutils.v3/themes/trpg/images/icons.jpg` | CDN 图片 | `cdnRoot` |
-| [17](../src/scripts/ts/trpg/testJadeTRPG.ts#L17) | `:8081/jadeutils.v3/themes/trpg/images/map.jpg` | CDN 图片 | `cdnRoot` |
-| [427](../src/scripts/ts/trpg/testJadeTRPG.ts#L427) | 同上 map.jpg（另一个函数里重复） | CDN 图片 | `cdnRoot` |
-| [428](../src/scripts/ts/trpg/testJadeTRPG.ts#L428) | 同上代理 URL（重复） | API 请求 | `apiRoot` |
-| [453-454](../src/scripts/ts/trpg/testJadeTRPG.ts#L453-L454) | `testSceneData` 里的 icons.jpg / map.jpg | CDN 图片 | `cdnRoot` |
+| [12](../site-page/src/trpg/testJadeTRPG.ts#L12) | 代理 URL `:8088/api/sandtable/parseImage?src=` | API 请求 | `apiRoot` |
+| [15](../site-page/src/trpg/testJadeTRPG.ts#L15) | `:8081/jadeutils.v3/themes/trpg/images/icons.jpg` | CDN 图片 | `cdnRoot` |
+| [17](../site-page/src/trpg/testJadeTRPG.ts#L17) | `:8081/jadeutils.v3/themes/trpg/images/map.jpg` | CDN 图片 | `cdnRoot` |
+| [427](../site-page/src/trpg/testJadeTRPG.ts#L427) | 同上 map.jpg（另一个函数里重复） | CDN 图片 | `cdnRoot` |
+| [428](../site-page/src/trpg/testJadeTRPG.ts#L428) | 同上代理 URL（重复） | API 请求 | `apiRoot` |
+| [453-454](../site-page/src/trpg/testJadeTRPG.ts#L453-L454) | `testSceneData` 里的 icons.jpg / map.jpg | CDN 图片 | `cdnRoot` |
 
 注意 453-454 在模块级常量 `testSceneData` 里，不在函数内，拿不到函数形参 ——
 需要改成在函数里拼 URL，或把 `testSceneData` 改成接受基址的工厂函数。见 4.3。
@@ -86,8 +86,8 @@ envs.js  →  gulp-file-include 的 @@变量  →  HTML 内联脚本  →  入�
 
 | 位置 | 内容 | 说明 |
 |------|------|------|
-| [wiki.ts:28](../src/scripts/ts/blog/wiki.ts#L28) | `apiRoot: "/"` 写死在 `PageConfig` 里 | 当前无页面调用 `initWikiPage()`，它是给外部 vimwiki 项目用的 |
-| [wiki.ts:46](../src/scripts/ts/blog/wiki.ts#L46) / [3rdLibTool.ts:36](../src/scripts/ts/3rdLibTool.ts#L36) | `../../vimwiki-theme/3rd/SyntaxHighlighter/2.1.364/scripts` | 指向本项目之外的目录 |
+| [wiki.ts:28](../site-page/src/blog/wiki.ts#L28) | `apiRoot: "/"` 写死在 `PageConfig` 里 | 当前无页面调用 `initWikiPage()`，它是给外部 vimwiki 项目用的 |
+| [wiki.ts:46](../site-page/src/blog/wiki.ts#L46) / [3rdLibTool.ts:36](../site-page/src/3rdLibTool.ts#L36) | `../../vimwiki-theme/3rd/SyntaxHighlighter/2.1.364/scripts` | 指向本项目之外的目录 |
 
 这两处**不建议本次动**：`initWikiPage()` 的调用方在另一个项目里，改了形参含义会影响那边。
 需要你确认 vimwiki 项目怎么调的，再单独处理。
@@ -329,7 +329,7 @@ rls 段用 `TODO-生产环境确定` 占位而不是填猜测值：这些地址�
 ### 8.2 顺带修掉的跨源判定 bug
 
 改完 `themeRoot` 后发现 TRPG demo 的图片不走代理了。根因在
-[web.ts](../src/scripts/ts/web.ts) 原来的判定条件：
+[web.ts](../common-utils/src/web.ts) 原来的判定条件：
 
 ```typescript
 if (cfg?.proxyUrl && url.indexOf('http') == 0) {   // 只认 http 开头
