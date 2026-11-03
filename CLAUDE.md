@@ -522,9 +522,13 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | 变量 | 指向 | 给谁用 |
 |------|------|-------|
 | `@@libRoot` | 库的产物（如 `jadeutils.v5`） | `themes/window-ui/` 的样式 |
-| `@@staticRoot` | site-page 的产物（如 `jadesites.v5`） | `themes/{blog,workout,trpg,site}/` |
+| `@@staticRoot` | site-page 的产物（如 `jadesites.v5`） | `themes/{blog,workout,trpg,site}/`、**`docs/` 下的文档链接** |
 | `@@libImportMapRoot` | 库的 `scripts/ts/` | import map 里库的模块 |
 | `@@importMapRoot` | site-page 的 `scripts/ts/` | import map 里 site-page 的模块 |
+
+**`docs/` 是个特例**：文件来源是 `common-utils/docs/`，但由
+`site-page/build.sh` 拷进自己的 `webroot/`、跟 site-page 的 CDN 发，
+**所以按「哪一边发出去的」算，走 `@@staticRoot`**（见第 27 节）。
 
 **判断依据是「这个文件是哪一边构建出来的」**，不是「这个页面属于哪一边」——
 site-page 的页面引用库的窗口 UI 样式，那也得走 `@@libRoot`。
@@ -580,11 +584,18 @@ site-page/src/main/html/
   ```
 
   漏了不报错，`<title>` 静默变空
-- **指向文档的链接现在是写死的绝对 URL**（2026-11-03 改，见第 27 节）——
-  `index.html` 那 5 条写
-  `http://www.jade-dungeon.cn:8081/jadesites.v5/docs/xxx.md`，
-  不再按页面深度算 `../`。原来盯层数的 2 条架构用例已经删掉
-  （一条空转、一条假通过，见 27.2 节），所以**改这些链接没有用例兜底了**
+- **指向文档的链接走 `@@staticRoot`，不再按页面深度算 `../`**
+  （2026-11-03 改，见第 27 节）：
+
+  ```html
+  <a href="@@staticRoot/docs/geo.md">链接</a>
+  ```
+
+  和 `@@staticRoot/themes/...` 同一个变量 —— 文档发到 site-page 的 CDN，
+  所以按「按归属选 root」的规则走 `staticRoot`。
+  **换 CDN 只改 `envs.js` 一处。**
+  原来盯层数的 2 条架构用例已经删掉（一条空转、一条假通过，见 27.2 节），
+  所以**改这些链接没有用例兜底了**
 - **`webroot/docs/` 里装的是库的文档**,由 `site-page/build.sh` 拷：
 
   ```bash
