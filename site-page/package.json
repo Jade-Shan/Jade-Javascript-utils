@@ -18,6 +18,22 @@
 			"types": "./dist/trpg/sandtable.d.ts",
 			"default": "./dist/trpg/sandtable.js"
 		},
+		"./sandbox-api": {
+			"types": "./dist/sandbox/sandboxApi.d.ts",
+			"default": "./dist/sandbox/sandboxApi.js"
+		},
+		"./sandbox-scene": {
+			"types": "./dist/sandbox/sandboxScene.d.ts",
+			"default": "./dist/sandbox/sandboxScene.js"
+		},
+		"./sandbox-windows": {
+			"types": "./dist/sandbox/sandboxWindows.d.ts",
+			"default": "./dist/sandbox/sandboxWindows.js"
+		},
+		"./sandbox-view": {
+			"types": "./dist/sandbox/sandboxView.d.ts",
+			"default": "./dist/sandbox/sandboxView.js"
+		},
 		"./blog-comm": {
 			"types": "./dist/blog/common.d.ts",
 			"default": "./dist/blog/common.js"

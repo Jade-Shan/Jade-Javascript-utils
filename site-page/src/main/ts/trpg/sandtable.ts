@@ -7,6 +7,18 @@ import { ImageProxyConfig, WebUtil } from '@jade-dungeon/jade-utils/web';
 export type VisibilityType = "default" | "glimmer" | "dark";
 
 /**
+ * 线段 Token 的命中容差（像素）
+ *
+ * 线段没有面积，点中它靠「距离小于容差」。取 6 是因为 `draw()` 的外层描边
+ * 就是 7px —— 容差比视觉宽度小一点，但足够让鼠标点得中。
+ * 调小了编辑器里几乎选不中墙。
+ */
+export const LINE_HIT_TOLERANCE = 6;
+
+/** 编辑器里线段两端那个方块手柄的半边长（像素） */
+export const LINE_HANDLE_SIZE = 3;
+
+/**
  * 观察者（玩家视角）
  */
 export interface IObserver {
@@ -44,10 +56,42 @@ export interface IToken2DRec {
 	y        : number,
 	/** 是否可见 */
 	visible : boolean,
+	/**
+	 * 是否可见（**存量数据的拼写错误**，`visible` 之误）
+	 *
+	 * 老沙盘应用一直这么存，而后端只存整块 JSON、不解析字段
+	 *（`save-map` 只取 `loginToken`），所以存量数据里是哪个拼写、读出来就是哪个。
+	 * 实测老样例场景文件里 57 处 `visiable`、0 处 `visible`。
+	 *
+	 * **读的时候两种都认**（见 {@link readVisible}）、
+	 * **写的时候只写 `visible`**（见各类的 `toRecord()`）——
+	 * 所以每个场景在 GM 第一次「保存并发布」之后就自动转正了。
+	 *
+	 * @deprecated 过渡字段。**不能提前删** —— 删了之后没转正过的场景会变成
+	 * 「整张图的棋子全部隐形」且不报错（`undefined` 按 falsy 处理）。
+	 * 要删得先确认 Redis 里所有场景都重存过一遍。
+	 */
+	visiable?: boolean,
 	/** 是否阻挡视野 */
 	blockView: boolean,
 	/** 颜色 */
 	color    : string,
+}
+
+/**
+ * 读取记录里的可见性，兼容存量数据的拼写错误
+ *
+ * 优先级：`visible` > `visiable` > `false`。
+ *
+ * **兜底是 `false` 而不是 `true`**：两个拼写都没有时说明这条记录既不是新数据
+ * 也不是老数据（字段真缺了）。棋子隐形是**可观测的异常**，
+ * 而默认可见会把「数据有问题」伪装成「一切正常」。
+ *
+ * @param rec - Token 记录
+ * @returns {boolean} 是否可见
+ */
+export function readVisible(rec: { visible?: boolean, visiable?: boolean }): boolean {
+	return rec.visible ?? rec.visiable ?? false;
 }
 /**
  * Token 2D 基础接口
@@ -68,6 +112,46 @@ export interface IToken2D extends CanvasShape2D {
 	draw(cvsCtx: CanvasRenderingContext2D): void;
 	/** 将 Token 转为可序列化的记录 */
 	toRecord(): IToken2DRec;
+
+	/**
+	 * 编辑器用：不带视野迷雾地绘制自己（看全图）
+	 *
+	 * 和 {@link IToken2D.draw} 的区别只在于**编辑器要看见隐形的 Token** ——
+	 * 墙壁、未触发的门这些 `visible: false` 的元素在玩家视图里不画，
+	 * 但编辑时必须看得见才能调。
+	 */
+	drawDesign(cvsCtx: CanvasRenderingContext2D): void;
+
+	/**
+	 * 点 `(x, y)` 是否命中本 Token
+	 *
+	 * 编辑器靠它做「点一下选中棋子」，玩家视图靠它判断「点的是不是自己的棋子」。
+	 */
+	isHit(x: number, y: number): boolean;
+
+	/**
+	 * 平移 `(dx, dy)` 之后的**新** Token
+	 *
+	 * ⚠️ **返回新实例，不改当前对象。** 几何层的坐标字段是 `readonly`，
+	 * 而且 `Rectangle2D` 把顶点与边缓存在构造函数里 —— 原地改坐标会让缓存
+	 * 失效，碰撞检测与阴影投射会静默按旧位置算（图形却画在新位置）。
+	 *
+	 * 所以调用方要把容器里的那一项**换成返回值**，不是改引用指向的对象。
+	 */
+	moveTo(dx: number, dy: number): IToken2D;
+
+	/**
+	 * 缩放之后的**新** Token
+	 *
+	 * 同 {@link IToken2D.moveTo}，返回新实例。
+	 *
+	 * @param dx - 水平方向的尺寸增量
+	 * @param dy - 垂直方向的尺寸增量。圆形只用 `dx`（半径增量）
+	 */
+	scaleTo(dx: number, dy: number): IToken2D;
+
+	/** 复制一个独立的 Token（图片裁剪也复制，不共享引用） */
+	clone(): IToken2D;
 }
 
 /**
@@ -148,7 +232,7 @@ export class CircleToken extends CanvasCircle2D implements IToken2D, ICircleToke
 			imgClip.imageElem = matched.imgElem;
 		}
 		let cc = new CircleToken(rec.id, rec.x, rec.y, rec.radius, 0, rec.color, rec.color, //
-			rec.visible, rec.blockView, rec.color, imgClip);
+			readVisible(rec), rec.blockView, rec.color, imgClip);
 		return cc;
 	}
 
@@ -226,6 +310,83 @@ export class CircleToken extends CanvasCircle2D implements IToken2D, ICircleToke
 		cvsCtx.restore();
 	}
 
+	/**
+	 * 编辑器用：画出自己 + 一圈虚线轮廓
+	 *
+	 * 轮廓的作用是让 `visible: false` 的 Token 在编辑器里也看得见 ——
+	 * 玩家视图不画它们，编辑时必须看得见才能调。
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 */
+	drawDesign(cvsCtx: CanvasRenderingContext2D): void {
+		this.draw(cvsCtx);
+		cvsCtx.save();
+		cvsCtx.setLineDash([4, 3]);
+		cvsCtx.lineWidth   = 1;
+		cvsCtx.strokeStyle = this.visible ? "rgba(0,0,0,0.6)" : "rgba(255,0,255,0.9)";
+		cvsCtx.beginPath();
+		cvsCtx.arc(this.c.x, this.c.y, this.radius + 1, 0, Geo2DUtils.PI_DOUBLE, true);
+		cvsCtx.stroke();
+		cvsCtx.restore();
+	}
+
+	/**
+	 * 点是否落在圆内（含边界）
+	 *
+	 * @param x - 点的 X 坐标
+	 * @param y - 点的 Y 坐标
+	 * @returns {boolean}
+	 */
+	isHit(x: number, y: number): boolean {
+		let dx = x - this.c.x;
+		let dy = y - this.c.y;
+		return dx * dx + dy * dy <= this.radius * this.radius;
+	}
+
+	/**
+	 * 平移后的新 CircleToken
+	 *
+	 * ⚠️ 返回新实例，不改当前对象，理由见 {@link IToken2D.moveTo}。
+	 *
+	 * @param dx - X 方向位移
+	 * @param dy - Y 方向位移
+	 * @returns {CircleToken} 位置变了、其余属性照搬的新 Token
+	 */
+	moveTo(dx: number, dy: number): CircleToken {
+		return new CircleToken(this.id, this.c.x + dx, this.c.y + dy, this.radius, //
+			this.lineWidth, this.strokeStyle, this.fillStyle, //
+			this.visible, this.blockView, this.color, { ...this.imgClip });
+	}
+
+	/**
+	 * 缩放后的新 CircleToken。圆形只认 `dx`（半径增量），`dy` 忽略
+	 *
+	 * 半径下限 1 —— 0 或负半径画不出来，而且 `isHit` 会永远返回 false，
+	 * 变成一个选不中、删不掉的幽灵 Token。
+	 *
+	 * @param dx - 半径增量
+	 * @param _dy - 未使用（圆形只有一个尺寸维度）
+	 * @returns {CircleToken}
+	 */
+	scaleTo(dx: number, _dy: number): CircleToken {
+		let radius = Math.max(1, this.radius + dx);
+		return new CircleToken(this.id, this.c.x, this.c.y, radius, //
+			this.lineWidth, this.strokeStyle, this.fillStyle, //
+			this.visible, this.blockView, this.color, { ...this.imgClip });
+	}
+
+	/**
+	 * 复制一份
+	 *
+	 * `imgClip` 浅拷贝一层 —— 裁剪参数独立，但 `imageElem` 共享同一个
+	 * `HTMLImageElement`（那是加载好的图片资源，本来就该共享）。
+	 *
+	 * @returns {CircleToken}
+	 */
+	clone(): CircleToken {
+		return this.moveTo(0, 0);
+	}
+
 }
 
 /**
@@ -300,7 +461,7 @@ export class RectangleToken extends CanvasRectangle2D implements IToken2D, IRect
 			imgClip.imageElem = matched.imgElem;
 		}
 		let rtg = new RectangleToken(rec.id, rec.x, rec.y, rec.width, rec.height, 0, //
-			rec.color, rec.color, rec.visible, rec.blockView, rec.color, imgClip);
+			rec.color, rec.color, readVisible(rec), rec.blockView, rec.color, imgClip);
 		return rtg;
 	}
 
@@ -336,6 +497,74 @@ export class RectangleToken extends CanvasRectangle2D implements IToken2D, IRect
 				this.imgClip.width, this.imgClip.height, dx, dy, dwidth, dheight);
 		}
 		cvsCtx.restore();
+	}
+
+	/**
+	 * 编辑器用：画出自己 + 一圈虚线轮廓（隐形的 Token 也看得见）
+	 * @param cvsCtx - Canvas 2D 上下文
+	 */
+	drawDesign(cvsCtx: CanvasRenderingContext2D): void {
+		this.draw(cvsCtx);
+		cvsCtx.save();
+		cvsCtx.setLineDash([4, 3]);
+		cvsCtx.lineWidth   = 1;
+		cvsCtx.strokeStyle = this.visible ? "rgba(0,0,0,0.6)" : "rgba(255,0,255,0.9)";
+		cvsCtx.strokeRect(this.x, this.y, this.width, this.height);
+		cvsCtx.restore();
+	}
+
+	/**
+	 * 点是否落在矩形内（含边界）
+	 *
+	 * @param x - 点的 X 坐标
+	 * @param y - 点的 Y 坐标
+	 * @returns {boolean}
+	 */
+	isHit(x: number, y: number): boolean {
+		return x >= this.x && x <= this.x + this.width
+			&& y >= this.y && y <= this.y + this.height;
+	}
+
+	/**
+	 * 平移后的新 RectangleToken
+	 *
+	 * ⚠️ 返回新实例。`Rectangle2D` 把 `vertexs` / `sides` 缓存在构造函数里，
+	 * 原地改 `x`/`y` 会让这些缓存停在旧位置 —— 阴影投射与碰撞检测会出错而不报错。
+	 *
+	 * @param dx - X 方向位移
+	 * @param dy - Y 方向位移
+	 * @returns {RectangleToken}
+	 */
+	moveTo(dx: number, dy: number): RectangleToken {
+		return new RectangleToken(this.id, this.x + dx, this.y + dy, this.width, this.height, //
+			this.lineWidth, this.strokeStyle, this.fillStyle, //
+			this.visible, this.blockView, this.color, { ...this.imgClip });
+	}
+
+	/**
+	 * 缩放后的新 RectangleToken
+	 *
+	 * 宽高下限都是 1，理由同 {@link CircleToken.scaleTo} —— 0 尺寸的 Token
+	 * 画不出来也选不中。
+	 *
+	 * @param dx - 宽度增量
+	 * @param dy - 高度增量
+	 * @returns {RectangleToken}
+	 */
+	scaleTo(dx: number, dy: number): RectangleToken {
+		let width  = Math.max(1, this.width  + dx);
+		let height = Math.max(1, this.height + dy);
+		return new RectangleToken(this.id, this.x, this.y, width, height, //
+			this.lineWidth, this.strokeStyle, this.fillStyle, //
+			this.visible, this.blockView, this.color, { ...this.imgClip });
+	}
+
+	/**
+	 * 复制一份（`imgClip` 浅拷贝，`imageElem` 共享）
+	 * @returns {RectangleToken}
+	 */
+	clone(): RectangleToken {
+		return this.moveTo(0, 0);
 	}
 }
 
@@ -396,7 +625,8 @@ export class LineToken extends CanvasLine2D implements IToken2D, ILineToken {
 	 * @returns {LineToken}
 	 */
 	static fromRecord(rec: ILineTokenRec): LineToken {
-		return new LineToken(rec.id, rec.x, rec.y, rec.x2, rec.y2, 6, "", rec.color, rec.visible, rec.blockView);
+		return new LineToken(rec.id, rec.x, rec.y, rec.x2, rec.y2, 6, "", rec.color,
+			readVisible(rec), rec.blockView);
 	}
 
 	/**
@@ -430,6 +660,95 @@ export class LineToken extends CanvasLine2D implements IToken2D, ILineToken {
 		cvsCtx.closePath();
 		cvsCtx.stroke();
 		cvsCtx.restore();
+	}
+
+	/**
+	 * 编辑器用：画出线段 + 两端的端点手柄
+	 *
+	 * **墙壁几乎都是 `visible: false`**（玩家不该看见墙本身，只受它遮挡），
+	 * 所以编辑器里这个方法是唯一能看见墙的途径。
+	 * 两端画方块手柄，提示这里可以拖。
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 */
+	drawDesign(cvsCtx: CanvasRenderingContext2D): void {
+		this.draw(cvsCtx);
+		cvsCtx.save();
+		cvsCtx.fillStyle = this.visible ? "rgba(0,0,0,0.6)" : "rgba(255,0,255,0.9)";
+		for (const p of [this.a, this.b]) {
+			cvsCtx.fillRect(p.x - LINE_HANDLE_SIZE, p.y - LINE_HANDLE_SIZE, //
+				LINE_HANDLE_SIZE * 2, LINE_HANDLE_SIZE * 2);
+		}
+		cvsCtx.restore();
+	}
+
+	/**
+	 * 点是否命中线段
+	 *
+	 * 线段没有面积，所以判定是「点到线段的距离小于容差」。
+	 * 容差取 {@link LINE_HIT_TOLERANCE}，和描边宽度相当 ——
+	 * 太小了编辑器里几乎点不中墙。
+	 *
+	 * 用点到**线段**（不是无限长直线）的距离：超出两端范围时取到端点的距离，
+	 * 否则取垂距。老代码的 `pointToLineDistence` 做的是同一件事。
+	 *
+	 * @param x - 点的 X 坐标
+	 * @param y - 点的 Y 坐标
+	 * @returns {boolean}
+	 */
+	isHit(x: number, y: number): boolean {
+		let dx = this.b.x - this.a.x;
+		let dy = this.b.y - this.a.y;
+		let len2 = dx * dx + dy * dy;
+		if (len2 < 1e-10) {
+			// 退化成一个点（两端重合），按到该点的距离判
+			return Geo2DUtils.distanceP2P({ x, y }, this.a) <= LINE_HIT_TOLERANCE;
+		}
+		// 投影参数夹到 [0,1]，保证落在线段上而不是延长线上
+		let t = ((x - this.a.x) * dx + (y - this.a.y) * dy) / len2;
+		t = Math.max(0, Math.min(1, t));
+		let px = this.a.x + t * dx;
+		let py = this.a.y + t * dy;
+		return Geo2DUtils.distanceP2P({ x, y }, { x: px, y: py }) <= LINE_HIT_TOLERANCE;
+	}
+
+	/**
+	 * 平移后的新 LineToken（两端一起移）
+	 *
+	 * ⚠️ 返回新实例，理由见 {@link IToken2D.moveTo}。
+	 *
+	 * @param dx - X 方向位移
+	 * @param dy - Y 方向位移
+	 * @returns {LineToken}
+	 */
+	moveTo(dx: number, dy: number): LineToken {
+		return new LineToken(this.id, this.a.x + dx, this.a.y + dy, //
+			this.b.x + dx, this.b.y + dy, //
+			this.lineWidth, this.strokeStyle, this.color, this.visible, this.blockView);
+	}
+
+	/**
+	 * 缩放线段：**只移动终点**，起点不动
+	 *
+	 * 线段没有「宽高」，所以缩放的语义就是拖动终点改变长度与方向 ——
+	 * 这也是老代码 `onScaleing` 的行为（编辑器里按 Alt 拖动）。
+	 *
+	 * @param dx - 终点的 X 增量
+	 * @param dy - 终点的 Y 增量
+	 * @returns {LineToken}
+	 */
+	scaleTo(dx: number, dy: number): LineToken {
+		return new LineToken(this.id, this.a.x, this.a.y, //
+			this.b.x + dx, this.b.y + dy, //
+			this.lineWidth, this.strokeStyle, this.color, this.visible, this.blockView);
+	}
+
+	/**
+	 * 复制一份
+	 * @returns {LineToken}
+	 */
+	clone(): LineToken {
+		return this.moveTo(0, 0);
 	}
 
 }
