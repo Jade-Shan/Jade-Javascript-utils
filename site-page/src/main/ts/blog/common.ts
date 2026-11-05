@@ -141,6 +141,15 @@ const imgPlaceHolder = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAGQCA
 
 
 /**
+ * 摘要后面那个「展开」链接的 class
+ *
+ * 这个链接是 {@link BlogCommon.renderArticle} 生成的，不是页面模板里的元素，
+ * 所以**不进 {@link BlogSelectors}** —— 那张表记的是 `src/main/html/parts/` 下
+ * 已有的结构，页面改版时要跟着改；这个 class 是本文件自己产自己用的。
+ */
+const EXPAND_LINK_CLASS = "atc-expand";
+
+/**
  * 用户信息接口响应
  */
 export interface UserInfoResp {
@@ -174,17 +183,61 @@ export interface PictureRec {
 
 /**
  * 用户文章
+ *
+ * 博客列表与相册列表共用这个结构，但**三个接口给的字段不一样**：
+ *
+ * | 来源 | `id` | `excerpt` | `text` | `album` |
+ * |------|------|-----------|--------|---------|
+ * | `api/blog/loadByUser` | 有 | 有（纯文本摘要） | **无** | 无 |
+ * | `api/blog/getArticle` | 有 | 有 | 有（Markdown） | 无 |
+ * | `api/gallery/loadByUser` | 有 | 无 | 有（Markdown） | 有 |
+ *
+ * 所以 `text` 和 `excerpt` 都是可选的。渲染时按「有 `text` 就当全文、
+ * 只有 `excerpt` 就当摘要」分支，见 {@link BlogCommon.renderArticle}。
  */
 export interface UserArticle {
+	/** 文章 id。调 `api/blog/getArticle` 取全文时要用它 */
+	id?: number;
 	/** 发布时间（时间戳） */
 	time: number;
 	/** 作者 */
 	auth: string;
 	/** 文章标题 */
 	title: string;
-	/** 文章正文（Markdown） */
-	text: string;
-	ablum?: Array<PictureRec>;
+	/**
+	 * 文章正文（**Markdown**，要过 showdown）。
+	 * 博客列表接口不返回它，只返回 {@link UserArticle.excerpt}
+	 */
+	text?: string;
+	/**
+	 * 纯文本摘要，**已经不是 Markdown，不要再过 showdown**。
+	 * 后端写入文章时就剥掉标记并截断好了（见 site-api 的 `makeExcerpt()`），
+	 * 这里只做 HTML 转义
+	 */
+	excerpt?: string;
+	/**
+	 * 相册的图片列表。
+	 *
+	 * **2026-11-05 前这个字段叫 `ablum`**（旧后端的拼写错误）。旧后端停用后
+	 * 与 `site-api` 一起改正了，两边必须同时改 —— 只改一边不报错，
+	 * 相册页会静默变成「只有说明文字、没有图」
+	 */
+	album?: Array<PictureRec>;
+};
+
+/**
+ * 单篇文章接口响应（`api/blog/getArticle`）
+ *
+ * 列表接口不再返回正文（实测正文平均 34.7 KB、最长 1.3 MB），
+ * 点「展开」时才按 id 来取这一篇的全文。
+ */
+export interface ArticleDetailResp {
+	/** 响应状态 */
+	status: string;
+	/** 文章，含完整正文（Markdown） */
+	article?: UserArticle;
+	/** 失败原因，`status` 为 `err` 时有 */
+	msg?: string;
 };
 
 /**
@@ -195,7 +248,13 @@ export interface UserArticlesResp {
 	status: string;
 	/** 当前页码 */
 	page: number;
-	/** 总页数（注：后端返回值比实际少 1，参见 CLAUDE.md 待跟进问题） */
+	/**
+	 * 总页数。
+	 *
+	 * 曾经后端算少 1（旧实现用 `parseInt((n+1)/pageSize)`），前端补过 `+ 1`。
+	 * site-api 改用 `Math.ceil` 之后值已经准确，**那个补偿已经去掉** ——
+	 * 再加回去会多出一个空白页
+	 */
 	pageCount: number;
 	/** 文章列表 */
 	articles: Array<UserArticle>;
@@ -263,15 +322,48 @@ export class BlogCommon {
 	}
 
 	/**
+	 * 渲染文章正文区
+	 *
+	 * 按「有 `text` 就是全文、只有 `excerpt` 就是摘要」分两种：
+	 *
+	 * | 情况 | 怎么渲染 |
+	 * |------|---------|
+	 * | 有 `text`（相册列表、展开后的文章） | 过 showdown 转 HTML |
+	 * | 只有 `excerpt`（博客列表） | **只转义，不过 showdown**，后面加「展开」链接 |
+	 *
+	 * 摘要是后端剥掉 Markdown 标记后的纯文本，再过一遍 showdown 会把正文里
+	 * 残留的 `*`、`_`、`#` 当成标记吃掉。
+	 *
+	 * @param atc - 用户文章
+	 * @param detailUrl - 按 id 生成取全文 URL 的函数。传了且 `atc.id` 有值时，
+	 *                    摘要后才会出现「展开」链接；相册列表不传
+	 * @returns {string} 正文区的 HTML 字符串
+	 */
+	private static renderArticleBody(atc: UserArticle,
+		detailUrl?: (id: number) => string): string //
+	{
+		// 相册的 text 很短但确实是 Markdown；展开后的文章也走这一支
+		if (atc.text && atc.text.length > 0) {
+			return ShowdownUtils.makeHtml(atc.text);
+		}
+		let excerpt = `<p>${StrUtil.escapeHtml(atc.excerpt ?? "")}</p>`;
+		if (!detailUrl || atc.id === undefined) { return excerpt; }
+		// 链接外面包个 <p> 只为跟摘要分行；样式走主题的 a 规则，不另加 class
+		return excerpt + `
+				<p><a class="${EXPAND_LINK_CLASS}" href="javascript:void(0);" data-article-id="${atc.id}">[展开]</a></p>`;
+	}
+
+	/**
 	 * 将文章对象渲染为 HTML
 	 *
 	 * @param atc - 用户文章
+	 * @param detailUrl - 按 id 生成取全文 URL 的函数，见 {@link BlogCommon.renderArticleBody}
 	 * @returns {string} 渲染后的 HTML 字符串
 	 */
-	static renderArticle(atc: UserArticle) {
+	static renderArticle(atc: UserArticle, detailUrl?: (id: number) => string) {
 		let date = new Date();
 		date.setTime(atc.time);
-		let st = ShowdownUtils.makeHtml(atc.text);
+		let st = BlogCommon.renderArticleBody(atc, detailUrl);
 		let html = `
 			<div class="item">
 				<div class="title">${StrUtil.escapeHtml(atc.title)}</div>
@@ -279,10 +371,10 @@ export class BlogCommon {
 				<div class="metadata metadata-auth"> by ${StrUtil.escapeHtml(atc.auth)}</div>
      			<div class="body">${st}</div>
     		</div>`;
-		if (atc.ablum && atc.ablum.length > 0) {
+		if (atc.album && atc.album.length > 0) {
 			html = html + `
 				<div class="row">`;
-			for (const pic of atc.ablum) {
+			for (const pic of atc.album) {
 				html = html + `
 					<div class="col-sm-6 col-md-3">
 						<div class="thumbnail">
@@ -302,6 +394,71 @@ export class BlogCommon {
 	}
 
 	/**
+	 * 取单篇全文，把列表里这一项的摘要换成完整正文
+	 *
+	 * 列表接口只给摘要，所以全文要单独请求一次。拿到的是 Markdown，
+	 * 由 showdown 转成 HTML 之后替换掉整个 `.body`（摘要和「展开」链接一起换掉）。
+	 *
+	 * 失败时只还原链接文字，不清空摘要 —— 摘要本来就在，展不开也还能读。
+	 *
+	 * @param link - 被点的「展开」链接
+	 * @param detailUrl - 按 id 生成取全文 URL 的函数
+	 * @returns {Promise<void>}
+	 */
+	private static async expandArticle(link: HTMLElement,
+		detailUrl: (id: number) => string): Promise<void> //
+	{
+		// 请求没回来之前连点多次，会发出多个请求、最后一次覆盖前面的结果
+		if (link.dataset.loading === "1") { return; }
+		let id = parseInt(link.dataset.articleId ?? "", 10);
+		let body = link.closest(".body");
+		if (!Number.isFinite(id) || !body) { return; }
+
+		let label = link.textContent ?? "[展开]";
+		link.dataset.loading = "1";
+		link.textContent = "[展开中…]";
+		try {
+			let resp: HttpResponse<ArticleDetailResp> =
+				await WebUtil.requestHttp<string, ArticleDetailResp>({
+					method: "GET", url: detailUrl(id)
+				}, {
+					onLoad: (evt, xhr, req) => {
+						let detail = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+						return { statusCode: xhr.status, statusMsg: xhr.statusText, body: detail };
+					},
+				});
+			let article = resp.body?.article;
+			// status 为 err 时 article 不在，msg 里是原因
+			if (resp.body?.status !== "success" || !article) {
+				throw new Error(resp.body?.msg ?? `load article ${id} failed`);
+			}
+			// 全文到手，整块换掉。换掉之后链接本身也不在了，不用再还原
+			body.innerHTML = BlogCommon.renderArticleBody(article);
+		} catch (e) {
+			console.error(`Expand article ${id} failed:`, e);
+			link.textContent = label;
+			delete link.dataset.loading;
+		}
+	}
+
+	/**
+	 * 给列表里所有「展开」链接绑点击
+	 *
+	 * 列表是 `innerHTML` 整块塞进去的，所以标签里写 `onclick` 不会生效，
+	 * 要在插入之后按 class 找出来逐个绑。
+	 *
+	 * @param container - 文章列表容器
+	 * @param detailUrl - 按 id 生成取全文 URL 的函数
+	 */
+	private static bindExpandLinks(container: Element,
+		detailUrl: (id: number) => string): void //
+	{
+		container.querySelectorAll<HTMLElement>(`a.${EXPAND_LINK_CLASS}`).forEach(link => {
+			link.onclick = () => { BlogCommon.expandArticle(link, detailUrl); };
+		});
+	}
+
+	/**
 	 * 加载文章列表（分页）并渲染到 `#articles`
 	 *
 	 * 文章列表和相册列表的接口返回结构一致，只有 URL 不同，
@@ -310,10 +467,13 @@ export class BlogCommon {
 	 * @param urlBuilder - 按页码生成请求 URL 的函数
 	 * @param currPage - 当前页码
 	 * @param slt - 页面选择器，缺省项走 {@link DEFAULT_BLOG_SELECTORS}
+	 * @param detailUrl - 按 id 生成取全文 URL 的函数。博客列表只返回摘要，
+	 *                    传了它摘要后面才有「展开」链接；相册列表自带全文，不用传
 	 * @returns {Promise<void>}
 	 */
 	static async loadArticleList(urlBuilder: (page: number) => string,
-		currPage: number, slt: BlogSelectors = {}) //
+		currPage: number, slt: BlogSelectors = {},
+		detailUrl?: (id: number) => string) //
 	{
 		let headers: SimpleMap<string, string> = new SimpleMap([["Accept","application/json, text/javascript, */*; q=0.01"]]);
 		let list: HttpResponse<UserArticlesResp> = await WebUtil.requestHttp<string, UserArticlesResp>({
@@ -335,17 +495,20 @@ export class BlogCommon {
 		let html = `
 			<div class="spacer"></div>`;
 		for (const t of articles.articles) {
-			html += BlogCommon.renderArticle(t);
+			html += BlogCommon.renderArticle(t, detailUrl);
 		}
 		let s = blogSelectors(slt);
 		let tk = document.querySelector(s.articleList);
 		// 旧列表即将被替换，先停掉上一页图片的懒加载监听
 		BlogCommon.lazyImgObserver?.disconnect();
 		if (tk) tk.innerHTML = html;
+		// 列表是整块 innerHTML 塞进去的，「展开」链接要在插入之后才能绑上
+		if (tk && detailUrl) { BlogCommon.bindExpandLinks(tk, detailUrl); }
 
-		// 服务端返回的pageCount是总页数不准确，所以需要+1。正在催促后端修改。等他们修好了，就可以去掉+1了。
-		let pagging = WebHtmlPage.renderPaging(articles.page, articles.pageCount + 1,
-			n => {BlogCommon.loadArticleList(urlBuilder, n, slt);});
+		// pageCount 直接用，不要再 +1。后端（site-api）已改用 Math.ceil，值是准的；
+		// 旧后端算少 1 时这里补过 +1，加回去会多出一个点进去空白的末页
+		let pagging = WebHtmlPage.renderPaging(articles.page, articles.pageCount,
+			n => {BlogCommon.loadArticleList(urlBuilder, n, slt, detailUrl);});
 		tk?.appendChild(pagging);
 
 		let br = document.createElement("br");

@@ -26,7 +26,7 @@ nvm use
 npm run build          # 两边都构建（先 common-utils 后 site-page）
 npm run build:pkg      # 只打库的 npm 包 → common-utils/dist/
                        # **编译 site-page 之前必须先跑这个**，见下
-npm test               # 跑三组测试：库 230 + 站点 33 + 架构 22
+npm test               # 跑三组测试：库 230 + 站点 52 + 架构 20
 npm run test:arch      # 只跑跨两边的架构约束测试
 
 # 全量 CDN 构建 + 分别部署到本地 nginx 的两个目标
@@ -54,14 +54,31 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
                                                   # rls 段不维护，见下文
 ```
 
-五个构建期注意事项：
+六个构建期注意事项：
 
-- 首次克隆仓库后必须先 `cp site-page/envs.sample.js site-page/envs.js` ——
-  它在 `.gitignore` 中，而 `site-page/gulpfile.js` 顶层 `require('./envs')`，
-  缺该文件时 **site-page 的**所有 gulp 任务都会挂。
+- **从 git 新拉下来的代码要做四步准备**（详见 `README.md` 与
+  `docs/refactor-20261101.md` 第 26 节）：
+
+  ```bash
+  nvm use                                        # .nvmrc 的 v22.22.2
+  npm install                                    # 根上跑，建 @jade-dungeon/* 符号链接
+  cp site-page/envs.sample.js site-page/envs.js  # 它在 .gitignore 里
+  cp build.sample.sh build.sh                    # 想部署时才需要
+  ```
+
+  `site-page/envs.js` 缺了的话 **site-page 的**所有 gulp 任务都会挂
+  （`site-page/gulpfile.js` 顶层 `require('./envs')`），报错只说找不到模块。
   **`common-utils` 不需要它** —— 库侧的 gulp 任务全是相对自己目录的路径，
   不读部署地址（见 `docs/refactor-20261101.md` 21.4 节）。
-  `build.sh` 同理，从 `build.sample.sh` 复制
+  **`common-utils/dist/` 不用手动管** —— 两道保险都会生成它：
+  `npm install` 的 `prepare` 钩子、库的 `build.sh` 第一步
+  （2026-11-03 改，见第 26 节）
+- **`npm install` 会顺便编译库的 TypeScript** ——
+  `common-utils/package.json` 的 `"prepare": "npm run build:pkg"`。
+  **所以库的 TS 编译不过时，`npm install` 整体失败、`node_modules` 一个都不装。**
+  从编译坏了的分支切过来想装依赖时会撞上，绕过要用
+  `npm install --workspaces=false`（**`--ignore-scripts` 对 workspace 成员的
+  `prepare` 不生效**，实测 npm 10.9.7）。详见 26.7 节
 - **构建顺序不能反：编译 site-page 之前，库必须先 `build:pkg`。**
   `site-page` 用包名 import 库，解析链有四环，缺任何一环都编译不过：
 
@@ -78,13 +95,22 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
   **第 ③ 环是唯一需要「先构建」的** —— ①由 `npm install` 建、②在源码里，
   只有 `dist/` 是产物。`tsc` 要的是 `.d.ts`（`types` 字段），不是 `.js`。
 
+  **走 `build.sh` 的路径不用操心**（2026-11-03 起）——
+  `common-utils/build.sh` 第一步就是 `npm run build:pkg`，
+  所以 `bash build.sh`（根）、`bash common-utils/build.sh`、
+  `npm run build -w common-utils` 都会先把 `dist/` 生成出来。
+
+  **只有绕过 build.sh 直接跑 gulp 时才要自己排顺序**：
+
   ```bash
   npm run build:pkg -w common-utils    # 先这个
   cd site-page && npx gulp             # 再这个
   ```
 
-  根上的 `npm run build` 和 `build.sample.sh` 已排好顺序，
-  **单独跑 site-page 时要自己注意**。
+  漏了的话 `site-page/build.sh` 会在构建开始**之前**拦住并提示该跑什么 ——
+  它按 `tsc` 真实的解析顺序查三个位置（根 `node_modules`、
+  本目录 `node_modules`、兄弟目录），换依赖形态不用改。
+  直接跑 `npx gulp` 绕过了这道检查，那才会撞上下面那堆报错。
 - **漏了 `build:pkg` 的报错会把人带偏** —— 实测删掉 `dist/` 编译 site-page：
   **185 个错，只有 31 个是 `TS2307`（找不到模块）**，
   其余 131 个 `TS2339`「属性不存在」+ 19 个 `TS7006`「隐式 any」
@@ -155,7 +181,7 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
 ## 单元测试
 
 ```bash
-npm test                     # 三组全跑：库 230 + 站点 33 + 架构 22
+npm test                     # 三组全跑：库 230 + 站点 52 + 架构 20
 npm test -w common-utils     # 只跑库的
 npm test -w site-page        # 只跑站点的
 npm run test:arch            # 只跑跨两边的架构约束
@@ -167,8 +193,8 @@ npm run build:test -w common-utils   # 只编译，不跑
 | 位置 | 用例数 | 测什么 |
 |------|-------|-------|
 | `common-utils/src/test/ts/` | 230 | 库的 14 个用例文件 + `_jsdom-setup.ts` |
-| `site-page/src/test/ts/` | 33 | 站点的 3 个用例文件 + `_jsdom-setup.ts`（各留一份） |
-| `test/`（根） | 22 | `arch.split.test.ts` —— 跨两边的边界约束 |
+| `site-page/src/test/ts/` | 52 | 站点的 4 个用例文件 + `_jsdom-setup.ts`（各留一份） |
+| `test/`（根） | 20 | `arch.split.test.ts` —— 跨两边的边界约束 |
 
 - 命名为 `<模块>.<主题>.test.ts`
 - 用 Node 内置的 `node:test` + `node:assert/strict`，**不装测试框架**
@@ -179,10 +205,11 @@ npm run build:test -w common-utils   # 只编译，不跑
   这一步由 `build:test` 脚本自动写入，和 `build:pkg` 对 `dist/` 做的是同一件事
 - **`arch.split.test.ts` 是唯一测源码而不测产物的** —— 它检查的是源码结构
   （有没有跨界的相对 import、库侧有没有全局脚本依赖、页面用对了 root、
-  指向文档的链接是不是坏的），产物里看不出来。
-  它有独立的 `tsconfig.arch.json`，输出到根上的 `.arch-build/`
+  页面用片段不手写、库先 `build:pkg`），产物里看不出来。
+  它有独立的 `tsconfig.arch.json`，输出到根上的 `.arch-build/`。
+  **原来还查「指向文档的链接」，2026-11-03 删了那 2 条**（见第 27 节）
 
-当前覆盖范围（285 个用例）：
+当前覆盖范围（302 个用例）：
 
 | 模块 | 需要 jsdom |
 |------|-----------|
@@ -196,14 +223,24 @@ npm run build:test -w common-utils   # 只编译，不跑
 | `web` 的 Cookie 读写、`initCustomElements()`、懒加载 | 是 |
 | `ui/webHtmlPage`（DOM 操作、分页、导航、主题切换） | 是 |
 | `blog/common` 的选择器表 + `loadUserInfo` | 是（外加假 XHR） |
+| `blog/common` 的摘要渲染、「展开」取全文、分页页数（`blog.article.test.ts`） | 部分（纯渲染不要，点击与翻页要，外加按 URL 分派的假 XHR + showdown 桩） |
+| `blog/blog` 的 `loadRecommendArticles`：**请求 URL 与读取字段的拼写**（同上文件） | 是（假 XHR） |
 | `ui/uiResource` 的注册表 + `resource` 的内置 provider | 否 |
 | `workout` 的渲染逻辑（`mergePathWithStyle` 纯函数，三个 SVG 渲染函数要 document） | 部分 |
 | `blog/wiki` 的 `DEFAULT_WIKI_PAGE_CONFIG` | 否 |
 
 未覆盖：`ui/canvas`、`ui/UIWindow` 的渲染部分、`trpg/sandtable`（jsdom 不实现
-`getContext('2d')`，要额外装 `canvas` 原生模块）、`blog/*` 的文章渲染
-（要 mock showdown）、`blog/wiki` 的 `initWikiPage()`（要 jQuery / MathJax /
-SyntaxHighlighter 三个全局库）、`3rdLibTool` 除导航栏模板外的部分。
+`getContext('2d')`，要额外装 `canvas` 原生模块）、`blog/wiki` 的 `initWikiPage()`
+（要 jQuery / MathJax / SyntaxHighlighter 三个全局库）、
+`3rdLibTool` 除导航栏模板与 `ShowdownUtils` 外的部分。
+
+**showdown 怎么桩的**：`blog.article.test.ts` 在**模块加载期**往 `globalThis`
+塞一个假 `showdown`，`makeHtml` 返回 `[md]...[/md]`。两个讲究：
+
+- 必须在模块加载期装 —— `ShowdownUtils` 把 Converter 实例缓存在模块级变量里，
+  第一次调用之后就不再读全局，等用例内部再装就晚了
+- 结果包成标记而不是真转 HTML，这样断言能直接看出某段文字**有没有**过 showdown。
+  摘要不该过、全文该过，正是这次要盯的那条线
 
 ### jsdom 的用法
 
@@ -428,10 +465,10 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | `site-page/src/main/ts/` | site-page 项目的 TypeScript：`blog/`、`trpg/`、`workout/`、`ui/`、`include/` + 根上 4 个 |
 | `site-page/src/main/themes/` | 按应用分四组：`blog/`（theme-core + hobbit / lo-fi / paper-print）、`workout/`、`trpg/`（纯图片）、`site/`（favicon）。含约 5.3 MB 图片资源 |
 | `site-page/src/main/html/` | HTML 页面：`index.html`（站点入口，在根上）、`blog/`（blog / gallery 两个模板页）、`demo/`（9 个 `test-*` 演示页），外加 `parts/` 下 20 个片段 |
-| `site-page/src/test/ts/` | web 的测试：3 个用例文件 + `_jsdom-setup.ts`，33 个用例 |
+| `site-page/src/test/ts/` | web 的测试：4 个用例文件 + `_jsdom-setup.ts`，52 个用例 |
 | `site-page/webroot/` | web 的 CDN 产物（gitignore） |
 | `site-page/envs.js` | **构建期的环境配置**（gitignore，从 `envs.sample.js` 复制）。只有 site-page 的 gulpfile 读它 —— 库侧不需要 |
-| `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，22 个用例 |
+| `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，20 个用例 |
 | `docs/` | **关于 lib + web 全局或与代码无关的文档**：refactor-20261101.md（拆分方案）、plan-url-config-20261101.md（地址清理）、styles.md（两套主题系统）、tsconfig-info.md、doc-uml.md、svg-img.md、node-env-cfg.md、ssh-secure.md、study-jsx.md、`uml/`（通用 plantuml） |
 | `context/` | 需求与进度记录 |
 
@@ -454,7 +491,8 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | `docs/`（根） | ❌ **不发** | 讲架构与重构过程,读者是开发者,在 git 里看 |
 
 所以**往根 `docs/` 新加的文档不能被页面链接** —— 要给访客看就放
-`common-utils/docs/`。架构用例盯着这条。
+`common-utils/docs/`。**原来有架构用例盯着这条,2026-11-03 删了**
+（页面链接改成绝对 URL 之后那条用例失效,见第 27 节）—— 现在靠人记得。
 
 ## 部署
 
@@ -494,9 +532,13 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | 变量 | 指向 | 给谁用 |
 |------|------|-------|
 | `@@libRoot` | 库的产物（如 `jadeutils.v5`） | `themes/window-ui/` 的样式 |
-| `@@staticRoot` | site-page 的产物（如 `jadesites.v5`） | `themes/{blog,workout,trpg,site}/` |
+| `@@staticRoot` | site-page 的产物（如 `jadesites.v5`） | `themes/{blog,workout,trpg,site}/`、**`docs/` 下的文档链接** |
 | `@@libImportMapRoot` | 库的 `scripts/ts/` | import map 里库的模块 |
 | `@@importMapRoot` | site-page 的 `scripts/ts/` | import map 里 site-page 的模块 |
+
+**`docs/` 是个特例**：文件来源是 `common-utils/docs/`，但由
+`site-page/build.sh` 拷进自己的 `webroot/`、跟 site-page 的 CDN 发，
+**所以按「哪一边发出去的」算，走 `@@staticRoot`**（见第 27 节）。
 
 **判断依据是「这个文件是哪一边构建出来的」**，不是「这个页面属于哪一边」——
 site-page 的页面引用库的窗口 UI 样式，那也得走 `@@libRoot`。
@@ -552,25 +594,34 @@ site-page/src/main/html/
   ```
 
   漏了不报错，`<title>` 静默变空
-- **指向文档的链接按页面深度算 `../`** —— 页面在 `webroot/html/` 下、
-  文档在 `webroot/docs/` 下，所以**在 `html/` 根上也要一层 `../`**：
-  `index.html` 写 `../docs/...`，`blog/`、`demo/` 下的写 `../../docs/...`。
-  `test/arch.split.test.ts` 有 2 个用例盯这个，层数算错会失败并报出该写几层
+- **指向文档的链接走 `@@staticRoot`，不再按页面深度算 `../`**
+  （2026-11-03 改，见第 27 节）：
+
+  ```html
+  <a href="@@staticRoot/docs/geo.md">链接</a>
+  ```
+
+  和 `@@staticRoot/themes/...` 同一个变量 —— 文档发到 site-page 的 CDN，
+  所以按「按归属选 root」的规则走 `staticRoot`。
+  **换 CDN 只改 `envs.js` 一处。**
+  原来盯层数的 2 条架构用例已经删掉（一条空转、一条假通过，见 27.2 节），
+  所以**改这些链接没有用例兜底了**
 - **`webroot/docs/` 里装的是库的文档**,由 `site-page/build.sh` 拷：
 
   ```bash
   cp -r ../common-utils/docs    webroot/      # → webroot/docs/geo.md 等
   ```
 
-  **注意没有 `common-utils/` 这一层** —— 写 `../docs/geo.md`,
-  不是 `../docs/common-utils/geo.md`（这个坑踩过,见 22.9 节）。
-  库的文档和页面发到**同一个 CDN**（site-page 的）,所以相对路径成立,
-  不需要 `@@libRoot` 绝对 URL
+  **这一步不能省** —— 那 5 条链接指向的是 `jadesites.v5/docs/`，
+  也就是 **site-page 自己的 CDN**，而文件来源是 `common-utils/docs/`。
+  **链接是绝对 URL 不代表不用搬**，那只是把地址写死了，
+  文件还是得送到那个地址去。
+  **注意没有 `common-utils/` 这一层**（这个坑踩过,见 22.9 节）
 - **根 `docs/` 不发到 CDN,所以页面里不能链它** —— 那是架构与重构记录
   （`refactor-20261101.md` 等）,读者是开发者而不是站点访客,在 git 仓库里看。
   链了会 404,而且**只在部署之后才看得到**。
-  `test/arch.split.test.ts` 的「链接指向的文档文件存在」**只认
-  `common-utils/docs/`**,链到根 `docs/` 下的文档会失败并提示两种修法
+  原来有一条用例盯这个（只认 `common-utils/docs/`）,
+  **链接改成绝对 URL 之后那条用例失效、已删** —— 现在靠人记得
 
 ## 切分边界：common-utils vs site-page
 
@@ -875,14 +926,59 @@ curl -s -D - -o /dev/null "http://localhost:8082/api/blog/loadUserById?userId=u0
 （都是 `onerror` + `status=0`），光看前端代码分不出来，必须查后端日志或用 `curl` 探活。
 详见 `docs/refactor-20261101.md` 第 10.6 节。
 
-## 待跟进的后端 API 问题
+## 后端 API：原来那两个「等后端修」的问题都修完了
 
-以下的问题要等后端的API修复以后才能修改。检查代码与修复问题时要保留以下表中的问题：
+**这一节以前列的是「要原样保留、等后端修」的坑。2026-11-05 两个都清了** ——
+后端换成本仓库的 `site-api/`，前后端在同一个仓库里，不用再互相等。
 
-| API | 问题 | 前端影响 | 状态 |
-|-----|------|---------|------|
-| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog/blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
-| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog/common.ts` 第 256 行对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+| 原来的问题 | 现在 |
+|-----------|------|
+| `pageCount` 比实际少 1，前端补 `pageCount + 1` | `calcPageCount()` 用 `Math.ceil`，前端的 `+ 1` **已去掉**。加回去会多出一个空白末页 |
+| 路径 `loadRecommandArticles` / 字段 `recommands` 拼写错误 | 两处都改成 `loadRecommendArticles` / `recommends`，**前后端一起改的** |
+
+所以：
+
+- **别再「照顾」这两个坑** —— 比如看到 `recommends` 以为是写错了想改回 `recommands`，
+  或者觉得分页少一页想补 `+ 1`。两个都是**改回去才会错**
+- 拼写改动涉及 **URL**，不只是字段名。旧前端 `Jade-Dungeon-page` 已停用，
+  改之前全盘搜过没有别的调用方
+- `loadRecommendArticles` **仍然返回硬编码假数据**（这部分按决策照搬，没动）。
+  要换成真查询见 `site-api/docs/todo-next.md` 的 2.3
+
+## blog 列表的摘要与展开
+
+后端 `site-api` 的 `api/blog/loadByUser` **不再返回正文**（实测正文平均 34.7 KB、
+最长 1.3 MB，列表页带着它翻页很慢），只返回 `excerpt`。所以列表页是这样的：
+
+```
+列表（只有 excerpt）  →  点「展开」  →  api/blog/getArticle?id=N  →  全文（Markdown）
+                                                                    →  showdown 转 HTML
+```
+
+三条容易踩的：
+
+- **`excerpt` 不是 Markdown，不要过 showdown** —— 后端写入文章时就用
+  `makeExcerpt()` 剥掉标记并截断到 200 字了（纯图片的文章给 `（图片）` 占位）。
+  再过一遍 showdown 会把正文里残留的 `*`、`_`、`#` 当成标记吃掉。
+  `renderArticleBody()` 按「有 `text` 就过 showdown、只有 `excerpt` 就只转义」分支
+- **`pageCount` 直接用，不要 `+ 1`** —— 旧后端算少 1 时补过，现在加回去会多出
+  一个点进去空白的末页。`teo` 的 36 篇正好是当年撞上这个 bug 的那组数据
+- **三个接口返回的字段形状不一样**，所以 `UserArticle` 的 `text` / `excerpt` / `id`
+  都是可选的：
+
+  | 接口 | `id` | `excerpt` | `text` | `album` |
+  |------|------|-----------|--------|---------|
+  | `api/blog/loadByUser` | 有 | 有 | **无** | 无 |
+  | `api/blog/getArticle` | 有 | 有 | 有 | 无 |
+  | `api/gallery/loadByUser` | 有 | 无 | 有 | 有 |
+
+  相册列表自带全文，所以 `loadArticleList()` 的 `detailUrl` 形参**只有博客页传** ——
+  不传就不渲染「展开」链接。
+
+「展开」链接的 class 是 `atc-expand`，**不在 `BlogSelectors` 里** ——
+那张表记的是 `src/main/html/parts/` 下页面模板已有的结构，
+这个 class 是 `blog/common.ts` 自己产自己用的。
+行为由 `site-page/src/test/ts/blog.article.test.ts` 的 14 个用例盯着。
 
 
 

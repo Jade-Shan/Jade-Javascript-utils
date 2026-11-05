@@ -7,11 +7,42 @@ Jade-Javascript-Utils
 
 ## 本地开发
 
-### 首次克隆后的必做一步
+### 从 git 新拉下来之后的准备
+
+四步，照着跑就能构建：
 
 ```bash
-cp site-page/envs.sample.js site-page/envs.js
+nvm use                                        # 1. 切到 .nvmrc 的 Node（v22.22.2）
+npm install                                    # 2. 装依赖 + 建 workspace 符号链接
+cp site-page/envs.sample.js site-page/envs.js  # 3. 它在 .gitignore 里，必须手动拷
+bash build.sh                                  # 4. 先 cp build.sample.sh build.sh
 ```
+
+`.gitignore` 里的这些东西，新克隆的代码里都没有：
+
+| 缺什么 | 谁需要 | 怎么补 |
+|-------|-------|-------|
+| `node_modules/` 与 `@jade-dungeon/*` 符号链接 | 两边 | `npm install`（在**根上**跑，workspaces 会建链接） |
+| `site-page/envs.js` | 只有 site-page | `cp site-page/envs.sample.js site-page/envs.js` |
+| `common-utils/dist/`（库的 `.d.ts`） | site-page 编译要用 | **不用手动管** —— `npm install` 的 `prepare` 钩子会生成，`common-utils/build.sh` 也会再做一次 |
+| 三个 `build.sh` | 想部署时 | `cp build.sample.sh build.sh`（根与两个模块各一份，按需） |
+
+第三行那个 `dist/` 是容易踩的 —— 详见下面「构建顺序」一节。
+
+#### ⚠ `npm install` 会编译库的 TypeScript
+
+`common-utils/package.json` 有 `"prepare": "npm run build:pkg"`，
+所以 `npm install` 会顺便编译库、生成 `dist/`。
+**这意味着库的 TS 编译不过时，`npm install` 整体失败，`node_modules` 一个都不装。**
+
+从一个编译坏了的分支切过来、想装新依赖时会撞上。绕过的办法：
+
+```bash
+npm install --workspaces=false   # ✅ 跳过 workspace 的 prepare，只装根上的依赖
+npm install --ignore-scripts     # ❌ 没用 —— 对 workspace 成员的 prepare 不生效
+```
+
+#### 关于 `site-page/envs.js`
 
 `site-page/envs.js` 在 `.gitignore` 中（各环境的地址不同，不入版本控制），
 而 `site-page/gulpfile.js` 顶层就 `require("./envs")`。
@@ -28,11 +59,13 @@ cp site-page/envs.sample.js site-page/envs.js
 - **`staticRoot` 不要填 `"."`。** 页面与静态资源分属不同服务时（比如页面在 8082、
   资源在 8081），相对路径会拼到页面所在的服务上，取不到资源
 
+只维护 `dev` 段，`rls` 段本仓库不管（生产的配置不进这个仓库）。
+
 ### 常用命令
 
 ```bash
 nvm use                      # 切到 .nvmrc 指定的 Node 版本（v22.22.2）
-npm test                     # 跑单元测试（库 230 + 站点 33 + 架构 22）
+npm test                     # 跑单元测试（库 230 + 站点 52 + 架构 20）
 npm run build:pkg            # 构建 npm 包到 common-utils/dist/
 bash build.sh                # 两边 CDN 构建 + 分别部署（先 cp build.sample.sh build.sh）
 ```
@@ -49,15 +82,35 @@ node_modules/@jade-dungeon/jade-utils      ← npm install 建的符号链接
 ```
 
 前两环现成（一个由 `npm install` 建、一个在源码里），
-**只有 `dist/` 是产物** —— 所以：
+**只有 `dist/` 是产物**，而且它在 `.gitignore` 里 ——
+**从 git 新拉下来的代码里没有它**。
+
+**走 `build.sh` 的话不用操心**：`common-utils/build.sh` 自己第一步就是
+`npm run build:pkg`，所以下面三条命令都会先把 `dist/` 生成出来：
+
+```bash
+bash build.sh                      # 根上，编排两边
+bash common-utils/build.sh         # 只构建库（dist/ + webroot/）
+npm run build -w common-utils      # 同上
+```
+
+**只有绕过 build.sh 直接跑 gulp 时才要自己注意**：
 
 ```bash
 npm run build:pkg -w common-utils    # 先这个，生成 dist/*.d.ts
 cd site-page && npx gulp             # 再编译站点
 ```
 
-根上的 `npm run build` 和 `build.sh` 已经排好顺序，
-**单独构建 site-page 时才需要自己注意**。
+漏跑的话 `site-page/build.sh` 会**在构建开始之前**拦住并告诉你跑什么：
+
+```
+!!! 库的 dist/*.d.ts 不存在，site-page 编译不过。
+    先跑这个：
+      bash ../common-utils/build.sh          # 它自己会先 build:pkg
+```
+
+这道检查按 `tsc` 真实的解析顺序找三个位置（根 `node_modules`、
+本目录 `node_modules`、兄弟目录），所以换依赖形态也不用改。
 
 另外：**改了库的 `.ts` 之后要重跑 `build:pkg`，site-page 才看得到** ——
 它依赖的是库的产物而不是源码。
@@ -381,12 +434,25 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 
 ---
 
-## 待跟进的后端 API 问题
+## 后端 API 的两个历史问题（都已修）
 
-| API | 问题 | 前端影响 | 状态 |
-|-----|------|---------|------|
-| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog/blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
-| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog/common.ts` 的 `loadArticleList()` 里对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+前后端现在同在一个仓库（后端是 `site-api/`），原来「等后端修」的两处 2026-11-05 一起清了：
+
+| 原来的问题 | 现在 | 注意 |
+|-----------|------|------|
+| `loadByUser` 的 `pageCount` 少 1 | `Math.ceil` 算页数，前端的 `pageCount + 1` 已去掉 | 补回 `+ 1` 会多出一个空白末页 |
+| `loadRecommandArticles` / `recommands` 拼写错误 | 改成 `loadRecommendArticles` / `recommends` | **URL 也改了**，不只是字段名 |
+
+两处都是**改回旧写法才会出错**。`loadRecommendArticles` 仍返回硬编码假数据，这部分没动。
+
+### blog 列表改成返回摘要（2026-11-05）
+
+`api/blog/loadByUser` 不再返回正文，只返回 `excerpt`（纯文本摘要，200 字上限）。
+列表页显示摘要 + 一个「展开」链接，点了才去 `api/blog/getArticle?id=N` 取全文，
+由 showdown 把 Markdown 转成 HTML 替换掉这一项。
+
+**`excerpt` 已经不是 Markdown 了，不要再过 showdown** ——
+后端写入文章时就剥掉标记了，再转一次会把正文里残留的 `*`、`_`、`#` 当标记吃掉。
 
 ---
 

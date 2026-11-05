@@ -13,6 +13,11 @@
  * - site-page 侧引用库是不是统一走包名，没有混用相对路径
  * - 库的 `exports` 和实际文件对不对得上
  *
+ * **20 条**（2026-11-03 从 22 条减到 20）——
+ * 删掉的两条都是关于「页面指向 docs/ 的链接」的，
+ * `index.html` 改用写死的绝对 URL 之后一条空转、一条假通过，
+ * 见 `docs/refactor-20261101.md` 27.2 节。
+ *
  * 这是本仓库唯一一个**测源码而不测编译产物**的测试文件
  * （其余都测各自 `.test-build/` 下的产物，见 12.2 节）——
  * 因为约束本身是关于源码结构和配置的。
@@ -422,87 +427,22 @@ describe('HTML 页面用片段而不是手写', () => {
 
 });
 
-describe('页面指向 docs/ 的链接', () => {
+describe('部署模型：两个 CDN 各自独立', () => {
 
 	/**
-	 * 这条链路坏过三次，每次原因都不同：
+	 * 这一组原来有 3 条，**2026-11-03 删掉了两条关于文档链接的**
+	 * （见 docs/refactor-20261101.md 27.2 节）：
 	 *
-	 * 1. 18.16 把只讲库的文档挪进 `common-utils/docs/`，页面没跟着改（路径不对）
-	 * 2. 阶段 4 把页面挪进 `html/<组>/`，`../` 的层数不对了
-	 * 3. 部署模型改成两个 CDN 各自独立（第 22 节），
-	 *    `site-page/build.sh` 改为自己 `cp -r ../common-utils/docs webroot/` ——
-	 *    **库的文档落在 `webroot/docs/` 下，不再有 `common-utils/` 这一层**
+	 * - ~~链接指向的文档文件存在~~ —— `index.html` 那 5 条文档链接改成了
+	 *   写死的绝对 URL（`http://...:8081/jadesites.v5/docs/xxx.md`），
+	 *   而这条用例是按**相对路径**解析的（正则 `[^"#:]*` 排除了含 `:` 的串），
+	 *   改完之后它一个链接都匹配不到，等于空转
+	 * - ~~`site-page/build.sh` 把库的文档拷进自己的产物~~ ——
+	 *   它的正则**没排注释行**，所以那行 `cp` 被注释掉时照样「通过」。
+	 *   是个假通过，不如没有
 	 *
-	 * 所以现在的事实是：
-	 *
-	 *   site-page/build.sh:  cp -r ../common-utils/docs  webroot/
-	 *                        → webroot/docs/{geo.md, ui-style-win98.md, win98-menu/, ...}
-	 *
-	 * 库的文档和页面**发到同一个 CDN**（site-page 的），所以相对路径仍然成立，
-	 * 不需要改成绝对 URL。层数按页面自己的深度算，不写死。
-	 *
-	 * 查源码而不查产物 —— `webroot/docs/` 只在 `build.sh` 跑过之后才有，
-	 * 而 `build.sh` 末尾会 scp 到生产，不能在测试里跑。
+	 * 留下的这条查的是部署模型本身（根上不该恢复合并树），和文档链接无关。
 	 */
-
-	/** 列出 html 模板里所有指向 docs/ 的链接，带页面自己的相对目录 */
-	function docRefs(): Array<{ file: string, dir: string, href: string }> {
-		const out: Array<{ file: string, dir: string, href: string }> = [];
-		const base = path.join(ROOT, 'site-page/src/main/html');
-		const walk = (d: string) => {
-			for (const e of fs.readdirSync(d, { withFileTypes: true })) {
-				const p = path.join(d, e.name);
-				if (e.isDirectory()) { walk(p); continue; }
-				if (!e.name.endsWith('.html')) { continue; }
-				const txt = fs.readFileSync(p, 'utf8');
-				for (const m of txt.matchAll(/href="([^"#:]*docs\/[^"]+)"/g)) {
-					out.push({
-						file: e.name,
-						dir: path.relative(base, d).split(path.sep).join('/'),
-						href: m[1],
-					});
-				}
-			}
-		};
-		walk(base);
-		return out;
-	}
-
-	test('链接指向的文档文件存在', () => {
-		const bad: Array<string> = [];
-		for (const r of docRefs()) {
-			// 部署后的树：webroot/{html/<组>/page.html, docs/...}
-			// 所以从页面出发解析一次，看落到 docs/ 下的哪里
-			const from = r.dir ? 'html/' + r.dir : 'html';
-			const land = path.posix.normalize(path.posix.join(from, r.href));
-			// 再还原成源码树里的位置。**`webroot/docs/` 只有一个来源**：
-			//   site-page/build.sh:  cp -r ../common-utils/docs  webroot/
-			// 根 docs/ **不发到 CDN**（22.9 节的决定：那是架构/重构记录，
-			// 读者是开发者而不是站点访客），所以链它必定 404。
-			if (!land.startsWith('docs/')) {
-				const depth = r.dir ? r.dir.split('/').length : 0;
-				bad.push(`${r.dir}/${r.file}: ${r.href} —— 解析到 `
-					+ `${land}，不在 docs/ 下。该页面深 ${depth} 层，`
-					+ `要写 ${'../'.repeat(depth + 1)}docs/...`);
-				continue;
-			}
-			const rel = land.slice('docs/'.length);
-			if (fs.existsSync(path.join(ROOT, 'common-utils/docs/' + rel))) {
-				continue;                                     // 可达
-			}
-			// 不在库的文档树里。分两种情况报错，因为修法完全不同
-			if (fs.existsSync(path.join(ROOT, 'docs/' + rel))) {
-				bad.push(`${r.dir}/${r.file}: ${r.href} → 这是**根 docs/** 下的`
-					+ `文档，而根 docs/ 不发到 CDN（22.9），链接必定 404。`
-					+ `要么别从页面链它，要么把它挪进 common-utils/docs/`);
-			} else {
-				bad.push(`${r.dir}/${r.file}: ${r.href} → `
-					+ `common-utils/docs/${rel} 不存在`);
-			}
-		}
-		assert.deepEqual(bad, [],
-			`这些指向 docs/ 的链接是坏的：\n  ${bad.join('\n  ')}`);
-	});
 
 	test('build.sample.sh 不再合并两边的产物', () => {
 		// 两边发到不同的 CDN（第 22 节），根上那棵合并树已经删掉。
@@ -520,23 +460,6 @@ describe('页面指向 docs/ 的链接', () => {
 		assert.deepEqual(bad.map(String), [],
 			'build.sample.sh 又在往根 webroot/ 合并产物了 ——'
 			+ ' 两边现在各自发到不同的 CDN，根上不该有合并树');
-	});
-
-	test('site-page/build.sh 把库的文档拷进自己的产物', () => {
-		// 页面链接指向 ../docs/xxx，而那些文件来自 common-utils/docs/。
-		// 两个 CDN 各自独立之后，这一步由 site-page 的构建脚本负责 ——
-		// 漏了页面上那 5 条文档链接全是 404。
-		// build.sh 在 .gitignore 里，所以优先查它、没有就查 sample
-		for (const f of ['site-page/build.sh', 'site-page/build.sample.sh']) {
-			const p = path.join(ROOT, f);
-			if (!fs.existsSync(p)) { continue; }
-			const txt = fs.readFileSync(p, 'utf8');
-			assert.ok(/cp\s+-r\s+\.\.\/common-utils\/docs\s+webroot\//.test(txt),
-				`${f} 没把 ../common-utils/docs 拷进 webroot/ ——`
-				+ ` html/index.html 里指向 ../docs/ 的链接会全部 404`);
-			return;
-		}
-		// 两个都不存在就跳过（新克隆的仓库还没 cp build.sample.sh）
 	});
 
 });

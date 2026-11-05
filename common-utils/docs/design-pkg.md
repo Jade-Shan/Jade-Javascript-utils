@@ -126,8 +126,13 @@ static initCustomElements(): void {
 
 ### 4.4 webroot/ 被 gitignore
 
-产物目录不入版本控制，因此必须配 `prepublishOnly` 脚本在发布前编译，
-不能依赖仓库里已有的产物。
+产物目录不入版本控制，因此必须配发布前编译的钩子，不能依赖仓库里已有的产物。
+
+> **落地时选的是 `prepare` 而不是 `prepublishOnly`**（2026-11-03）——
+> `prepare` 覆盖 `prepublishOnly` 的全部场合，另外还管
+> `npm install` / `npm ci` / 被 `file:` 或 git URL 装这几种情况。
+> 代价是「库的 TS 编译不过时 `npm install` 整体失败」。
+> 详见 `docs/refactor-20261101.md` 26.7 节。
 
 ### 4.5 gulpfile 依赖 gitignored 的 envs.js
 
@@ -159,8 +164,10 @@ npm 打包路径直接调 `tsc`，不经过 gulp，所以不受影响。
 
 - **`3rdLibTool.ts`** — 依赖 `$` / `MathJax` / `showdown` 等**全局变量**。
   npm 场景下使用方装的是真 npm 包（`import $ from 'jquery'`），这层包装会错位。
-- **`blog.ts` / `wiki.ts`** — 绑定特定后端 API，且含 CLAUDE.md 记录的 2 个待后端修复问题
-  （`recommands` 拼写、`pageCount + 1` 补偿）。
+- **`blog.ts` / `wiki.ts`** — 绑定特定后端 API。
+  （原来这里还记着 2 个待后端修复的问题 —— `recommands` 拼写、`pageCount + 1` 补偿，
+  **2026-11-05 都修完了**，后端换成本仓库的 `site-api/` 之后前后端一起改的。
+  不打包的理由只剩「绑定特定后端 API」这一条。）
 - **`workout/*`** — 业务数据（`workoutData.ts` 为健身动作数据），非通用工具。
 
 ### 5.1 exports 配置（实测可用）

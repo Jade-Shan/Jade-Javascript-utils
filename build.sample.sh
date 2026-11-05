@@ -1,23 +1,32 @@
 #!/bin/bash
-# site-page 项目的 CDN 构建
+# 全量 CDN 构建 + 部署
 #
-# 三条链：主题 Less + 图片、TypeScript 编译（含压缩）、HTML 模板展开。
-# 产物在 site-page/webroot/。
+# 切 workspaces 之后这个脚本只做编排，实际构建在两边各自的 build.sh 里
+# （见 docs/refactor-20261101.md 第 18 节的决定 16）：
 #
-# **编译 TS 之前库必须先 build:pkg**。site-page 用包名 import 库，解析链：
+#   common-utils/build.sh   dist/ + window-ui 主题 + TS  → common-utils/{dist,webroot}/
+#   site-page/build.sh   三套内容主题 + workout/trpg/site 图片 + TS + HTML
+#                                        → site-page/webroot/
 #
-#   node_modules/@jade-dungeon/jade-utils   ← npm install 建的符号链接
-#     → common-utils/package.json 的 exports（types 字段）
-#       → common-utils/dist/*.d.ts          ← build:pkg 生成的，**唯一要先构建的一环**
+# **顺序不能反**：site-page 侧用包名 import 库，要先有 common-utils/dist/ 才能编译。
 #
-# 根上的 `npm run build` 和 build.sample.sh 已排好顺序。
-# 单独跑本脚本时，先 `npm run build:pkg -w common-utils`。
+# ── 从 git 新拉下来的代码，跑本脚本之前要做三件事 ──
 #
-# 漏跑的报错会带偏：实测 185 个错里只有 31 个 TS2307（找不到模块），
-# 其余 131 个 TS2339「属性不存在」都是类型解析失败的连带效应。
-# 看到成片 TS2339 先确认 common-utils/dist/ 在不在。
+#   nvm use                                        # .nvmrc 的 v22.22.2
+#   npm install                                    # 建 @jade-dungeon/* 符号链接
+#   cp site-page/envs.sample.js site-page/envs.js  # 它在 .gitignore 里
 #
-# 用法：cd site-page && bash build.sh    或    npm run build -w site-page
+# `dist/` 不用手动管 —— common-utils/build.sh 自己会先 build:pkg。
+# 完整的准备清单见 README.md「首次克隆后的准备」与 docs/refactor-20261101.md 第 26 节。
+#
+# **两边各自发到不同的 CDN,不再合并**（第 22 节）。
+# 生产部署由两边自己的 build.sh 末尾 scp 完成：
+#
+#   common-utils/webroot/  →  jadecdn/webroot/jadeutils.v5   （@@libRoot）
+#   site-page/webroot/     →  jadecdn/webroot/jadesites.v5   （@@staticRoot）
+#
+# 所以**根目录下不再有 webroot/** —— 原来那棵合并树已经没有用途了。
+# 本脚本只剩两件事：排好构建顺序、把两边的产物拷到本地 nginx 做开发期验证。
 
 set -e
 cd "$(dirname "$0")"
@@ -40,9 +49,20 @@ cd "$(dirname "$0")"
 
 # ========================================
 # 库：先打 npm 包（site-page 侧编译要用 common-utils/dist/ 的 .d.ts），再做 CDN 构建
+#
+# **这里的 build:pkg 和 common-utils/build.sh 里的那条是重复的**，故意留着：
+#
+#   - 它把「库的包要先于站点构建」这个约束**写在编排层**，
+#     读这个脚本的人不用点进 common-utils/build.sh 才知道顺序
+#   - test/arch.split.test.ts 有一条用例盯着它在 site-page/build.sh 之前
+#   - 重复的代价只有一次 tsc（约 2 秒），而且幂等
+#
+# 用 `cd` 而不是 `-w` 是有意的：符号链接缺失时 `-w` 会回退去跑根自己的
+# 同名 script，自我调用成无限递归（18.17 节踩过，32 分钟 fork 出 721 个进程）。
+# `cd` 形式没有这个退化路径 —— 目录不对就直接报错。
 # ========================================
 echo '=== 1/3 lib ==='
-npm run build:pkg -w common-utils
+(cd common-utils && npm run build:pkg)
 bash common-utils/build.sh
 
 # ========================================
