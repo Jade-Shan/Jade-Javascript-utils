@@ -1,0 +1,16 @@
+node_modules/
+.vscode/
+.vscode-backup/
+dist/
+local-notes.md
+config.properties
+config.rls.properties
+build.sh
+*.js.map
+
+# SQLite 数据库文件（含 WAL 临时文件），不入库
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite

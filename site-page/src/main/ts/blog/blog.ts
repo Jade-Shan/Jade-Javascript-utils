@@ -23,8 +23,17 @@ interface RecommendArticle {
 interface RecommendArticlesResp {
 	/** 响应状态 */
 	status: string;
-	/** 推荐文章列表（字段名与后端 API 保持一致） */
-	recommands: Array<RecommendArticle>;
+	/**
+	 * 推荐文章列表。
+	 *
+	 * 字段名与后端 API 保持一致。**2026-11-05 跟着后端一起改掉了拼写** ——
+	 * 旧后端是 `recommands`（少个 e、多个 a），接口路径也是
+	 * `loadRecommandArticles`，现在两处都正了。
+	 *
+	 * **可选**是照实写的：这个值来自 `JSON.parse`，后端报错时响应里只有
+	 * `status`，没有这个字段。写成必填会让调用处的 `?? []` 看起来像废代码
+	 */
+	recommends?: Array<RecommendArticle>;
 };
 
 /**
@@ -45,7 +54,7 @@ export class BlogPage {
 	 */
 	static async loadRecommendArticles (apiRoot: string, slt: BlogSelectors = {}) {
 		let recoms: HttpResponse<RecommendArticlesResp> = await WebUtil.requestHttp<string, RecommendArticlesResp>({
-			method: "GET", url: `${apiRoot}api/blog/loadRecommandArticles`
+			method: "GET", url: `${apiRoot}api/blog/loadRecommendArticles`
 		}, {
 			onLoad: (evt, xhr, req) => {
 				let recommends = xhr.responseText ? JSON.parse(xhr.responseText) : null;
@@ -53,10 +62,14 @@ export class BlogPage {
 			},
 		});
 		let recommends: RecommendArticlesResp = recoms.body ? recoms.body : {
-			status: "success", recommands: []
+			status: "success", recommends: []
 		};
 		let html = "";
-		for (const t of recommends.recommands) {
+		// `?? []` 不能省：响应体在但缺 `recommends` 字段时（后端报错、或字段名
+		// 对不上）上面那个 `?:` 兜不住 —— 它只在 body 为 null 时才给默认值，
+		// 直接 for...of 一个 undefined 会抛错。而这个函数是 initBlogPage() 里
+		// Promise.all 的一支，抛了会把用户信息和文章列表一起带走
+		for (const t of recommends.recommends ?? []) {
 			html += `
 				<li><div class="img-text-itm"><div class="item-thumbnail">
 					<a href="${StrUtil.escapeHtml(t.link)}" target="_blank"><img class="img-hov" alt="" src="${StrUtil.escapeHtml(t.thumbnail)}" border="0"></a></div><div class="item-title">
@@ -81,7 +94,9 @@ export class BlogPage {
 	{
 		await BlogCommon.loadArticleList(
 			page => `${apiRoot}api/blog/loadByUser?userId=${encodeURIComponent(userId)}&page=${page}`,
-			currPage, slt);
+			currPage, slt,
+			// 列表只给摘要，全文点「展开」时按 id 单独取
+			id => `${apiRoot}api/blog/getArticle?id=${encodeURIComponent(id)}`);
 	}
 
 	/**

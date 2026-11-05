@@ -164,8 +164,10 @@ npm 打包路径直接调 `tsc`，不经过 gulp，所以不受影响。
 
 - **`3rdLibTool.ts`** — 依赖 `$` / `MathJax` / `showdown` 等**全局变量**。
   npm 场景下使用方装的是真 npm 包（`import $ from 'jquery'`），这层包装会错位。
-- **`blog.ts` / `wiki.ts`** — 绑定特定后端 API，且含 CLAUDE.md 记录的 2 个待后端修复问题
-  （`recommands` 拼写、`pageCount + 1` 补偿）。
+- **`blog.ts` / `wiki.ts`** — 绑定特定后端 API。
+  （原来这里还记着 2 个待后端修复的问题 —— `recommands` 拼写、`pageCount + 1` 补偿，
+  **2026-11-05 都修完了**，后端换成本仓库的 `site-api/` 之后前后端一起改的。
+  不打包的理由只剩「绑定特定后端 API」这一条。）
 - **`workout/*`** — 业务数据（`workoutData.ts` 为健身动作数据），非通用工具。
 
 ### 5.1 exports 配置（实测可用）

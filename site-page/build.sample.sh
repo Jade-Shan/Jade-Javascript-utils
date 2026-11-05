@@ -80,7 +80,12 @@ echo '--- end : process-html ---'
 
 echo '=== site-page: done。产物在 site-page/webroot/ ==='
 
-# 复制文档到当前位置
+# 库的文档拷进自己的产物 → webroot/docs/
+#
+# **这一步不能省** —— html/index.html 里那 5 条文档链接指向
+# `@@staticRoot/docs/xxx.md`（= jadesites.v5/docs/），也就是**本模块的 CDN**。
+# 文件来源却是 common-utils/docs/，所以要在这里搬一次。
+# 链接是绝对 URL 不代表不用搬 —— 那只是把地址写死了，文件还是得送到那个地址。
 cp -r ../common-utils/docs    webroot/
 # scp -r webroot/*   username@host:/jadesites.v5-path
 #  cp -r webroot/*   jadesites.v5-path

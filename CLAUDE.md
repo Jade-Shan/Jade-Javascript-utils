@@ -26,7 +26,7 @@ nvm use
 npm run build          # 两边都构建（先 common-utils 后 site-page）
 npm run build:pkg      # 只打库的 npm 包 → common-utils/dist/
                        # **编译 site-page 之前必须先跑这个**，见下
-npm test               # 跑三组测试：库 230 + 站点 33 + 架构 20
+npm test               # 跑三组测试：库 230 + 站点 52 + 架构 20
 npm run test:arch      # 只跑跨两边的架构约束测试
 
 # 全量 CDN 构建 + 分别部署到本地 nginx 的两个目标
@@ -181,7 +181,7 @@ cd site-page && npx gulp process-html-rls         # 只为验 processhtml 的 bu
 ## 单元测试
 
 ```bash
-npm test                     # 三组全跑：库 230 + 站点 33 + 架构 20
+npm test                     # 三组全跑：库 230 + 站点 52 + 架构 20
 npm test -w common-utils     # 只跑库的
 npm test -w site-page        # 只跑站点的
 npm run test:arch            # 只跑跨两边的架构约束
@@ -193,7 +193,7 @@ npm run build:test -w common-utils   # 只编译，不跑
 | 位置 | 用例数 | 测什么 |
 |------|-------|-------|
 | `common-utils/src/test/ts/` | 230 | 库的 14 个用例文件 + `_jsdom-setup.ts` |
-| `site-page/src/test/ts/` | 33 | 站点的 3 个用例文件 + `_jsdom-setup.ts`（各留一份） |
+| `site-page/src/test/ts/` | 52 | 站点的 4 个用例文件 + `_jsdom-setup.ts`（各留一份） |
 | `test/`（根） | 20 | `arch.split.test.ts` —— 跨两边的边界约束 |
 
 - 命名为 `<模块>.<主题>.test.ts`
@@ -209,7 +209,7 @@ npm run build:test -w common-utils   # 只编译，不跑
   它有独立的 `tsconfig.arch.json`，输出到根上的 `.arch-build/`。
   **原来还查「指向文档的链接」，2026-11-03 删了那 2 条**（见第 27 节）
 
-当前覆盖范围（283 个用例）：
+当前覆盖范围（302 个用例）：
 
 | 模块 | 需要 jsdom |
 |------|-----------|
@@ -223,14 +223,24 @@ npm run build:test -w common-utils   # 只编译，不跑
 | `web` 的 Cookie 读写、`initCustomElements()`、懒加载 | 是 |
 | `ui/webHtmlPage`（DOM 操作、分页、导航、主题切换） | 是 |
 | `blog/common` 的选择器表 + `loadUserInfo` | 是（外加假 XHR） |
+| `blog/common` 的摘要渲染、「展开」取全文、分页页数（`blog.article.test.ts`） | 部分（纯渲染不要，点击与翻页要，外加按 URL 分派的假 XHR + showdown 桩） |
+| `blog/blog` 的 `loadRecommendArticles`：**请求 URL 与读取字段的拼写**（同上文件） | 是（假 XHR） |
 | `ui/uiResource` 的注册表 + `resource` 的内置 provider | 否 |
 | `workout` 的渲染逻辑（`mergePathWithStyle` 纯函数，三个 SVG 渲染函数要 document） | 部分 |
 | `blog/wiki` 的 `DEFAULT_WIKI_PAGE_CONFIG` | 否 |
 
 未覆盖：`ui/canvas`、`ui/UIWindow` 的渲染部分、`trpg/sandtable`（jsdom 不实现
-`getContext('2d')`，要额外装 `canvas` 原生模块）、`blog/*` 的文章渲染
-（要 mock showdown）、`blog/wiki` 的 `initWikiPage()`（要 jQuery / MathJax /
-SyntaxHighlighter 三个全局库）、`3rdLibTool` 除导航栏模板外的部分。
+`getContext('2d')`，要额外装 `canvas` 原生模块）、`blog/wiki` 的 `initWikiPage()`
+（要 jQuery / MathJax / SyntaxHighlighter 三个全局库）、
+`3rdLibTool` 除导航栏模板与 `ShowdownUtils` 外的部分。
+
+**showdown 怎么桩的**：`blog.article.test.ts` 在**模块加载期**往 `globalThis`
+塞一个假 `showdown`，`makeHtml` 返回 `[md]...[/md]`。两个讲究：
+
+- 必须在模块加载期装 —— `ShowdownUtils` 把 Converter 实例缓存在模块级变量里，
+  第一次调用之后就不再读全局，等用例内部再装就晚了
+- 结果包成标记而不是真转 HTML，这样断言能直接看出某段文字**有没有**过 showdown。
+  摘要不该过、全文该过，正是这次要盯的那条线
 
 ### jsdom 的用法
 
@@ -455,7 +465,7 @@ envs.js  →  @@变量  →  HTML 内联脚本  →  入口函数的 env 形参 
 | `site-page/src/main/ts/` | site-page 项目的 TypeScript：`blog/`、`trpg/`、`workout/`、`ui/`、`include/` + 根上 4 个 |
 | `site-page/src/main/themes/` | 按应用分四组：`blog/`（theme-core + hobbit / lo-fi / paper-print）、`workout/`、`trpg/`（纯图片）、`site/`（favicon）。含约 5.3 MB 图片资源 |
 | `site-page/src/main/html/` | HTML 页面：`index.html`（站点入口，在根上）、`blog/`（blog / gallery 两个模板页）、`demo/`（9 个 `test-*` 演示页），外加 `parts/` 下 20 个片段 |
-| `site-page/src/test/ts/` | web 的测试：3 个用例文件 + `_jsdom-setup.ts`，33 个用例 |
+| `site-page/src/test/ts/` | web 的测试：4 个用例文件 + `_jsdom-setup.ts`，52 个用例 |
 | `site-page/webroot/` | web 的 CDN 产物（gitignore） |
 | `site-page/envs.js` | **构建期的环境配置**（gitignore，从 `envs.sample.js` 复制）。只有 site-page 的 gulpfile 读它 —— 库侧不需要 |
 | `test/` | 跨两边的架构约束测试 `arch.split.test.ts`，20 个用例 |
@@ -916,14 +926,59 @@ curl -s -D - -o /dev/null "http://localhost:8082/api/blog/loadUserById?userId=u0
 （都是 `onerror` + `status=0`），光看前端代码分不出来，必须查后端日志或用 `curl` 探活。
 详见 `docs/refactor-20261101.md` 第 10.6 节。
 
-## 待跟进的后端 API 问题
+## 后端 API：原来那两个「等后端修」的问题都修完了
 
-以下的问题要等后端的API修复以后才能修改。检查代码与修复问题时要保留以下表中的问题：
+**这一节以前列的是「要原样保留、等后端修」的坑。2026-11-05 两个都清了** ——
+后端换成本仓库的 `site-api/`，前后端在同一个仓库里，不用再互相等。
 
-| API | 问题 | 前端影响 | 状态 |
-|-----|------|---------|------|
-| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog/blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
-| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog/common.ts` 第 256 行对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+| 原来的问题 | 现在 |
+|-----------|------|
+| `pageCount` 比实际少 1，前端补 `pageCount + 1` | `calcPageCount()` 用 `Math.ceil`，前端的 `+ 1` **已去掉**。加回去会多出一个空白末页 |
+| 路径 `loadRecommandArticles` / 字段 `recommands` 拼写错误 | 两处都改成 `loadRecommendArticles` / `recommends`，**前后端一起改的** |
+
+所以：
+
+- **别再「照顾」这两个坑** —— 比如看到 `recommends` 以为是写错了想改回 `recommands`，
+  或者觉得分页少一页想补 `+ 1`。两个都是**改回去才会错**
+- 拼写改动涉及 **URL**，不只是字段名。旧前端 `Jade-Dungeon-page` 已停用，
+  改之前全盘搜过没有别的调用方
+- `loadRecommendArticles` **仍然返回硬编码假数据**（这部分按决策照搬，没动）。
+  要换成真查询见 `site-api/docs/todo-next.md` 的 2.3
+
+## blog 列表的摘要与展开
+
+后端 `site-api` 的 `api/blog/loadByUser` **不再返回正文**（实测正文平均 34.7 KB、
+最长 1.3 MB，列表页带着它翻页很慢），只返回 `excerpt`。所以列表页是这样的：
+
+```
+列表（只有 excerpt）  →  点「展开」  →  api/blog/getArticle?id=N  →  全文（Markdown）
+                                                                    →  showdown 转 HTML
+```
+
+三条容易踩的：
+
+- **`excerpt` 不是 Markdown，不要过 showdown** —— 后端写入文章时就用
+  `makeExcerpt()` 剥掉标记并截断到 200 字了（纯图片的文章给 `（图片）` 占位）。
+  再过一遍 showdown 会把正文里残留的 `*`、`_`、`#` 当成标记吃掉。
+  `renderArticleBody()` 按「有 `text` 就过 showdown、只有 `excerpt` 就只转义」分支
+- **`pageCount` 直接用，不要 `+ 1`** —— 旧后端算少 1 时补过，现在加回去会多出
+  一个点进去空白的末页。`teo` 的 36 篇正好是当年撞上这个 bug 的那组数据
+- **三个接口返回的字段形状不一样**，所以 `UserArticle` 的 `text` / `excerpt` / `id`
+  都是可选的：
+
+  | 接口 | `id` | `excerpt` | `text` | `album` |
+  |------|------|-----------|--------|---------|
+  | `api/blog/loadByUser` | 有 | 有 | **无** | 无 |
+  | `api/blog/getArticle` | 有 | 有 | 有 | 无 |
+  | `api/gallery/loadByUser` | 有 | 无 | 有 | 有 |
+
+  相册列表自带全文，所以 `loadArticleList()` 的 `detailUrl` 形参**只有博客页传** ——
+  不传就不渲染「展开」链接。
+
+「展开」链接的 class 是 `atc-expand`，**不在 `BlogSelectors` 里** ——
+那张表记的是 `src/main/html/parts/` 下页面模板已有的结构，
+这个 class 是 `blog/common.ts` 自己产自己用的。
+行为由 `site-page/src/test/ts/blog.article.test.ts` 的 14 个用例盯着。
 
 
 

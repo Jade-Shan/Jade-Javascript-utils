@@ -65,7 +65,7 @@ npm install --ignore-scripts     # ❌ 没用 —— 对 workspace 成员的 pre
 
 ```bash
 nvm use                      # 切到 .nvmrc 指定的 Node 版本（v22.22.2）
-npm test                     # 跑单元测试（库 230 + 站点 33 + 架构 20）
+npm test                     # 跑单元测试（库 230 + 站点 52 + 架构 20）
 npm run build:pkg            # 构建 npm 包到 common-utils/dist/
 bash build.sh                # 两边 CDN 构建 + 分别部署（先 cp build.sample.sh build.sh）
 ```
@@ -434,12 +434,25 @@ testJadeTRPG.ts  → basic, resource → dataStructure + web
 
 ---
 
-## 待跟进的后端 API 问题
+## 后端 API 的两个历史问题（都已修）
 
-| API | 问题 | 前端影响 | 状态 |
-|-----|------|---------|------|
-| `GET /api/blog/loadRecommandArticles` | 路径及返回字段 `recommands` 拼写错误，应为 `recommends` | `blog/blog.ts` 中 `RecommendArticlesResp.recommands` 字段名需与后端保持一致，待后端修正后前端同步改为 `recommends` | 等待后端修改 |
-| `GET /api/blog/loadByUser` | 返回的 `pageCount` 值不准确（比实际总页数少 1） | `blog/common.ts` 的 `loadArticleList()` 里对 `pageCount + 1` 做了临时补偿，后端修正后需去掉 `+ 1` | 等待后端修改 |
+前后端现在同在一个仓库（后端是 `site-api/`），原来「等后端修」的两处 2026-11-05 一起清了：
+
+| 原来的问题 | 现在 | 注意 |
+|-----------|------|------|
+| `loadByUser` 的 `pageCount` 少 1 | `Math.ceil` 算页数，前端的 `pageCount + 1` 已去掉 | 补回 `+ 1` 会多出一个空白末页 |
+| `loadRecommandArticles` / `recommands` 拼写错误 | 改成 `loadRecommendArticles` / `recommends` | **URL 也改了**，不只是字段名 |
+
+两处都是**改回旧写法才会出错**。`loadRecommendArticles` 仍返回硬编码假数据，这部分没动。
+
+### blog 列表改成返回摘要（2026-11-05）
+
+`api/blog/loadByUser` 不再返回正文，只返回 `excerpt`（纯文本摘要，200 字上限）。
+列表页显示摘要 + 一个「展开」链接，点了才去 `api/blog/getArticle?id=N` 取全文，
+由 showdown 把 Markdown 转成 HTML 替换掉这一项。
+
+**`excerpt` 已经不是 Markdown 了，不要再过 showdown** ——
+后端写入文章时就剥掉标记了，再转一次会把正文里残留的 `*`、`_`、`#` 当标记吃掉。
 
 ---
 
