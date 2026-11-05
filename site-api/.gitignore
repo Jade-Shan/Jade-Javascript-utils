@@ -6,6 +6,7 @@ local-notes.md
 config.properties
 config.rls.properties
 build.sh
+start.sh
 *.js.map
 
 # SQLite 数据库文件（含 WAL 临时文件），不入库
