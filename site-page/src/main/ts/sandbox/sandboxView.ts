@@ -3,7 +3,7 @@ import {
 	JadeUIResource, DefaultIconGroup, registerDefaultUIResource,
 } from '@jade-dungeon/jade-utils/resource';
 import { UIDesktop } from '@jade-dungeon/jade-utils/ui-window';
-import { IToken2D, SandTable, SandTableUtils } from '../trpg/sandtable.js';
+import { IToken2D, SandTable } from '../trpg/sandtable.js';
 import { renderRollResults, SandboxApi, SceneId } from './sandboxApi.js';
 import { SandboxScene } from './sandboxScene.js';
 import { SandboxDiceWindow, SandboxMapWindow } from './sandboxWindows.js';
@@ -131,12 +131,12 @@ export class SandboxView {
 			this.mapWin.setStatus(`载入失败：${r.msg ?? '未知错误'}`);
 			return;
 		}
-		this.scene.loadFrom(r.data, this.cfg.assetRoot);
+		// loadFrom 内部已经等图片加载完才建 Token —— 顺序反了棋子图片就不显示，
+		// 详见 sandboxScene.ts 的 loadFrom 注释
+		await this.scene.loadFrom(r.data, this.cfg.assetRoot, this.api.imageProxyUrl);
 
 		// 缺 map 项会在这里抛可读的错，而不是在取宽高时抛 undefined.image
 		const mapImg = this.scene.requireMapImage();
-		await SandTableUtils.loadImageResources(this.scene.imageList(),
-			this.api.imageProxyUrl);
 
 		this.myToken = this.scene.list('teams')
 			.find(t => t.id === this.cfg.username);
@@ -174,11 +174,17 @@ export class SandboxView {
 	 * @returns {Promise<void>}
 	 */
 	private async redraw(): Promise<void> {
+		// ⚠️ **画完之后不要再碰 canvas 的 width / height** ——
+		// 按 HTML 规范，给它们赋值会走 "set bitmap dimensions"，
+		// 其中一步是重置上下文并**清空位图**，而且**赋同值也执行**。
+		// 这里原来在下面调了一次 `resizeCanvas(w, h)`，
+		// 赋的正是 drawSceneWithUserView 刚设好的那两个值 ——
+		// 尺寸没变、画面全没了，表现是**窗口里一片空白且不报错**。
+		//
+		// 不需要补设尺寸：`drawSceneWithUserView()` 内部已经把两张画布的
+		// width / height / style 四项都按地图尺寸设好了（见 sandtable.ts）。
 		await this.sandTable.drawSceneWithUserView(this.scene.allTokens(),
 			{ proxyUrl: this.api.imageProxyUrl });
-		const w = this.sandTable.scene.map.width;
-		const h = this.sandTable.scene.map.height;
-		if (w > 0 && h > 0) { this.mapWin.resizeCanvas(w, h); }
 
 		// 把合成结果存成图片，拖动预览时拿它当底
 		const snap = new Image();

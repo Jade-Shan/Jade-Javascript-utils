@@ -145,6 +145,14 @@ export const loginByPassword = async (username: string, password: string): Promi
 	const user = await findUser(username);
 	if (!user) { return { ok: false, msg: 'username or password err' }; }
 
+	// 免验证模式建的占位用户显式拒掉。
+	// 它的 password_hash 是随机字节、本来就匹配不上任何密码，这里再挡一道是为了
+	// 把「这种账号登不进来」变成代码里看得见的规则，而不是依赖随机值的巧合。
+	if (user.hash_algo === BYPASS_HASH_ALGO) {
+		console.warn(`⚠️  拒绝占位用户 ${username} 的密码登录（AUTH_BYPASS 期间自动创建，无可用密码）`);
+		return { ok: false, msg: 'username or password err' };
+	}
+
 	const matched = user.hash_algo === 'plain'
 		? user.password_hash === password          // 旧数据兼容分支，当前无此类数据
 		: await verifyPassword(password, user);
@@ -161,6 +169,57 @@ export const loginByPassword = async (username: string, password: string): Promi
 	}
 
 	const token = await issueToken(username);
+	return { ok: true, msg: 'login success', username, token };
+};
+
+/** 免验证模式下自动建出来的占位用户，`hash_algo` 记成这个值 */
+export const BYPASS_HASH_ALGO = 'bypass';
+
+/**
+ * 免验证登录时保证 `auth_user` 里有这一行。
+ *
+ * **为什么必须建行**：`auth_token.username` 有外键指向 `auth_user`，
+ * 而 **better-sqlite3 默认 `foreign_keys = ON`**（与 sqlite3 命令行相反，
+ * 那边默认 OFF）。给不存在的用户签 token 会直接抛
+ * `FOREIGN KEY constraint failed`。实测确认过。
+ *
+ * 占位行的 `password_hash` 填**随机字节**、`hash_algo` 填 `bypass`，
+ * 所以它不对应任何密码 —— 关掉开关之后这些账号登不进来（见
+ * `loginByPassword` 里对 `bypass` 的显式拒绝）。
+ *
+ * **已存在的用户绝不碰** —— 真实用户在免验证期间登录过，不能让他的密码
+ * 被这行覆盖掉。并发同名用 `INSERT OR IGNORE` 兜住。
+ */
+const ensureBypassUser = async (username: string): Promise<void> => {
+	const existing = await findUser(username);
+	if (existing) { return; }
+
+	const now = Date.now();
+	await getSqlite().run(
+		`INSERT OR IGNORE INTO auth_user
+		 (username, password_hash, salt, hash_algo, created_at, updated_at)
+		 VALUES (?, ?, ?, '${BYPASS_HASH_ALGO}', ?, ?)`,
+		[username,
+			crypto.randomBytes(SCRYPT_KEYLEN).toString('hex'),   // 随机，不对应任何密码
+			crypto.randomBytes(SALT_BYTES).toString('hex'),
+			now, now]);
+	console.warn(`⚠️  免验证模式自动建了占位用户 ${username}（无可用密码）`);
+};
+
+/**
+ * ⚠️ 免验证登录（临时开关，由 `AUTH_BYPASS` 开启）。
+ *
+ * 不比密码，直接按客户端给的用户名签发 token。
+ * 给 sandtable 在**没法用真验证机的环境**里联调用的。
+ *
+ * **签发的是真 token**（落 `auth_token` 表）—— 这样 `verifyToken()` /
+ * `authorizeSceneWrite()` 完全不用改，沙盘的场景读写与 owner 判定
+ * 照常按用户名走。
+ */
+export const loginBypass = async (username: string): Promise<ILoginResult> => {
+	await ensureBypassUser(username);
+	const token = await issueToken(username);
+	console.warn(`⚠️  免验证登录: ${username}（AUTH_BYPASS 已开启，未校验密码）`);
 	return { ok: true, msg: 'login success', username, token };
 };
 

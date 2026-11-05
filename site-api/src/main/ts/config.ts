@@ -34,6 +34,22 @@ export const initGlobalCfg = (args: ICliArgs): IGlobalCfg => {
 	const sqlitePath = process.env.SQLITE_PATH || 'data/jade-dungeon.db';
 	const sqliteReadPoolSize = parseInt(process.env.SQLITE_READ_POOL_SIZE || '8', 10);
 
+	// ⚠️ 登录免验证开关（临时）。开启后 /api/auth/login 对任意用户名 + 任意密码
+	// 都返回成功并签发 token，用于 sandtable 在没有真验证机的环境里联调。
+	//
+	// 两道闸：
+	//   1. 默认关闭，必须显式写 AUTH_BYPASS=true 才开
+	//   2. NODE_ENV=production 时强制关闭 —— 配置文件被误带到生产也不会放开登录
+	const bypassRequested = (process.env.AUTH_BYPASS || '').trim().toLowerCase() === 'true';
+	const isProduction = (process.env.NODE_ENV || '').trim() === 'production';
+	const authBypass = bypassRequested && !isProduction;
+	if (bypassRequested && isProduction) {
+		console.warn('🔒 AUTH_BYPASS=true 但 NODE_ENV=production，已强制关闭登录免验证');
+	} else if (authBypass) {
+		console.warn('⚠️  登录免验证已开启（AUTH_BYPASS=true）：任意用户名与密码都能登录成功。');
+		console.warn('⚠️  这是 sandtable 联调用的临时开关，联调结束后请从配置里删掉它。');
+	}
+
 	// 允许跨域的来源，逗号分隔。留空或不配则放开所有来源（等同 '*'）。
 	// 注意这里要填带协议和端口的完整 origin，如 http://www.example.com:8082，
 	// 浏览器发来的 Origin 头就是这个形式，字符串必须完全匹配。
@@ -45,6 +61,7 @@ export const initGlobalCfg = (args: ICliArgs): IGlobalCfg => {
 	const globalCfg: IGlobalCfg = {
 		server: { hostname: host, port: port },
 		sqlite: { path: sqlitePath, readPoolSize: sqliteReadPoolSize },
+		auth: { bypass: authBypass },
 		crosSite: crosSite,
 		redis: [
 			{ key: 'trpg', host: redisHost, port: redisPort, name: `${redisName}:trpg` },

@@ -3,7 +3,7 @@ import {
 } from '@jade-dungeon/jade-utils/resource';
 import { UIDesktop } from '@jade-dungeon/jade-utils/ui-window';
 import {
-	CircleToken, IToken2D, LineToken, RectangleToken, SandTableUtils,
+	CircleToken, IToken2D, LineToken, RectangleToken,
 } from '../trpg/sandtable.js';
 import { renderRollResults, SandboxApi, SceneId } from './sandboxApi.js';
 import { SandboxScene, TokenGroup, TOKEN_GROUPS } from './sandboxScene.js';
@@ -177,9 +177,9 @@ export class SandboxEditor {
 				`先在「图片资源」里加一张 id 为 map 的图`);
 			return;
 		}
-		this.scene.loadFrom(r.data, this.cfg.assetRoot);
-		await SandTableUtils.loadImageResources(this.scene.imageList(),
-			this.api.imageProxyUrl);
+		// loadFrom 内部已经等图片加载完才建 Token —— 顺序反了棋子图片就不显示，
+		// 详见 sandboxScene.ts 的 loadFrom 注释
+		await this.scene.loadFrom(r.data, this.cfg.assetRoot, this.api.imageProxyUrl);
 		await this.redraw();
 		this.mapWin.setStatus('点选元素；Ctrl+拖动=移动，Alt+拖动=缩放');
 	}

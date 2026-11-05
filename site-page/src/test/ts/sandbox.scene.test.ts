@@ -12,12 +12,21 @@
  * - **`requireMapImage` 给可读的错**（4.5 节的决定）
  * - **`toJsonStr` 只写 `visible`**，所以保存一次就自动转正（4.1 节）
  */
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDomForFile } from './_jsdom-setup.js';
 import { SandboxScene } from '../../main/ts/sandbox/sandboxScene.js';
 import { CircleToken, LineToken, SceneDataResp } from '../../main/ts/trpg/sandtable.js';
 
 const ROOT = '//cdn.x/themes/trpg/images';
+
+// `loadFrom` 现在是 async 的，内部会 `new Image()` 把图片资源加载好
+// （详见 sandboxScene.ts 的注释：顺序反了棋子图片就不显示），所以整个文件要 DOM。
+// jsdom 里图片一定加载失败、换成占位图 —— 这里的用例不关心图片内容，
+// 只关心装载流程，所以不影响断言。
+const dom = installDomForFile('<div></div>', { stubImages: true });
+before(dom.setup);
+after(dom.teardown);
 
 /** 一份最小但完整的场景响应，故意用老拼写 `visiable` 和老相对路径 */
 const legacyResp = (): SceneDataResp => ({
@@ -49,9 +58,9 @@ const legacyResp = (): SceneDataResp => ({
 
 describe('loadFrom 装载场景', () => {
 
-	test('五个分组都装进去了', () => {
+	test('五个分组都装进去了', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		assert.equal(s.list('teams').length, 1);
 		assert.equal(s.list('creaters').length, 1);
 		assert.equal(s.list('walls').length, 1);
@@ -59,38 +68,38 @@ describe('loadFrom 装载场景', () => {
 		assert.equal(s.list('furnishings').length, 0);
 	});
 
-	test('老拼写 visiable 被认出来', () => {
+	test('老拼写 visiable 被认出来', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		assert.equal(s.get('teams', 'teo')!.visible, true, '老数据的 true 要读到');
 		assert.equal(s.get('walls', 'w1')!.visible, false, '墙是隐形的');
 	});
 
-	test('老相对路径的图片被归一化，绝对 URL 原样保留', () => {
+	test('老相对路径的图片被归一化，绝对 URL 原样保留', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		assert.equal(s.images.get('map')!.url, `${ROOT}/map.jpg`, '相对路径要接 assetRoot');
 		assert.equal(s.images.get('icons')!.url, 'http://img.host/icons.jpg',
 			'绝对 URL 要原样（它走 parseImage 代理）');
 	});
 
-	test('重复装载会清掉上一次的内容', () => {
+	test('重复装载会清掉上一次的内容', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		assert.equal(s.list('teams').length, 1, '不该累积成 2 个');
 		assert.equal(s.imageList().length, 2);
 	});
 
-	test('mapDatas 缺失时不抛错', () => {
+	test('mapDatas 缺失时不抛错', async () => {
 		const s = new SandboxScene();
-		s.loadFrom({ username: 'x', loginToken: '', imgResources: [] } as unknown as SceneDataResp, ROOT);
+		await s.loadFrom({ username: 'x', loginToken: '', imgResources: [] } as unknown as SceneDataResp, ROOT);
 		assert.equal(s.allTokens().length, 0);
 	});
 
-	test('username 带进来了', () => {
+	test('username 带进来了', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		assert.equal(s.username, 'teo');
 	});
 
@@ -98,9 +107,9 @@ describe('loadFrom 装载场景', () => {
 
 describe('allTokens 的渲染层次', () => {
 
-	test('顺序是 墙 → 门 → 陈设 → 生物 → 玩家', () => {
+	test('顺序是 墙 → 门 → 陈设 → 生物 → 玩家', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		assert.deepEqual(s.allTokens().map(t => t.id), ['w1', 'orc1', 'teo'],
 			'玩家要在最上层');
 	});
@@ -149,9 +158,9 @@ describe('hitTest 命中测试', () => {
 
 describe('replace / remove', () => {
 
-	test('replace 同 id 是替换不是追加（moveTo 之后要用它）', () => {
+	test('replace 同 id 是替换不是追加（moveTo 之后要用它）', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		const tk = s.get('teams', 'teo')!;
 		s.replace('teams', tk.moveTo(50, 50));
 		assert.equal(s.list('teams').length, 1, '不该变成 2 个');
@@ -160,9 +169,9 @@ describe('replace / remove', () => {
 			'容器里应该是移动后的新实例');
 	});
 
-	test('remove 删得掉', () => {
+	test('remove 删得掉', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		s.remove('teams', 'teo');
 		assert.equal(s.list('teams').length, 0);
 		assert.equal(s.get('teams', 'teo'), undefined);
@@ -172,19 +181,19 @@ describe('replace / remove', () => {
 
 describe('requireMapImage', () => {
 
-	test('有 map 项时返回它', () => {
+	test('有 map 项时返回它', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		assert.equal(s.requireMapImage().id, 'map');
 	});
 
-	test('缺 map 项时抛出可读的错，并列出现有图片', () => {
+	test('缺 map 项时抛出可读的错，并列出现有图片', async () => {
 		// 老代码这里抛的是 `Cannot read properties of undefined (reading 'image')`，
 		// 指向一句取宽高的代码，看不出是「数据缺了 map 这一项」
 		const resp = legacyResp();
 		resp.imgResources = [{ id: 'icons', type: 'Image', url: 'http://x/i.jpg' }];
 		const s = new SandboxScene();
-		s.loadFrom(resp, ROOT);
+		await s.loadFrom(resp, ROOT);
 		assert.throws(() => s.requireMapImage(), (e: Error) => {
 			assert.ok(e.message.includes('map'), '要提到缺的是 map');
 			assert.ok(e.message.includes('icons'), '要列出现有的图片资源');
@@ -202,17 +211,17 @@ describe('requireMapImage', () => {
 
 describe('toJsonStr 序列化', () => {
 
-	test('带上 username 与 loginToken（后端靠它鉴权）', () => {
+	test('带上 username 与 loginToken（后端靠它鉴权）', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		const o = JSON.parse(s.toJsonStr('teo', 'tk-123'));
 		assert.equal(o.username, 'teo');
 		assert.equal(o.loginToken, 'tk-123');
 	});
 
-	test('五个分组都在，字段名与后端一致', () => {
+	test('五个分组都在，字段名与后端一致', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		const o = JSON.parse(s.toJsonStr('teo', 'tk'));
 		for (const k of ['teams', 'creaters', 'furnishings', 'doors', 'walls']) {
 			assert.ok(Array.isArray(o.mapDatas[k]), `mapDatas.${k} 应是数组`);
@@ -220,10 +229,10 @@ describe('toJsonStr 序列化', () => {
 		assert.ok(Array.isArray(o.imgResources));
 	});
 
-	test('老数据存一次就自动转正：输出只有 visible', () => {
+	test('老数据存一次就自动转正：输出只有 visible', async () => {
 		// 这是 4.1 节「写时只写新拼写」的保证
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		const json = s.toJsonStr('teo', 'tk');
 		assert.ok(!json.includes('visiable'), '输出里不该有老拼写');
 		assert.ok(json.includes('visible'), '应该有新拼写');
@@ -232,9 +241,9 @@ describe('toJsonStr 序列化', () => {
 		assert.equal(o.mapDatas.walls[0].visible, false);
 	});
 
-	test('图片资源只存 id/type/url 三个字段', () => {
+	test('图片资源只存 id/type/url 三个字段', async () => {
 		const s = new SandboxScene();
-		s.loadFrom(legacyResp(), ROOT);
+		await s.loadFrom(legacyResp(), ROOT);
 		const o = JSON.parse(s.toJsonStr('teo', 'tk'));
 		// imgElem 是运行期加载的 HTMLImageElement，不能进 JSON
 		assert.deepEqual(Object.keys(o.imgResources[0]).sort(), ['id', 'type', 'url']);

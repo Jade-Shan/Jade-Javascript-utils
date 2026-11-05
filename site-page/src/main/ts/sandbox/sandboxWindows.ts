@@ -105,9 +105,23 @@ export class SandboxMapWindow extends UIWindowAdapter {
 	/**
 	 * 把画布尺寸调整成地图的实际大小
 	 *
-	 * 场景的尺寸要等地图图片加载完才知道（`SandTable` 从图片的
-	 * `naturalWidth/Height` 取），所以这一步在 `drawSceneWithUserView()`
-	 * 之后调。两张画布都要改 —— 缓冲那张尺寸不对，合成出来的快照会被裁掉。
+	 * ## ⚠️ 这个方法会清空画布，**只能在绘制之前调**
+	 *
+	 * 给 canvas 的 `width` / `height` 赋值会按 HTML 规范走
+	 * "set bitmap dimensions"，其中一步是重置上下文并**清空位图** ——
+	 * **赋同值也照样执行**。
+	 *
+	 * 本方法原来的注释写的是「这一步在 `drawSceneWithUserView()` 之后调」，
+	 * 那是**反的**：`sandboxView` 照着做，于是每次重画都把刚合成好的画面
+	 * 擦成空白，而且不报错。已改正（2026-11-05）。
+	 *
+	 * 另外 **view 侧根本不需要调它** ——
+	 * `SandTable.drawSceneWithUserView()` 内部已经把两张画布的
+	 * width / height / style 四项都按地图尺寸设好了。
+	 * 需要它的是 `sandboxEditor`：那边自己画、不走 `SandTable`，
+	 * 而且**在 `drawImage` 之前**调。
+	 *
+	 * 两张画布都要改 —— 缓冲那张尺寸不对，合成出来的快照会被裁掉。
 	 *
 	 * @param width - 地图宽
 	 * @param height - 地图高

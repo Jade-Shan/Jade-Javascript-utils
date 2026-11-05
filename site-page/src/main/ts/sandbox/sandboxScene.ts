@@ -1,7 +1,7 @@
 import { SimpleMap } from '@jade-dungeon/jade-utils/data';
 import {
 	CircleToken, ICircleTokenRec, ILineTokenRec, IRectangleTokenRec,
-	ImageResource, IToken2D, LineToken, RectangleToken, SceneDataResp,
+	ImageResource, IToken2D, LineToken, RectangleToken, SandTableUtils, SceneDataResp,
 } from '../trpg/sandtable.js';
 import { normalizeImageUrl } from './sandboxApi.js';
 
@@ -142,10 +142,29 @@ export class SandboxScene {
 	 * 图片 URL 会过 {@link normalizeImageUrl} —— 存量数据里是老相对路径，
 	 * 新页面的相对基准变了，不归一化会 404（而且是静默换占位图）。
 	 *
+	 * ## ⚠️ 图片必须在建 Token **之前**加载完
+	 *
+	 * `fromRecord()` 是把 `ImageResource.imgElem` **快照拷贝**进 Token 的
+	 * `imgClip.imageElem` 的（见 `trpg/sandtable.ts`）。所以顺序反了的话，
+	 * Token 拿到的是 `undefined`，**之后再把 `imgElem` 填上对已建好的 Token
+	 * 没有任何影响** —— 棋子图片不显示，而且 `draw()` 里是
+	 * `if (imageElem)` 的空判断，不报错。
+	 *
+	 * 这就是本方法 `async` 的原因：加载图片这一步**收在里面**，
+	 * 不留给调用方排顺序。原来两个调用方都是
+	 * `loadFrom()` 之后再 `loadImageResources()`，正好是坏的那个顺序。
+	 *
+	 * 加载失败不影响装载流程 —— `loadImageByProxy` 内部 catch 住、
+	 * 静默换占位图，不抛错。
+	 *
 	 * @param resp - 后端返回的场景数据
 	 * @param assetRoot - 老相对路径的落点，页面从 `envs.js` 注入
+	 * @param imgProxyUrl - 图片代理前缀，跨源图片要走它（canvas 污染）
+	 * @returns {Promise<void>}
 	 */
-	loadFrom(resp: SceneDataResp, assetRoot: string): void {
+	async loadFrom(resp: SceneDataResp, assetRoot: string,
+		imgProxyUrl?: string): Promise<void> //
+	{
 		this.username = resp.username ?? '';
 		this.images.recs = [];
 		for (const g of TOKEN_GROUPS) { this.groups.get(g)!.recs = []; }
@@ -154,6 +173,8 @@ export class SandboxScene {
 			this.images.put(img.id, { ...img, url: normalizeImageUrl(img.url, assetRoot) });
 		}
 		const imgList = this.imageList();
+		// 先把图片元素备好，再建 Token。顺序见上面的说明
+		await SandTableUtils.loadImageResources(imgList, imgProxyUrl);
 
 		const md = resp.mapDatas;
 		if (!md) { return; }

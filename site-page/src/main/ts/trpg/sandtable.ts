@@ -93,6 +93,59 @@ export interface IToken2DRec {
 export function readVisible(rec: { visible?: boolean, visiable?: boolean }): boolean {
 	return rec.visible ?? rec.visiable ?? false;
 }
+
+/**
+ * 从记录里的 `img` 字段重建 ImageClip，图片元素只认 `imageRecs` 里的
+ *
+ * ## 为什么要显式丢掉记录里的 `imageElem`
+ *
+ * `ImageClip.imageElem` 是个 `HTMLImageElement`。老代码 `{ ...rec.img }`
+ * 直接摊开，于是**存档里带的那个会被原样拷进来**。
+ * 而 `toRecord()` 把整个 `imgClip` 交给 `JSON.stringify`，
+ * HTMLImageElement 没有可枚举的自有属性，序列化结果是 `imageElem: {}` ——
+ * **空对象是真值**。下次载入时 `draw()` 的 `if (this.imgClip.imageElem)`
+ * 判断通过，`drawImage({})` 直接抛 `TypeError`，
+ * 而它在 Token 的绘制循环里，一抛就**整层 Token 都不画了**。
+ *
+ * 所以这里只从 `imageRecs` 取元素：匹配得上就用，匹配不上就是 `undefined`
+ *（`draw()` 的空判断会跳过画图，这是可接受的降级）。
+ *
+ * 配套的另一半在 `toRecord()` —— 它现在显式不写 `imageElem`。
+ * 两边都改了才算修干净：这里管「读到脏数据不出事」，那边管「不再产生脏数据」。
+ *
+ * @param img - 记录里的 img 字段，可能带存档残留的 imageElem
+ * @param imageRecs - 场景的图片资源列表，元素的唯一可信来源
+ * @returns {ImageClip} 新的 ImageClip，`imageElem` 来自 imageRecs 或为 undefined
+ */
+export function clipFromRecord(img: ImageClip,
+	imageRecs: Array<ImageResource>): ImageClip //
+{
+	// 显式列字段，不用 `{ ...img }` —— 那样会把 imageElem 带进来
+	const clip: ImageClip = {
+		imgKey: img.imgKey, sx: img.sx, sy: img.sy,
+		width: img.width, height: img.height,
+	};
+	const matched = imageRecs?.find(r => r.id === img.imgKey);
+	if (matched?.imgElem) { clip.imageElem = matched.imgElem; }
+	return clip;
+}
+
+/**
+ * 把 ImageClip 转成可序列化的记录，**不含图片元素**
+ *
+ * `imageElem` 是运行时缓存，不是数据。写进存档会变成 `{}`，
+ * 详见 {@link clipFromRecord}。
+ *
+ * @param clip - 要序列化的 ImageClip
+ * @returns {ImageClip} 只含五个数据字段的新对象
+ */
+export function clipToRecord(clip: ImageClip): ImageClip {
+	return {
+		imgKey: clip.imgKey, sx: clip.sx, sy: clip.sy,
+		width: clip.width, height: clip.height,
+	};
+}
+
 /**
  * Token 2D 基础接口
  *
@@ -212,11 +265,16 @@ export class CircleToken extends CanvasCircle2D implements IToken2D, ICircleToke
 
 	/**
 	 * 将圆形 Token 转为可序列化的记录
+	 *
+	 * `img` 过 {@link clipToRecord} 剥掉 `imageElem` —— 直接给 `this.imgClip`
+	 * 会把 HTMLImageElement 序列化成 `{}` 写进存档。
+	 *
 	 * @returns {ICircleTokenRec}
 	 */
 	toRecord(): ICircleTokenRec {
 		return { "type": "Circle", "id": this.id, "x": this.c.x, "y": this.c.y, "radius": this.radius, //
-			"visible": this.visible, "blockView": this.blockView, "color": this.color, "img": this.imgClip };
+			"visible": this.visible, "blockView": this.blockView, "color": this.color, //
+			"img": clipToRecord(this.imgClip) };
 	}
 
 	/**
@@ -226,11 +284,10 @@ export class CircleToken extends CanvasCircle2D implements IToken2D, ICircleToke
 	 * @returns {CircleToken}
 	 */
 	static fromRecord(rec: ICircleTokenRec, imageRecs: Array<ImageResource>): CircleToken {
-		const imgClip = { ...rec.img };
-		const matched = imageRecs?.find(img => img.id === rec.img.imgKey);
-		if (matched?.imgElem) {
-			imgClip.imageElem = matched.imgElem;
-		}
+		// imageElem 只能来自 imageRecs，存档里带的那个一律丢掉 ——
+		// 它是 JSON 化之后的空对象 `{}`，而空对象是真值，
+		// 留着会让 draw() 拿它去 drawImage()。详见 clipFromRecord()
+		const imgClip = clipFromRecord(rec.img, imageRecs);
 		let cc = new CircleToken(rec.id, rec.x, rec.y, rec.radius, 0, rec.color, rec.color, //
 			readVisible(rec), rec.blockView, rec.color, imgClip);
 		return cc;
@@ -455,11 +512,8 @@ export class RectangleToken extends CanvasRectangle2D implements IToken2D, IRect
 	 * @returns {RectangleToken}
 	 */
 	static fromRecord(rec: IRectangleTokenRec, imageRecs: Array<ImageResource>): RectangleToken {
-		const imgClip = { ...rec.img };
-		const matched = imageRecs?.find(img => img.id === rec.img.imgKey);
-		if (matched?.imgElem) {
-			imgClip.imageElem = matched.imgElem;
-		}
+		// 同 CircleToken.fromRecord：存档里的 imageElem 一律丢掉
+		const imgClip = clipFromRecord(rec.img, imageRecs);
 		let rtg = new RectangleToken(rec.id, rec.x, rec.y, rec.width, rec.height, 0, //
 			rec.color, rec.color, readVisible(rec), rec.blockView, rec.color, imgClip);
 		return rtg;
@@ -467,6 +521,9 @@ export class RectangleToken extends CanvasRectangle2D implements IToken2D, IRect
 
 	/**
 	 * 将矩形 Token 转为可序列化的记录
+	 *
+	 * `img` 过 {@link clipToRecord} 剥掉 `imageElem`，同 CircleToken.toRecord。
+	 *
 	 * @returns {IRectangleTokenRec}
 	 */
 	toRecord(): IRectangleTokenRec {
@@ -474,7 +531,7 @@ export class RectangleToken extends CanvasRectangle2D implements IToken2D, IRect
 			"type": "Rectangle", "id": this.id, "x": this.x, "y": this.y, //
 			"width": this.width, "height": this.height, "visible": this.visible, //
 			"blockView": this.blockView, "color": this.color, //
-			"img": this.imgClip
+			"img": clipToRecord(this.imgClip)
 		};
 	}
 

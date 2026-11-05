@@ -1154,8 +1154,10 @@ cp -r ../common-utils/docs    webroot/      # → webroot/docs/
 几何层不可变，`moveTo`/`scaleTo` 返回新实例。这是方案里没料到的，
 而且原地改会**静默**算错阴影。
 
-**测试**：三组合计 401 个用例（库 230 + 站点 151 + 架构 20），
+**测试**：三组合计 404 个用例（库 230 + 站点 154 + 架构 20），
 外加三轮打真 `site-api` 的冒烟验证共 89 项。
+站点侧比初版多 3 条 —— 浏览器验证抓到的 Token 图片 bug 的回归用例，
+见 [11.1.1 节](#1111-️-浏览器验证抓到的第一个-bug token-图片不显示2026-11-05-已修)。
 
 ### 11.1 还没做的：浏览器手动验证
 
@@ -1175,6 +1177,67 @@ jsdom 的 `getContext('2d')` 返回 `null`（没装 `canvas` 原生模块），
 
 建议拿 `old-sandbox-page` 起一份老应用做**视觉对比** —— 迷雾和阴影
 最容易出的是「看着差不多但边界不对」，并排看才发现得了。
+
+### 11.1.1 ⚠️ 浏览器验证抓到的第一个 bug：Token 图片不显示（2026-11-05 已修）
+
+`sandbox/editor.html` 载入后**棋子和门的图片一张都不显示**（地图背景正常）。
+两个独立的缺陷，都是静默的：
+
+**① 装载顺序反了 —— 这是直接原因**
+
+`fromRecord()` 是把 `ImageResource.imgElem` **快照拷贝**进 Token 的
+`imgClip.imageElem` 的。而两个调用方当时都是这个顺序：
+
+```typescript
+this.scene.loadFrom(r.data, this.cfg.assetRoot);     // ← 这里就建好了全部 Token
+await SandTableUtils.loadImageResources(...);         // ← 图片元素到这一步才有
+```
+
+Token 拿到的是 `undefined`，**之后再填 `imgElem` 对已建好的 Token 没有任何影响**。
+`draw()` 里是 `if (this.imgClip.imageElem)` 的空判断，所以不报错、只是不画。
+
+地图背景不受影响，因为 `redraw()` 每次都现取 `requireMapImage().imgElem` ——
+**它读的是资源表、不是快照**。所以「地图有、棋子没有」正是这个 bug 的指纹。
+
+对照组：demo 脚本 `trpg/testJadeTRPG.ts` 的顺序是对的（先加载、后
+`fromRecord`），所以那边一直是好的 —— 这也是为什么迁移时没发现。
+
+**修法**：把加载收进 `loadFrom()` 内部（它因此变成 `async`），
+不留给调用方排顺序。两个调用方各删掉自己那行 `loadImageResources`。
+
+**② `toRecord()` 把 `imageElem` 写进了存档 —— 潜伏的那个**
+
+`toRecord()` 直接给出 `this.imgClip`，里面带着 `imageElem`。
+它是 `HTMLImageElement`，没有可枚举的自有属性，所以
+`JSON.stringify` 之后是 `imageElem: {}` —— **空对象是真值**。
+
+于是下次载入时 `{ ...rec.img }` 把这个空对象拷进 Token，
+`draw()` 的空判断**通过**，`drawImage({})` 抛 `TypeError`。
+而它在 Token 的绘制循环里，一抛就**整层 Token 都不画了**。
+
+老应用没这个问题 —— 它的 save 是逐字段拼的（`sandtable-comm.js` 的
+`tokenToData()` 只取 `token.image.key` 等五个字段），`imageElem` 从没进过存档。
+**是新编辑器引入的**。
+
+**修法**：加 `clipFromRecord()` / `clipToRecord()` 两个函数，
+显式列字段而不用展开符。前者管「读到脏数据不出事」，后者管「不再产生脏数据」，
+两边都要改才算修干净。
+
+**回归用例**：`src/test/ts/sandbox.tokenimage.test.ts`（3 条）。
+退回修复验证过会红。顺带修了测试基建两处：
+
+- `_jsdom-setup.ts` 的 `PATCHED` 里**漏了 `Image`** ——
+  Node 全局没有它（实测 `undefined`），而 `loadImageResources` 用的就是
+  `new Image()`，不装会 `ReferenceError`
+- **jsdom 不加载图片，`onload` / `onerror` 都不触发**（实测 500ms 后两个都没来），
+  所以 `loadImageByProxy` 的 `await` 在 jsdom 里**永久挂起**，
+  `node --test` 报 `Promise resolution is still pending`、整个 suite 被取消。
+  加了 `stubImageLoading()`：换一个立即触发 `onerror` 的 `Image` 桩
+  （失败分支只是换占位图、不抛错）。开 `resources: 'usable'` 也能让事件触发，
+  但那会发真实网络请求
+
+**这条也说明 11.1 那张表值得认真走** —— 两个缺陷都是静默的，
+302 个自动化用例一条都没碰到。
 
 ### 11.2 两件遗留
 
