@@ -250,3 +250,223 @@ export class SandboxDiceWindow extends UIWindowAdapter {
 	}
 
 }
+
+/**
+ * Token 列表窗口（GM 用）
+ *
+ * 老界面是一排 emoji 分组按钮 + 一张表格 + 下方的创建按钮，
+ * 挤在 `#tokenGroupBtns` / `#tokenListArea` / `#createTokenArea` 三个 div 里，
+ * 高度靠 `resizeLayout()` 手算。这里合成一个窗口。
+ *
+ * 表格用 98.css 的 `table.interactive` + `tr.highlighted` 做选中态，
+ * 外面套 `.sunken-panel` 给内凹边框 —— 不自己写样式。
+ */
+export class SandboxTokenListWindow extends UIWindowAdapter {
+
+	/** 分组切换按钮的容器 */
+	readonly groupBar: HTMLDivElement = document.createElement('div');
+	/** Token 列表的表格主体 */
+	readonly listBody: HTMLTableSectionElement = document.createElement('tbody');
+	/** 创建新 Token 的按钮容器（按分组变化） */
+	readonly createBar: HTMLDivElement = document.createElement('div');
+
+	/**
+	 * 拼窗体：分组按钮 → 列表 → 创建按钮
+	 */
+	renderIn(): void {
+		const renderBody = (): HTMLDivElement => {
+			const body = this.ui.windowBody;
+			const size = this.cfg.body.initSize ?? DEFAULT_BODY;
+			body.style.width = `${size.width}px`;
+			body.style.height = `${size.height}px`;
+			body.style.overflow = 'auto';
+
+			this.groupBar.classList.add('field-row');
+			body.appendChild(this.groupBar);
+
+			const panel = document.createElement('div');
+			panel.classList.add('sunken-panel');
+			// 列表可能很长，给个固定高度让它自己滚
+			panel.style.height = `${Math.max(120, size.height - 110)}px`;
+			const table = document.createElement('table');
+			table.classList.add('interactive');
+			table.style.width = '100%';
+			table.appendChild(this.listBody);
+			panel.appendChild(table);
+			body.appendChild(panel);
+
+			this.createBar.classList.add('field-row');
+			body.appendChild(this.createBar);
+			return body;
+		};
+
+		JadeWindowUI.renderWindowTplt(this, undefined, renderBody, undefined);
+	}
+
+}
+
+/**
+ * Token 属性编辑窗口（GM 用）
+ *
+ * 老界面把属性表单塞在地图下方的 `#tk-prop-editer` 里，
+ * 用四段拼好的 HTML 字符串（`editorHtmlLine` / `Rect` / `Circ` / `Img`）
+ * 按 Token 类型替换 `innerHTML`，再用 `$('#tkX').val()` 逐个读回。
+ *
+ * 这里保留「按类型换表单」的思路，但表单由 {@link SandboxPropsWindow.renderFields}
+ * 按字段描述生成，读值走 `fieldValue()` —— 不再手写 20 个 id。
+ */
+export class SandboxPropsWindow extends UIWindowAdapter {
+
+	/** 表单容器 */
+	readonly form: HTMLDivElement = document.createElement('div');
+	/** 图片裁剪预览画布 */
+	readonly clipCanvas: HTMLCanvasElement = document.createElement('canvas');
+	/** 字段名 → 输入元素 */
+	private readonly fields: Map<string, HTMLInputElement | HTMLSelectElement> = new Map();
+
+	/**
+	 * 拼窗体：表单 + 图片裁剪预览
+	 */
+	renderIn(): void {
+		const renderBody = (): HTMLDivElement => {
+			const body = this.ui.windowBody;
+			const size = this.cfg.body.initSize ?? DEFAULT_BODY;
+			body.style.width = `${size.width}px`;
+			body.style.height = `${size.height}px`;
+			body.style.overflow = 'auto';
+			body.appendChild(this.form);
+
+			const panel = document.createElement('div');
+			panel.classList.add('sunken-panel');
+			panel.appendChild(this.clipCanvas);
+			body.appendChild(panel);
+			return body;
+		};
+
+		JadeWindowUI.renderWindowTplt(this, undefined, renderBody, undefined);
+	}
+
+	/**
+	 * 按字段描述重建表单
+	 *
+	 * @param defs - 字段描述。`options` 有值时渲染成 `<select>`，否则是 `<input>`
+	 */
+	renderFields(defs: Array<{
+		key: string, label: string, value: string,
+		type?: string, options?: Array<[string, string]>,
+	}>): void {
+		this.form.innerHTML = '';
+		this.fields.clear();
+		for (const d of defs) {
+			const row = document.createElement('div');
+			row.classList.add('field-row');
+			const label = document.createElement('label');
+			label.textContent = d.label;
+			label.style.width = '5em';
+			row.appendChild(label);
+
+			let input: HTMLInputElement | HTMLSelectElement;
+			if (d.options) {
+				const sel = document.createElement('select');
+				for (const [v, t] of d.options) {
+					const opt = document.createElement('option');
+					opt.value = v;
+					opt.textContent = t;
+					sel.appendChild(opt);
+				}
+				sel.value = d.value;
+				input = sel;
+			} else {
+				const ipt = document.createElement('input');
+				ipt.type = d.type ?? 'text';
+				ipt.value = d.value;
+				input = ipt;
+			}
+			row.appendChild(input);
+			this.form.appendChild(row);
+			this.fields.set(d.key, input);
+		}
+	}
+
+	/**
+	 * 读某个字段的当前值
+	 *
+	 * @param key - 字段名
+	 * @returns {string} 字段不存在时返回空串
+	 */
+	fieldValue(key: string): string {
+		return this.fields.get(key)?.value ?? '';
+	}
+
+	/**
+	 * 给表单的每个字段绑定变更回调
+	 *
+	 * 老代码是「改完按按钮提交」，这里改成**改完即生效** ——
+	 * 编辑地图时属性改一下就要看到效果，多一次点击很烦。
+	 *
+	 * @param onChange - 任一字段变更时调用
+	 */
+	bindChange(onChange: () => void): void {
+		for (const input of this.fields.values()) {
+			input.addEventListener('change', onChange);
+		}
+	}
+
+	/** 清空表单与预览（没选中 Token 时） */
+	clear(): void {
+		this.form.innerHTML = '';
+		this.fields.clear();
+		this.clipCanvas.width = 10;
+		this.clipCanvas.height = 10;
+	}
+
+}
+
+/**
+ * 场景操作窗口（GM 用）
+ *
+ * 装「保存并发布」「刷新请求」两个按钮和场景信息。
+ * 老界面这两个按钮在 `#optSaveBtns` 里，由 `listGroupTokens()` 顺手
+ * 用 `innerHTML` 重建 —— 切一次分组就重建一遍，没必要。
+ */
+export class SandboxSceneWindow extends UIWindowAdapter {
+
+	/** 保存并发布 */
+	readonly saveBtn: HTMLButtonElement = document.createElement('button');
+	/** 刷新移动请求 */
+	readonly refreshBtn: HTMLButtonElement = document.createElement('button');
+	/** 信息显示区 */
+	readonly info: HTMLParagraphElement = document.createElement('p');
+
+	/**
+	 * 拼窗体：两个按钮 + 信息行
+	 */
+	renderIn(): void {
+		const renderBody = (): HTMLDivElement => {
+			const body = this.ui.windowBody;
+			body.style.overflow = 'auto';
+			this.saveBtn.textContent = '保存并发布';
+			// 98.css 的 button.default 是带强调边框的主按钮
+			this.saveBtn.classList.add('default');
+			this.refreshBtn.textContent = '刷新请求';
+			const row = document.createElement('div');
+			row.classList.add('field-row');
+			row.appendChild(this.saveBtn);
+			row.appendChild(this.refreshBtn);
+			body.appendChild(row);
+			body.appendChild(this.info);
+			return body;
+		};
+
+		JadeWindowUI.renderWindowTplt(this, undefined, renderBody, undefined);
+	}
+
+	/**
+	 * 显示一行信息
+	 * @param text - 要显示的文字
+	 */
+	setInfo(text: string): void {
+		this.info.textContent = text;
+	}
+
+}

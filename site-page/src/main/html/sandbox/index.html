@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+@@include('./src/main/html/parts/meta-charset.html', { })
+@@include('./src/main/html/parts/importmap.html', { })
+		<title>沙盘 - 登录</title>
+@@include('./src/main/html/parts/favicon.html', { })
+
+@@include('./src/main/html/parts/vendor-98css.html', { })
+@@include('./src/main/html/parts/theme-window-ui.html', { })
+		<!--
+			这一页不是桌面，所以不设 html/body 的 100% 高度 ——
+			它是进入应用之前的一步，普通页面布局就够。
+			理由见 sandboxLogin.ts 的文件注释
+			--->
+		<style>
+body { padding: 2em; max-width: 34em; }
+fieldset { margin-bottom: 1em; }
+#login-status { min-height: 1.4em; }
+		</style>
+	</head>
+	<body>
+
+<div class="window">
+	<div class="title-bar">
+		<div class="title-bar-text">Jade Dungeon 沙盘</div>
+	</div>
+	<div class="window-body">
+
+		<fieldset>
+			<legend>身份</legend>
+			<div class="field-row">
+				<label for="username">用户名</label>
+				<input id="username" type="text" />
+			</div>
+			<div class="field-row">
+				<label for="password">密码</label>
+				<input id="password" type="password" />
+			</div>
+			<div class="field-row">
+				<button id="btn-login" class="default">登录</button>
+				<button id="btn-regist">注册</button>
+			</div>
+		</fieldset>
+
+		<fieldset>
+			<legend>场景</legend>
+			<div class="field-row">
+				<label for="campaignId">战役</label>
+				<input id="campaignId" type="text" placeholder="如 深水城大冒险" />
+			</div>
+			<div class="field-row">
+				<label for="placeId">地点</label>
+				<input id="placeId" type="text" placeholder="如 海拉斯特的地下城" />
+			</div>
+			<div class="field-row">
+				<label for="sceneId">场景</label>
+				<input id="sceneId" type="text" placeholder="如 山下一层" />
+			</div>
+			<div class="field-row">
+				<button id="btn-enter">进入场景</button>
+				<button id="btn-edit">编辑场景</button>
+			</div>
+			<p>
+				第一个用新战役名保存的人成为它的拥有者，其他人改不了该战役的任何场景。
+			</p>
+		</fieldset>
+
+		<p id="login-status"></p>
+
+		<div class="status-bar">
+			<p class="status-bar-field">
+				玩家棋子的 ID 必须与用户名一致，否则进场景会是旁观模式
+			</p>
+		</div>
+
+	</div>
+</div>
+
+	</body>
+	<script type="module">
+		import { initSandboxLogin } from "@jade-dungeon/site-page/sandbox-login";
+		window.onload = function() {
+			initSandboxLogin({ apiRoot: '@@apiRoot' });
+		}
+	</script>
+</html>
