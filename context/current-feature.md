@@ -22,6 +22,17 @@
 
 ## 历史记录
 
+- **editor 属性窗口：裁剪区域支持鼠标交互**（2026-11-06）
+  - `sandboxWindows.ts` 的 `SandboxPropsWindow` 加 `setFieldValue()`（直接改
+    `input.value`，不触发 change）
+  - `sandboxEditor.ts` 加 `bindPropsEvents()`：在裁剪预览画布上
+    Shift+拖动=框选新矩形、Ctrl+拖动已选区域=平移、Alt+拖动已选区域=缩放
+    （dx 改宽、dy 改高，下限 1，对齐 `RectangleToken.scaleTo`）
+  - 拖动过程只更新表单字段 + 实时重画预览，松手才 `applyProps()` 写回 Token；
+    `clipToCanvasPoint()` 用 `getBoundingClientRect` 按比例换算（画布位图 = 图片
+    原始尺寸，但 CSS 显示尺寸可能被压缩）
+  - `keydown/keyup` 增加 Shift 状态跟踪（`shiftDown`）
+  - **未做浏览器手工验证** —— 三种拖动、坐标换算（图片比窗口大时的缩放）要在浏览器里看
 - **editor 场景窗口：加「当前角色视野」开关**（2026-11-06）
   - `sandboxWindows.ts` 的 `SandboxSceneWindow` 加 `autoView` checkbox
     （文本「当前角色视野」，位于「定时刷新」下方，默认非选中）

@@ -426,6 +426,20 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 	}
 
 	/**
+	 * 设置某个字段的值（裁剪区域拖动用）
+	 *
+	 * 直接改 `input.value`，不触发 change 事件 —— 拖动的实时反馈由调用方
+	 * 自己重画预览，松手时再统一走 `applyProps` 写回 Token。
+	 *
+	 * @param key - 字段名
+	 * @param value - 新值
+	 */
+	setFieldValue(key: string, value: string): void {
+		const input = this.fields.get(key);
+		if (input) { input.value = value; }
+	}
+
+	/**
 	 * 给表单的每个字段绑定变更回调
 	 *
 	 * 老代码是「改完按按钮提交」，这里改成**改完即生效** ——

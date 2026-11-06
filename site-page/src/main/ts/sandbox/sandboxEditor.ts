@@ -101,8 +101,16 @@ export class SandboxEditor {
 	private ctrlDown = false;
 	/** 按住 Alt = 缩放模式 */
 	private altDown = false;
+	/** 按住 Shift = 框选裁剪区域模式 */
+	private shiftDown = false;
 	/** 拖动起点 */
 	private dragFrom: { x: number, y: number } | undefined;
+	/** 裁剪区域的拖动状态（Shift 框选 / Ctrl 移动 / Alt 缩放） */
+	private clipDrag: {
+		mode: 'select' | 'move' | 'scale',
+		start: { x: number, y: number },
+		rect: { sx: number, sy: number, sw: number, sh: number },
+	} | undefined;
 	/**
 	 * 画面上有没有预览的幽灵
 	 *
@@ -170,6 +178,7 @@ export class SandboxEditor {
 		this.bindMapEvents();
 		this.bindSceneEvents();
 		this.bindDiceEvents();
+		this.bindPropsEvents();
 		this.renderGroupBar();
 		this.renderTokenList();
 		await this.refreshRollResults();
@@ -719,10 +728,12 @@ export class SandboxEditor {
 		document.addEventListener('keydown', e => {
 			if (e.key === 'Control') { this.ctrlDown = true; }
 			if (e.key === 'Alt') { this.altDown = true; }
+			if (e.key === 'Shift') { this.shiftDown = true; }
 		});
 		document.addEventListener('keyup', e => {
 			if (e.key === 'Control') { this.ctrlDown = false; }
 			if (e.key === 'Alt') { this.altDown = false; }
+			if (e.key === 'Shift') { this.shiftDown = false; }
 		});
 
 		cvs.addEventListener('mousedown', e => {
@@ -790,6 +801,106 @@ export class SandboxEditor {
 			this.renderProps();
 			void this.redraw();
 		});
+	}
+
+	/**
+	 * 绑定属性窗口裁剪预览的交互：Shift 框选 / Ctrl 移动 / Alt 缩放
+	 *
+	 * 三种修饰键和编辑窗口里拖元素的语义一致（见 bindMapEvents）：
+	 *
+	 * | 键 | 动作 |
+	 * |----|------|
+	 * | Shift + 拖动 | 从起点框一个矩形，重新圈定裁剪区域 |
+	 * | Ctrl + 拖动已选中的区域 | 平移裁剪区域 |
+	 * | Alt + 拖动已选中的区域 | 改裁剪宽高（dx 改宽、dy 改高） |
+	 *
+	 * 拖动过程只更新表单字段并实时重画预览，松手才走 `applyProps()` 写回
+	 * Token —— 和地图拖动「拖动看预览、松手生效」同一套节奏。
+	 */
+	private bindPropsEvents(): void {
+		const cvs = this.propsWin.clipCanvas;
+
+		cvs.addEventListener('mousedown', e => {
+			const p = this.clipToCanvasPoint(e);
+			const rect = this.clipRect();
+			const inside = p.x >= rect.sx && p.x <= rect.sx + rect.sw &&
+				p.y >= rect.sy && p.y <= rect.sy + rect.sh;
+
+			if (this.shiftDown) {
+				this.clipDrag = { mode: 'select', start: p, rect };
+			} else if (this.ctrlDown && inside) {
+				this.clipDrag = { mode: 'move', start: p, rect };
+			} else if (this.altDown && inside) {
+				this.clipDrag = { mode: 'scale', start: p, rect };
+			}
+		});
+
+		cvs.addEventListener('mousemove', e => {
+			if (!this.clipDrag) { return; }
+			const p = this.clipToCanvasPoint(e);
+			const { mode, start, rect } = this.clipDrag;
+			const dx = p.x - start.x;
+			const dy = p.y - start.y;
+
+			let next: { sx: number, sy: number, sw: number, sh: number } | undefined;
+			if (mode === 'select') {
+				const sw = Math.abs(dx);
+				const sh = Math.abs(dy);
+				// 还没拖出有效区域就不动，避免点一下把裁剪缩成 0
+				if (sw < 1 || sh < 1) { return; }
+				next = { sx: Math.min(start.x, p.x), sy: Math.min(start.y, p.y), sw, sh };
+			} else if (mode === 'move') {
+				next = { sx: rect.sx + dx, sy: rect.sy + dy, sw: rect.sw, sh: rect.sh };
+			} else {
+				// 缩放：dx 改宽、dy 改高，下限 1（对齐 RectangleToken.scaleTo）
+				next = {
+					sx: rect.sx, sy: rect.sy,
+					sw: Math.max(1, rect.sw + dx), sh: Math.max(1, rect.sh + dy),
+				};
+			}
+
+			this.writeClipRect(next);
+			this.drawClipPreview();
+		});
+
+		cvs.addEventListener('mouseup', () => {
+			if (!this.clipDrag) { return; }
+			this.clipDrag = undefined;
+			void this.applyProps();
+		});
+	}
+
+	/**
+	 * 把鼠标事件换算成裁剪预览画布上的坐标
+	 *
+	 * 画布位图尺寸 = 图片原始尺寸，但 CSS 显示尺寸可能被窗口宽度压缩，
+	 * 所以用 `getBoundingClientRect` 按比例换算（对齐 `SandboxMapWindow.toCanvasPoint`）。
+	 */
+	private clipToCanvasPoint(e: MouseEvent): { x: number, y: number } {
+		const cvs = this.propsWin.clipCanvas;
+		const rect = cvs.getBoundingClientRect();
+		if (rect.width <= 0 || rect.height <= 0) { return { x: 0, y: 0 }; }
+		const x = (e.clientX - rect.left) * (cvs.width / rect.width);
+		const y = (e.clientY - rect.top) * (cvs.height / rect.height);
+		return { x: Math.round(x), y: Math.round(y) };
+	}
+
+	/** 读当前裁剪区域（来自表单字段） */
+	private clipRect(): { sx: number, sy: number, sw: number, sh: number } {
+		return {
+			sx: parseFloat(this.propsWin.fieldValue('sx')) || 0,
+			sy: parseFloat(this.propsWin.fieldValue('sy')) || 0,
+			sw: parseFloat(this.propsWin.fieldValue('sw')) || 0,
+			sh: parseFloat(this.propsWin.fieldValue('sh')) || 0,
+		};
+	}
+
+	/** 把裁剪区域写回表单字段（不触发 change） */
+	private writeClipRect(rect: { sx: number, sy: number, sw: number, sh: number }): void {
+		this.propsWin.setFieldValue('sx', String(rect.sx));
+		this.propsWin.setFieldValue('sy', String(rect.sy));
+		this.propsWin.setFieldValue('sw', String(rect.sw));
+		this.propsWin.setFieldValue('sh', String(rect.sh));
 	}
 
 	/**
