@@ -107,6 +107,10 @@ export class SandboxEditor {
 	private previewing = false;
 	/** 待创建的形状，点地图时落下 */
 	private pendingShape: { group: TokenGroup, shape: 'Line' | 'Rectangle' | 'Circle' } | undefined;
+	/** 定时刷新的计时器句柄（选中「定时刷新」时启动，取消时清掉） */
+	private autoRefreshTimer: number | undefined;
+	/** 刷新请求是否正在进行 —— 防止上一次没返回就叠下一次 */
+	private refreshInFlight = false;
 
 	/**
 	 * @param cfg - 页面注入的配置
@@ -658,11 +662,20 @@ export class SandboxEditor {
 	}
 
 	/**
-	 * 绑定场景窗口：保存并发布、刷新移动请求
+	 * 绑定场景窗口：保存并发布、刷新移动请求、定时刷新开关
 	 */
 	private bindSceneEvents(): void {
 		this.sceneWin.saveBtn.addEventListener('click', () => { void this.save(); });
 		this.sceneWin.refreshBtn.addEventListener('click', () => { void this.loadMoveRequests(); });
+		// 定时刷新：选中启动 3 秒一次的自动刷新，取消就停
+		this.sceneWin.autoRefresh.addEventListener('change', () => {
+			if (this.sceneWin.autoRefresh.checked) {
+				this.autoRefreshTimer = window.setInterval(() => { void this.loadMoveRequests(); }, 3000);
+			} else if (this.autoRefreshTimer !== undefined) {
+				window.clearInterval(this.autoRefreshTimer);
+				this.autoRefreshTimer = undefined;
+			}
+		});
 	}
 
 	/**
@@ -695,27 +708,33 @@ export class SandboxEditor {
 	 * @returns {Promise<void>}
 	 */
 	private async loadMoveRequests(): Promise<void> {
-		const r = await this.api.loadMoveRequests(this.cfg.scene);
-		if (!r.ok) {
-			this.sceneWin.setInfo(`读取请求失败：${r.msg ?? '未知错误'}`);
-			return;
-		}
-		await this.redraw();
-		const ctx = this.mapWin.finalCanvas.getContext('2d');
-		const list = r.data ?? [];
-		if (ctx) {
-			for (const req of list) {
-				const tk = this.scene.get('teams', req.userId);
-				// drawNextLocation 只有圆形 Token 有，玩家棋子都是圆形
-				const drawable = tk as unknown as {
-					drawNextLocation?: (c: CanvasRenderingContext2D, x: number, y: number) => void
-				} | undefined;
-				drawable?.drawNextLocation?.(ctx, req.pos.x, req.pos.y);
+		if (this.refreshInFlight) { return; }
+		this.refreshInFlight = true;
+		try {
+			const r = await this.api.loadMoveRequests(this.cfg.scene);
+			if (!r.ok) {
+				this.sceneWin.setInfo(`读取请求失败：${r.msg ?? '未知错误'}`);
+				return;
 			}
+			await this.redraw();
+			const ctx = this.mapWin.finalCanvas.getContext('2d');
+			const list = r.data ?? [];
+			if (ctx) {
+				for (const req of list) {
+					const tk = this.scene.get('teams', req.userId);
+					// drawNextLocation 只有圆形 Token 有，玩家棋子都是圆形
+					const drawable = tk as unknown as {
+						drawNextLocation?: (c: CanvasRenderingContext2D, x: number, y: number) => void
+					} | undefined;
+					drawable?.drawNextLocation?.(ctx, req.pos.x, req.pos.y);
+				}
+			}
+			this.sceneWin.setInfo(list.length > 0
+				? `${list.length} 个移动请求（Ctrl+拖动棋子来裁定）`
+				: '没有待裁定的移动请求');
+		} finally {
+			this.refreshInFlight = false;
 		}
-		this.sceneWin.setInfo(list.length > 0
-			? `${list.length} 个移动请求（Ctrl+拖动棋子来裁定）`
-			: '没有待裁定的移动请求');
 	}
 
 	/**

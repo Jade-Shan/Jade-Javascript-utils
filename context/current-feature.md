@@ -22,6 +22,15 @@
 
 ## 历史记录
 
+- **editor 场景窗口：加「定时刷新」开关**（2026-11-06）
+  - `sandboxWindows.ts` 的 `SandboxSceneWindow` 加 `autoRefresh` checkbox
+    （文本「定时刷新」，默认非选中）。98.css 的 checkbox 靠 `input + label`
+    相邻兄弟选择器画外观，所以 label 紧跟 input 且用 `for` 关联
+  - `sandboxEditor.ts`：`bindSceneEvents()` 绑 change 事件——选中启动
+    `setInterval` 每 3 秒自动执行 `loadMoveRequests()`，取消就 `clearInterval`；
+    `loadMoveRequests()` 加 `refreshInFlight` 防重入（上一次没返回就跳过下一次，
+    避免网络慢时每 3 秒堆一堆请求）
+  - **未做浏览器手工验证** —— checkbox 外观与 3 秒定时刷新要在浏览器里看
 - **editor 的元素列表：分组按钮改成 98.css 标签页**（2026-11-06）
   - `sandboxWindows.ts` 的 `SandboxTokenListWindow`：分组切换从一排 `<button>`
     改成 98.css 的 `menu[role=tablist]` 标签页，列表 + 创建按钮包进

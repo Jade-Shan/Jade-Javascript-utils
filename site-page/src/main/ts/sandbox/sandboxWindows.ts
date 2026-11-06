@@ -452,7 +452,7 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 /**
  * 场景操作窗口（GM 用）
  *
- * 装「保存并发布」「刷新请求」两个按钮和场景信息。
+ * 装「保存并发布」「刷新请求」两个按钮、「定时刷新」开关和场景信息。
  * 老界面这两个按钮在 `#optSaveBtns` 里，由 `listGroupTokens()` 顺手
  * 用 `innerHTML` 重建 —— 切一次分组就重建一遍，没必要。
  */
@@ -462,11 +462,13 @@ export class SandboxSceneWindow extends UIWindowAdapter {
 	readonly saveBtn: HTMLButtonElement = document.createElement('button');
 	/** 刷新移动请求 */
 	readonly refreshBtn: HTMLButtonElement = document.createElement('button');
+	/** 定时刷新开关（选中后每 3 秒自动刷新一次移动请求） */
+	readonly autoRefresh: HTMLInputElement = document.createElement('input');
 	/** 信息显示区 */
 	readonly info: HTMLParagraphElement = document.createElement('p');
 
 	/**
-	 * 拼窗体：两个按钮 + 信息行
+	 * 拼窗体：两个按钮 + 定时刷新开关 + 信息行
 	 */
 	renderIn(): void {
 		const renderBody = (): HTMLDivElement => {
@@ -481,6 +483,20 @@ export class SandboxSceneWindow extends UIWindowAdapter {
 			row.appendChild(this.saveBtn);
 			row.appendChild(this.refreshBtn);
 			body.appendChild(row);
+
+			// 定时刷新开关。98.css 的 checkbox 用 `input + label` 相邻兄弟
+			// 选择器画外观，所以 label 必须紧跟 input、且用 for 关联。
+			this.autoRefresh.type = 'checkbox';
+			this.autoRefresh.id = 'sandbox-auto-refresh';
+			const refreshRow = document.createElement('div');
+			refreshRow.classList.add('field-row');
+			const refreshLabel = document.createElement('label');
+			refreshLabel.htmlFor = 'sandbox-auto-refresh';
+			refreshLabel.textContent = '定时刷新';
+			refreshRow.appendChild(this.autoRefresh);
+			refreshRow.appendChild(refreshLabel);
+			body.appendChild(refreshRow);
+
 			body.appendChild(this.info);
 			return body;
 		};
