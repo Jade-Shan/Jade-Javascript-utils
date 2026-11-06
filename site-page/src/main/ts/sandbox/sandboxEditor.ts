@@ -3,7 +3,7 @@ import {
 } from '@jade-dungeon/jade-utils/resource';
 import { UIDesktop, UIWindowAdapter } from '@jade-dungeon/jade-utils/ui-window';
 import {
-	CircleToken, IToken2D, LineToken, RectangleToken,
+	CircleToken, IToken2D, LineToken, RectangleToken, SandTable,
 } from '../trpg/sandtable.js';
 import { renderRollResults, SandboxApi, SceneId } from './sandboxApi.js';
 import { SandboxScene, TokenGroup, TOKEN_GROUPS } from './sandboxScene.js';
@@ -73,6 +73,12 @@ const SHAPE_ICON = { Line: '╱', Rectangle: '▢', Circle: '◯' };
 /** 新建 Token 的默认尺寸 */
 const NEW_SIZE = { radius: 25, width: 50, height: 50, lineLen: 50 };
 
+/** 视野范围（像素），对齐玩家视图 view 页的值 */
+const VIEW_RANGE = 500;
+
+/** 迷雾的颜色与透明度，对齐玩家视图 */
+const SHADOW_STYLE = 'rgba(0, 0, 0, 0.7)';
+
 /**
  * GM 编辑器
  */
@@ -111,6 +117,10 @@ export class SandboxEditor {
 	private autoRefreshTimer: number | undefined;
 	/** 刷新请求是否正在进行 —— 防止上一次没返回就叠下一次 */
 	private refreshInFlight = false;
+	/** 视野预览用的沙盘（场景载入成功后构造，缺背景图时保持 undefined） */
+	private sandTable: SandTable | undefined;
+	/** 「当前角色视野」是否开启 */
+	private viewMode = false;
 
 	/**
 	 * @param cfg - 页面注入的配置
@@ -241,21 +251,74 @@ export class SandboxEditor {
 		// loadFrom 内部已经等图片加载完才建 Token —— 顺序反了棋子图片就不显示，
 		// 详见 sandboxScene.ts 的 loadFrom 注释
 		await this.scene.loadFrom(r.data, this.cfg.assetRoot, this.api.imageProxyUrl);
+
+		// 建视野预览用的沙盘。缺背景图（requireMapImage 抛错）时跳过 ——
+		// 「当前角色视野」用不了，但编辑照常。
+		try {
+			const mapImg = this.scene.requireMapImage();
+			this.sandTable = new SandTable({
+				visibility: 'default',
+				map: { imageUrl: mapImg.url, width: 0, height: 0, shadowStyle: SHADOW_STYLE },
+				frame: {
+					buff: {
+						cvs: this.mapWin.bufferCanvas,
+						ctx: this.mapWin.bufferCanvas.getContext('2d')!,
+					},
+					show: {
+						cvs: this.mapWin.finalCanvas,
+						ctx: this.mapWin.finalCanvas.getContext('2d')!,
+					},
+				},
+			});
+		} catch {
+			this.sandTable = undefined;
+		}
+
 		await this.redraw();
 		this.mapWin.setStatus('点选元素；Ctrl+拖动=移动，Alt+拖动=缩放');
 	}
 
 	/**
-	 * 重画地图（**不带迷雾**，GM 看全图）
+	 * 重画地图
 	 *
-	 * 用各 Token 的 `drawDesign()` 而不是 `draw()` —— 后者对
-	 * `visible: false` 的元素什么都不画，而墙壁几乎都是隐形的，
-	 * 编辑时必须看得见。
+	 * 平时是 GM 视角的全图（不带迷雾），用各 Token 的 `drawDesign()` 而不是
+	 * `draw()` —— 后者对 `visible: false` 的元素什么都不画，而墙壁几乎都是
+	 * 隐形的，编辑时必须看得见。
+	 *
+	 * 「当前角色视野」开启时改走玩家视角：以选中的棋子为观察者，
+	 * 调 `SandTable.drawSceneWithUserView()` 画迷雾 + 遮挡，和 view 页一致。
+	 * 画完再补一个选中高亮，让 GM 知道观察者是谁。
 	 *
 	 * @returns {Promise<void>}
 	 */
 	private async redraw(): Promise<void> {
-		this.paintScene();
+		if (this.viewMode && this.canPreviewView && this.sandTable) {
+			const sel = this.selected!;
+			const c = sel.token.getCenter();
+			this.sandTable.observer = {
+				c: { x: c.x, y: c.y },
+				viewRange: () => VIEW_RANGE,
+				// 带上自己的 id，遮挡阴影会跳过自己（不给自己投阴影）
+				id: sel.token.id,
+			};
+			await this.sandTable.drawSceneWithUserView(this.scene.allTokens(),
+				{ proxyUrl: this.api.imageProxyUrl });
+			const ctx = this.mapWin.finalCanvas.getContext('2d');
+			if (ctx) { this.highlightSelected(ctx); }
+		} else {
+			this.paintScene();
+		}
+	}
+
+	/**
+	 * 当前选中对象能否作为视野观察者（玩家或生物）
+	 *
+	 * 视野预览要有一个「站在哪」的对象，只有玩家棋子（teams）和生物（creaters）
+	 * 符合 —— 墙 / 门 / 陈设是场景道具，没有「视野」可言。
+	 */
+	private get canPreviewView(): boolean {
+		return this.selected !== undefined &&
+			(this.selected.group === 'teams' || this.selected.group === 'creaters');
 	}
 
 	/**
@@ -415,6 +478,12 @@ export class SandboxEditor {
 		this.selected = { group, token };
 		this.renderProps();
 		this.renderTokenList();
+		// 视野预览只在选中玩家/生物时有效；选中别的对象就自动退出视野模式，
+		// 否则 checkbox 还勾着、画面却是全图，状态对不上
+		if (this.viewMode && !this.canPreviewView) {
+			this.viewMode = false;
+			this.sceneWin.autoView.checked = false;
+		}
 		void this.redraw();
 	}
 
@@ -738,6 +807,26 @@ export class SandboxEditor {
 				this.autoRefreshTimer = undefined;
 			}
 		});
+		// 当前角色视野：以选中的玩家/生物为观察者预览视野与遮挡
+		this.sceneWin.autoView.addEventListener('change', () => { void this.toggleViewMode(); });
+	}
+
+	/**
+	 * 切换「当前角色视野」
+	 *
+	 * 选中时先检查有没有选中的对象、是不是玩家/生物 —— 不是就弹回 checkbox、
+	 * 什么都不做；是则以它为观察者画视野。取消选中则恢复 GM 的全图。
+	 *
+	 * @returns {Promise<void>}
+	 */
+	private async toggleViewMode(): Promise<void> {
+		if (this.sceneWin.autoView.checked && !this.canPreviewView) {
+			// 没选中对象、或选中的不是玩家/生物：什么都不做，checkbox 弹回
+			this.sceneWin.autoView.checked = false;
+			return;
+		}
+		this.viewMode = this.sceneWin.autoView.checked;
+		await this.redraw();
 	}
 
 	/**

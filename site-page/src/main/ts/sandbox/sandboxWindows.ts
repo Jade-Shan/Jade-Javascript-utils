@@ -464,6 +464,8 @@ export class SandboxSceneWindow extends UIWindowAdapter {
 	readonly refreshBtn: HTMLButtonElement = document.createElement('button');
 	/** 定时刷新开关（选中后每 3 秒自动刷新一次移动请求） */
 	readonly autoRefresh: HTMLInputElement = document.createElement('input');
+	/** 当前角色视野开关（选中后以选中的玩家/生物为观察者显示视野与遮挡） */
+	readonly autoView: HTMLInputElement = document.createElement('input');
 	/** 信息显示区 */
 	readonly info: HTMLParagraphElement = document.createElement('p');
 
@@ -496,6 +498,18 @@ export class SandboxSceneWindow extends UIWindowAdapter {
 			refreshRow.appendChild(this.autoRefresh);
 			refreshRow.appendChild(refreshLabel);
 			body.appendChild(refreshRow);
+
+			// 当前角色视野开关。同样是 98.css checkbox，label 紧跟 input、用 for 关联。
+			this.autoView.type = 'checkbox';
+			this.autoView.id = 'sandbox-auto-view';
+			const viewRow = document.createElement('div');
+			viewRow.classList.add('field-row');
+			const viewLabel = document.createElement('label');
+			viewLabel.htmlFor = 'sandbox-auto-view';
+			viewLabel.textContent = '当前角色视野';
+			viewRow.appendChild(this.autoView);
+			viewRow.appendChild(viewLabel);
+			body.appendChild(viewRow);
 
 			body.appendChild(this.info);
 			return body;

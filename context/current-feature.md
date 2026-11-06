@@ -22,6 +22,18 @@
 
 ## 历史记录
 
+- **editor 场景窗口：加「当前角色视野」开关**（2026-11-06）
+  - `sandboxWindows.ts` 的 `SandboxSceneWindow` 加 `autoView` checkbox
+    （文本「当前角色视野」，位于「定时刷新」下方，默认非选中）
+  - `sandboxEditor.ts`：`loadScene` 成功后构造一个 `SandTable`（复用 view 页的
+    视野渲染，缺背景图时跳过、编辑照常）；`redraw()` 分叉 —— `viewMode` 开启且
+    选中对象是玩家/生物时，以它为观察者调 `drawSceneWithUserView()` 画迷雾+遮挡，
+    画完补选中高亮；否则走原来的 `paintScene()` 全图
+  - `toggleViewMode()`：checkbox 选中时检查有没有选中对象、是不是玩家/生物，
+    不是就弹回 checkbox、什么都不做；取消选中恢复全图。`select()` 里同步 ——
+    视野模式开启时选中墙/门/陈设会自动退出视野模式，避免 checkbox 勾着却显示全图
+  - 视野范围 500、迷雾色 `rgba(0,0,0,0.7)` 与 view 页对齐
+  - **未做浏览器手工验证** —— 视野遮挡、选中切换、checkbox 弹回都要在浏览器里看
 - **editor 五窗口初始位置平铺**（2026-11-06）
   - `sandboxEditor.ts` 加 `tileWindows()`：五个窗口 `renderIn()` 之后统一重排，
     不再用 `renderWindowTplt` 的自动叠放。地图贴桌面左上（距上/左 20px）；
