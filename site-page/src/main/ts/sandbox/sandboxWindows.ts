@@ -342,14 +342,19 @@ export class SandboxTokenListWindow extends UIWindowAdapter {
  * 这里保留「按类型换表单」的思路，但表单由 {@link SandboxPropsWindow.renderFields}
  * 按字段描述生成，读值走 `fieldValue()` —— 不再手写 20 个 id。
  */
+/** 属性表单里一个字段的控件：单个输入框/下拉框，或一组单选框 */
+type FieldControl =
+	| { kind: 'single', el: HTMLInputElement | HTMLSelectElement }
+	| { kind: 'radio', radios: HTMLInputElement[] };
+
 export class SandboxPropsWindow extends UIWindowAdapter {
 
 	/** 表单容器 */
 	readonly form: HTMLDivElement = document.createElement('div');
 	/** 图片裁剪预览画布 */
 	readonly clipCanvas: HTMLCanvasElement = document.createElement('canvas');
-	/** 字段名 → 输入元素 */
-	private readonly fields: Map<string, HTMLInputElement | HTMLSelectElement> = new Map();
+	/** 字段名 → 控件（单选组是多个 radio 共用一个 key） */
+	private readonly fields: Map<string, FieldControl> = new Map();
 
 	/**
 	 * 拼窗体：表单 + 图片裁剪预览
@@ -386,11 +391,13 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 	/**
 	 * 按字段描述重建表单
 	 *
-	 * @param defs - 字段描述。`options` 有值时渲染成 `<select>`，否则是 `<input>`
+	 * @param defs - 字段描述。带 `options` 的字段：`widget: 'radio'` 渲染成
+	 * 98.css 的 OptionButton（一组 radio），否则渲染成 `<select>` 下拉框。
+	 * 不带 `options` 的渲染成 `<input>`。
 	 */
 	renderFields(defs: Array<{
 		key: string, label: string, value: string,
-		type?: string, options?: Array<[string, string]>,
+		type?: string, options?: Array<[string, string]>, widget?: 'radio',
 	}>): void {
 		this.form.innerHTML = '';
 		this.fields.clear();
@@ -402,26 +409,48 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 			label.style.width = '5em';
 			row.appendChild(label);
 
-			let input: HTMLInputElement | HTMLSelectElement;
 			if (d.options) {
-				const sel = document.createElement('select');
-				for (const [v, t] of d.options) {
-					const opt = document.createElement('option');
-					opt.value = v;
-					opt.textContent = t;
-					sel.appendChild(opt);
+				if (d.widget === 'radio') {
+					// 98.css 的 OptionButton：`input[type=radio]` 后面紧跟 `label`，
+					// 圆点与选中点全靠这两个相邻选择器画出来 —— 别拆开，
+					// 也不要用「label 包 input」，那会让 `+` 选择器失效。
+					const radios: HTMLInputElement[] = [];
+					d.options.forEach(([v, t], i) => {
+						const radio = document.createElement('input');
+						radio.type = 'radio';
+						radio.name = d.key;
+						radio.value = v;
+						radio.checked = v === d.value;
+						radio.id = `fld-${d.key}-${i}`;
+						row.appendChild(radio);
+						const optLabel = document.createElement('label');
+						optLabel.htmlFor = radio.id;
+						optLabel.textContent = t;
+						row.appendChild(optLabel);
+						radios.push(radio);
+					});
+					this.fields.set(d.key, { kind: 'radio', radios });
+				} else {
+					// 下拉框：选项多的字段用它（如「图片」的图片资源列表）
+					const sel = document.createElement('select');
+					for (const [v, t] of d.options) {
+						const opt = document.createElement('option');
+						opt.value = v;
+						opt.textContent = t;
+						sel.appendChild(opt);
+					}
+					sel.value = d.value;
+					row.appendChild(sel);
+					this.fields.set(d.key, { kind: 'single', el: sel });
 				}
-				sel.value = d.value;
-				input = sel;
 			} else {
 				const ipt = document.createElement('input');
 				ipt.type = d.type ?? 'text';
 				ipt.value = d.value;
-				input = ipt;
+				row.appendChild(ipt);
+				this.fields.set(d.key, { kind: 'single', el: ipt });
 			}
-			row.appendChild(input);
 			this.form.appendChild(row);
-			this.fields.set(d.key, input);
 		}
 	}
 
@@ -432,7 +461,10 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 	 * @returns {string} 字段不存在时返回空串
 	 */
 	fieldValue(key: string): string {
-		return this.fields.get(key)?.value ?? '';
+		const f = this.fields.get(key);
+		if (!f) { return ''; }
+		if (f.kind === 'radio') { return f.radios.find(r => r.checked)?.value ?? ''; }
+		return f.el.value;
 	}
 
 	/**
@@ -445,8 +477,13 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 	 * @param value - 新值
 	 */
 	setFieldValue(key: string, value: string): void {
-		const input = this.fields.get(key);
-		if (input) { input.value = value; }
+		const f = this.fields.get(key);
+		if (!f) { return; }
+		if (f.kind === 'radio') {
+			for (const r of f.radios) { r.checked = r.value === value; }
+		} else {
+			f.el.value = value;
+		}
 	}
 
 	/**
@@ -458,8 +495,12 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 	 * @param onChange - 任一字段变更时调用
 	 */
 	bindChange(onChange: () => void): void {
-		for (const input of this.fields.values()) {
-			input.addEventListener('change', onChange);
+		for (const f of this.fields.values()) {
+			if (f.kind === 'radio') {
+				for (const r of f.radios) { r.addEventListener('change', onChange); }
+			} else {
+				f.el.addEventListener('change', onChange);
+			}
 		}
 	}
 

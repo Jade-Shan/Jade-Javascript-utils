@@ -620,7 +620,7 @@ export class SandboxEditor {
 
 		const defs: Array<{
 			key: string, label: string, value: string,
-			type?: string, options?: Array<[string, string]>,
+			type?: string, options?: Array<[string, string]>, widget?: 'radio',
 		}> = [
 			{ key: 'id', label: 'ID', value: String(rec.id ?? '') },
 			{ key: 'x', label: 'x', value: String(rec.x ?? 0), type: 'number' },
@@ -639,11 +639,11 @@ export class SandboxEditor {
 
 		defs.push({
 			key: 'visible', label: '可见', value: tk.visible ? 'true' : 'false',
-			options: [['true', '可见'], ['false', '隐形']],
+			options: [['true', '可见'], ['false', '隐形']], widget: 'radio',
 		});
 		defs.push({
 			key: 'blockView', label: '遮挡', value: tk.blockView ? 'true' : 'false',
-			options: [['true', '遮挡视线'], ['false', '后方可见']],
+			options: [['true', '遮挡视线'], ['false', '后方可见']], widget: 'radio',
 		});
 		defs.push({ key: 'color', label: '颜色', value: String(rec.color ?? '#0000FF') });
 
