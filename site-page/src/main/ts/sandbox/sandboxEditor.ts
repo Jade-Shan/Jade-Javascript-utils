@@ -173,7 +173,7 @@ export class SandboxEditor {
 		this.mapWin.renderIn();
 
 		this.listWin = new SandboxTokenListWindow(desktop, 'sandbox-tokens', '元素列表',
-			{ icons, body: { initSize: { width: 300, height: 420 }, overflow: 'auto' } });
+			{ icons, body: { initSize: { width: 330, height: 320 }, overflow: 'auto' } });
 		this.listWin.renderIn();
 
 		this.propsWin = new SandboxPropsWindow(desktop, 'sandbox-props', '属性',
