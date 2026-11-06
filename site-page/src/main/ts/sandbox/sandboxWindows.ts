@@ -272,20 +272,22 @@ export class SandboxDiceWindow extends UIWindowAdapter {
  * 挤在 `#tokenGroupBtns` / `#tokenListArea` / `#createTokenArea` 三个 div 里，
  * 高度靠 `resizeLayout()` 手算。这里合成一个窗口。
  *
- * 表格用 98.css 的 `table.interactive` + `tr.highlighted` 做选中态，
+ * 分组切换用 98.css 的 `menu[role=tablist]` 标签页（选中态靠
+ * `aria-selected`），内容包在 `.window[role=tabpanel]` 里；
+ * 表格用 `table.interactive` + `tr.highlighted` 做选中态，
  * 外面套 `.sunken-panel` 给内凹边框 —— 不自己写样式。
  */
 export class SandboxTokenListWindow extends UIWindowAdapter {
 
-	/** 分组切换按钮的容器 */
-	readonly groupBar: HTMLDivElement = document.createElement('div');
+	/** 分组标签页的容器（98.css 的 menu[role=tablist]） */
+	readonly groupBar: HTMLMenuElement = document.createElement('menu');
 	/** Token 列表的表格主体 */
 	readonly listBody: HTMLTableSectionElement = document.createElement('tbody');
 	/** 创建新 Token 的按钮容器（按分组变化） */
 	readonly createBar: HTMLDivElement = document.createElement('div');
 
 	/**
-	 * 拼窗体：分组按钮 → 列表 → 创建按钮
+	 * 拼窗体：标签页 → 列表 → 创建按钮
 	 */
 	renderIn(): void {
 		const renderBody = (): HTMLDivElement => {
@@ -295,8 +297,17 @@ export class SandboxTokenListWindow extends UIWindowAdapter {
 			body.style.height = `${size.height}px`;
 			body.style.overflow = 'auto';
 
-			this.groupBar.classList.add('field-row');
+			// 98.css 的标签页：menu[role=tablist] 是标签栏
+			this.groupBar.setAttribute('role', 'tablist');
 			body.appendChild(this.groupBar);
+
+			// 标签内容面板：98.css 的 .window[role=tabpanel] 给内凹窗口边框
+			const tabPanel = document.createElement('div');
+			tabPanel.classList.add('window');
+			tabPanel.setAttribute('role', 'tabpanel');
+			const tabBody = document.createElement('div');
+			tabBody.classList.add('window-body');
+			tabPanel.appendChild(tabBody);
 
 			const panel = document.createElement('div');
 			panel.classList.add('sunken-panel');
@@ -307,10 +318,12 @@ export class SandboxTokenListWindow extends UIWindowAdapter {
 			table.style.width = '100%';
 			table.appendChild(this.listBody);
 			panel.appendChild(table);
-			body.appendChild(panel);
+			tabBody.appendChild(panel);
 
 			this.createBar.classList.add('field-row');
-			body.appendChild(this.createBar);
+			tabBody.appendChild(this.createBar);
+
+			body.appendChild(tabPanel);
 			return body;
 		};
 

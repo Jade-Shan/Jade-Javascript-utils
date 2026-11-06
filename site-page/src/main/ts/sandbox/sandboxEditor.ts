@@ -262,18 +262,29 @@ export class SandboxEditor {
 	}
 
 	/**
-	 * 渲染分组切换按钮
+	 * 渲染分组切换标签页（98.css 的 menu[role=tablist]）
+	 *
+	 * 每个分组一个 `<li role="tab">`，选中态用 `aria-selected="true"`。
+	 * 点击后重画标签页更新选中态，再刷新列表。
 	 */
 	private renderGroupBar(): void {
 		this.listWin.groupBar.innerHTML = '';
 		for (const g of TOKEN_GROUPS) {
-			const btn = document.createElement('button');
-			btn.textContent = GROUP_LABEL[g];
-			btn.addEventListener('click', () => {
+			const li = document.createElement('li');
+			li.setAttribute('role', 'tab');
+			if (g === this.currGroup) { li.setAttribute('aria-selected', 'true'); }
+			const a = document.createElement('a');
+			a.href = '#';
+			a.textContent = GROUP_LABEL[g];
+			li.appendChild(a);
+			// 绑在 li 上，整个标签都可点；preventDefault 拦掉 <a href="#"> 的跳转
+			li.addEventListener('click', (e) => {
+				e.preventDefault();
 				this.currGroup = g;
+				this.renderGroupBar();
 				this.renderTokenList();
 			});
-			this.listWin.groupBar.appendChild(btn);
+			this.listWin.groupBar.appendChild(li);
 		}
 	}
 

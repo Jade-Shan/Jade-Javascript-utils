@@ -22,6 +22,14 @@
 
 ## 历史记录
 
+- **editor 的元素列表：分组按钮改成 98.css 标签页**（2026-11-06）
+  - `sandboxWindows.ts` 的 `SandboxTokenListWindow`：分组切换从一排 `<button>`
+    改成 98.css 的 `menu[role=tablist]` 标签页，列表 + 创建按钮包进
+    `.window[role=tabpanel]` 内容面板（`groupBar` 字段类型 div → menu）
+  - `sandboxEditor.ts` 的 `renderGroupBar()`：每个分组渲染成
+    `<li role="tab"><a>标签</a></li>`，当前分组设 `aria-selected="true"`，
+    点击切换后**重画标签页更新选中态**（原来的按钮没有选中态，切了也不知道在哪）
+  - **未做浏览器手工验证** —— 标签页的选中态凸起外观要在浏览器里看
 - **修遮挡阴影的绘制顺序：阴影与 Token 从远到近交错**（2026-11-06）
   - 上一版给 view 页加遮挡阴影时，明亮层「先画完所有遮挡物阴影、再画所有可见
     Token」，被遮挡的 Token 又画在了自己的阴影**上面**，墙后仍是亮的
