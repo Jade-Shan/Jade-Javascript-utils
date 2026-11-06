@@ -15,18 +15,8 @@ import assert from 'node:assert/strict';
 import { withDom, withDomAsync } from './_jsdom-setup.js';
 import { initSandboxLogin } from '../../main/ts/sandbox/sandboxLogin.js';
 
-/** 登录页的 DOM，和 html/sandbox/index.html 的结构一致 */
-const PAGE = `
-	<input id="username" type="text" />
-	<input id="password" type="password" />
-	<input id="campaignId" type="text" />
-	<input id="placeId" type="text" />
-	<input id="sceneId" type="text" />
-	<button id="btn-login">登录</button>
-	<button id="btn-regist">注册</button>
-	<button id="btn-enter">进入场景</button>
-	<button id="btn-edit">编辑场景</button>
-	<p id="login-status"></p>`;
+/** 登录页的 DOM，和 html/sandbox/index.html 一致：一个桌面容器，窗口由脚本建 */
+const PAGE = `<div id="sandbox-desktop" class="desktop dock-content"></div>`;
 
 /** 记下假 XHR 收到的请求 */
 let sent: Array<{ url: string, method: string, body?: string }> = [];
@@ -220,7 +210,8 @@ describe('进入场景', () => {
 			initSandboxLogin({ apiRoot: '//api' });
 			fill('campaignId', 'c1');
 			fill('placeId', 'p1');
-			// sceneId 空着
+			// 窗口里预填了 scene01（demo 便利），这里清空以测「缺一个」
+			fill('sceneId', '');
 			click('btn-enter');
 			assert.ok(status().includes('三个都要填'), `实际: ${status()}`);
 		});
@@ -291,10 +282,8 @@ describe('进入场景', () => {
 
 describe('选择器可覆盖', () => {
 
-	test('传了覆盖项时按覆盖后的 id 找元素', async () => {
-		await withDomAsync(`
-			<input id="my-user" /><input id="my-pw" /><p id="my-status"></p>
-			<button id="my-login">登录</button>`, async () => {
+	test('传了覆盖项时按覆盖后的 id 建元素', async () => {
+		await withDomAsync(PAGE, async () => {
 			stubXhr({ status: 'success', username: 'teo', token: 't' });
 			initSandboxLogin({
 				apiRoot: '//api',
@@ -312,9 +301,9 @@ describe('选择器可覆盖', () => {
 		});
 	});
 
-	test('元素缺失时不抛错', () => {
+	test('桌面容器缺失时抛可读的错', () => {
 		withDom('<div></div>', () => {
-			initSandboxLogin({ apiRoot: '//api' });
+			assert.throws(() => initSandboxLogin({ apiRoot: '//api' }), /桌面容器/);
 		});
 	});
 

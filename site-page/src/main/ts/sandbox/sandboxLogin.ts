@@ -1,3 +1,7 @@
+import {
+	JadeUIResource, DefaultIconGroup, registerDefaultUIResource,
+} from '@jade-dungeon/jade-utils/resource';
+import { JadeWindowUI, UIDesktop, UIWindowAdapter, WinParam } from '@jade-dungeon/jade-utils/ui-window';
 import { WebUtil } from '@jade-dungeon/jade-utils/web';
 import { SandboxApi } from './sandboxApi.js';
 
@@ -6,12 +10,13 @@ import { SandboxApi } from './sandboxApi.js';
  *
  * 对应老应用的 `sandtable-index.html` + `sandtable-index.js`。
  *
- * ## 为什么这一页不做成窗口
+ * ## 为什么这一页也做成窗口
  *
- * 它是**进入应用之前**的一步，此时还没有身份、也没有场景。
- * 做成窗口的话「未登录」状态要额外管一套（桌面上只有一个不能关的窗口，
- * 关掉就没得玩了）。所以这页是普通页面，用 98.css 的
- * `fieldset` + `.field-row` 排版。
+ * 最初这页是普通页面（一个静态的 `.window` 壳子），因为它是**进入应用
+ * 之前**的一步，当时还没有身份、也没有场景。2026-11-06 改成和
+ * view / editor 一样挂在 `UIDesktop` 上、登录表单装进一个 `UIWindowAdapter`
+ * 窗口 —— 桌面上有桌面背景、底部有 Dock，登录窗口和别的窗口共用
+ * 拖动 / 缩放 / 最小化那一套。登录之后带着场景参数跳 view / editor。
  *
  * ## 与老实现的差别
  *
@@ -76,6 +81,8 @@ export interface SandboxLoginConfig {
 	viewUrl?: string;
 	/** 编辑器页的地址，默认 `./editor.html` */
 	editorUrl?: string;
+	/** 桌面容器的 id，默认 `sandbox-desktop` */
+	desktopId?: string;
 	/** 页面选择器，缺省项走默认 */
 	selectors?: SandboxLoginSelectors;
 	/**
@@ -91,6 +98,148 @@ export interface SandboxLoginConfig {
 }
 
 /**
+ * 去掉选择器前面的 `#`，得到元素 id
+ */
+function idOf(slt: string): string {
+	return slt.startsWith('#') ? slt.slice(1) : slt;
+}
+
+/** 登录窗口里各元素的 id（不带 `#`，从 selectors 提出来） */
+interface LoginFieldIds {
+	username: string;
+	password: string;
+	campaignId: string;
+	placeId: string;
+	sceneId: string;
+	loginBtn: string;
+	registBtn: string;
+	enterBtn: string;
+	editBtn: string;
+	status: string;
+}
+
+/**
+ * 登录窗口：把登录表单装进一个可拖动、会进 Dock 的窗口
+ *
+ * 表单元素在构造时就创建好（带 id），`renderIn()` 只负责把它们按
+ * 98.css 的 `fieldset` + `.field-row` 排版塞进窗体。这样 `SandboxLogin`
+ * 那套 `document.querySelector` 读写逻辑不用改，元素在窗体渲染后就都在
+ * document 里了。
+ */
+class SandboxLoginWindow extends UIWindowAdapter {
+
+	private readonly username: HTMLInputElement = document.createElement('input');
+	private readonly password: HTMLInputElement = document.createElement('input');
+	private readonly campaignId: HTMLInputElement = document.createElement('input');
+	private readonly placeId: HTMLInputElement = document.createElement('input');
+	private readonly sceneId: HTMLInputElement = document.createElement('input');
+	private readonly loginBtn: HTMLButtonElement = document.createElement('button');
+	private readonly registBtn: HTMLButtonElement = document.createElement('button');
+	private readonly enterBtn: HTMLButtonElement = document.createElement('button');
+	private readonly editBtn: HTMLButtonElement = document.createElement('button');
+	private readonly statusEl: HTMLParagraphElement = document.createElement('p');
+
+	constructor(desktop: UIDesktop, id: string, title: string, cfg: WinParam, ids: LoginFieldIds) {
+		super(desktop, id, title, cfg);
+
+		this.username.id = ids.username;
+		this.username.type = 'text';
+		this.password.id = ids.password;
+		this.password.type = 'password';
+		this.campaignId.id = ids.campaignId;
+		this.campaignId.type = 'text';
+		this.campaignId.placeholder = '如 费伦大陆从北到南';
+		this.placeId.id = ids.placeId;
+		this.placeId.type = 'text';
+		this.placeId.placeholder = '如 深水城下大迷宫';
+		this.sceneId.id = ids.sceneId;
+		this.sceneId.type = 'text';
+		this.sceneId.placeholder = '如 第一层的门房';
+		this.loginBtn.id = ids.loginBtn;
+		this.loginBtn.classList.add('default');
+		this.loginBtn.textContent = '登录';
+		this.registBtn.id = ids.registBtn;
+		this.registBtn.textContent = '注册';
+		this.enterBtn.id = ids.enterBtn;
+		this.enterBtn.textContent = '进入场景';
+		this.editBtn.id = ids.editBtn;
+		this.editBtn.textContent = '编辑场景';
+		this.statusEl.id = ids.status;
+	}
+
+	renderIn(): void {
+		const renderBody = (): HTMLDivElement => {
+			const body = this.ui.windowBody;
+			body.style.overflow = 'auto';
+
+			body.appendChild(this.buildIdentityFieldset());
+			body.appendChild(this.buildSceneFieldset());
+			body.appendChild(this.statusEl);
+
+			const bar = document.createElement('div');
+			bar.classList.add('status-bar');
+			const hint = document.createElement('p');
+			hint.classList.add('status-bar-field');
+			hint.textContent = '玩家棋子的 ID 必须与用户名一致，否则进场景会是旁观模式';
+			bar.appendChild(hint);
+			body.appendChild(bar);
+			return body;
+		};
+
+		JadeWindowUI.renderWindowTplt(this, undefined, renderBody, undefined);
+	}
+
+	/** 「身份」一栏：用户名 + 密码 + 登录/注册按钮 */
+	private buildIdentityFieldset(): HTMLFieldSetElement {
+		const fs = document.createElement('fieldset');
+		const legend = document.createElement('legend');
+		legend.textContent = '身份';
+		fs.appendChild(legend);
+		fs.appendChild(this.fieldRow('用户名', this.username));
+		fs.appendChild(this.fieldRow('密码', this.password));
+		const btns = document.createElement('div');
+		btns.classList.add('field-row');
+		btns.appendChild(this.loginBtn);
+		btns.appendChild(this.registBtn);
+		fs.appendChild(btns);
+		return fs;
+	}
+
+	/** 「场景」一栏：战役/地点/场景 + 进入/编辑按钮 */
+	private buildSceneFieldset(): HTMLFieldSetElement {
+		const fs = document.createElement('fieldset');
+		const legend = document.createElement('legend');
+		legend.textContent = '场景';
+		fs.appendChild(legend);
+		fs.appendChild(this.fieldRow('战役', this.campaignId));
+		fs.appendChild(this.fieldRow('地点', this.placeId));
+		fs.appendChild(this.fieldRow('场景', this.sceneId));
+		const btns = document.createElement('div');
+		btns.classList.add('field-row');
+		btns.appendChild(this.enterBtn);
+		btns.appendChild(this.editBtn);
+		fs.appendChild(btns);
+		const note = document.createElement('p');
+		note.textContent = '第一个用新战役名保存的人成为它的拥有者，其他人改不了该战役的任何场景。';
+		fs.appendChild(note);
+		return fs;
+	}
+
+	/** label + 输入框 的一行 */
+	private fieldRow(label: string, input: HTMLInputElement): HTMLDivElement {
+		const row = document.createElement('div');
+		row.classList.add('field-row');
+		const lbl = document.createElement('label');
+		lbl.htmlFor = input.id;
+		lbl.textContent = label;
+		row.appendChild(lbl);
+		row.appendChild(input);
+		return row;
+	}
+
+}
+
+/**
  * 登录页
  */
 export class SandboxLogin {
@@ -98,6 +247,7 @@ export class SandboxLogin {
 	private readonly api: SandboxApi;
 	private readonly cfg: SandboxLoginConfig;
 	private readonly slt: Required<SandboxLoginSelectors>;
+	private win?: SandboxLoginWindow;
 
 	/**
 	 * @param cfg - 页面注入的配置
@@ -109,9 +259,23 @@ export class SandboxLogin {
 	}
 
 	/**
-	 * 绑定按钮，并回填 URL 参数与已登录的身份
+	 * 建桌面 + 登录窗口，再回填 URL 参数与已登录的身份、绑定按钮
 	 */
-	init(): void {
+	start(): void {
+		registerDefaultUIResource();
+		const desktopId = this.cfg.desktopId ?? 'sandbox-desktop';
+		const host = document.getElementById(desktopId);
+		if (!host) {
+			throw new Error(`找不到桌面容器 #${desktopId}`);
+		}
+		const desktop = new UIDesktop(host, { dockBar: { range: 300, maxScale: 1.8 } });
+		const icons = JadeUIResource.getDefaultIcon(DefaultIconGroup.ELEC_FACE);
+
+		this.win = new SandboxLoginWindow(desktop, 'sandbox-login', 'Jade Dungeon 沙盘',
+			{ icons, body: { initSize: { width: 360, height: 430 }, overflow: 'auto' } },
+			this.fieldIds());
+		this.win.renderIn();
+
 		// URL 带了场景参数就回填，方便分享链接
 		const params = new URLSearchParams(window.location.search);
 		for (const key of ['campaignId', 'placeId', 'sceneId'] as const) {
@@ -132,6 +296,22 @@ export class SandboxLogin {
 		this.onClick(this.slt.registBtn, () => { void this.regist(); });
 		this.onClick(this.slt.enterBtn, () => { this.enter(this.cfg.viewUrl ?? './view.html'); });
 		this.onClick(this.slt.editBtn, () => { this.enter(this.cfg.editorUrl ?? './editor.html'); });
+	}
+
+	/** 从选择器提取各元素的 id（不带 `#`），交给窗口建元素 */
+	private fieldIds(): LoginFieldIds {
+		return {
+			username: idOf(this.slt.username),
+			password: idOf(this.slt.password),
+			campaignId: idOf(this.slt.campaignId),
+			placeId: idOf(this.slt.placeId),
+			sceneId: idOf(this.slt.sceneId),
+			loginBtn: idOf(this.slt.loginBtn),
+			registBtn: idOf(this.slt.registBtn),
+			enterBtn: idOf(this.slt.enterBtn),
+			editBtn: idOf(this.slt.editBtn),
+			status: idOf(this.slt.status),
+		};
 	}
 
 	/**
@@ -256,6 +436,6 @@ export class SandboxLogin {
  */
 export function initSandboxLogin(cfg: SandboxLoginConfig): SandboxLogin {
 	const page = new SandboxLogin(cfg);
-	page.init();
+	page.start();
 	return page;
 }
