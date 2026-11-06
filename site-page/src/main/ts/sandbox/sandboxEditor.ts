@@ -1,7 +1,7 @@
 import {
 	JadeUIResource, DefaultIconGroup, registerDefaultUIResource,
 } from '@jade-dungeon/jade-utils/resource';
-import { UIDesktop } from '@jade-dungeon/jade-utils/ui-window';
+import { UIDesktop, UIWindowAdapter } from '@jade-dungeon/jade-utils/ui-window';
 import {
 	CircleToken, IToken2D, LineToken, RectangleToken,
 } from '../trpg/sandtable.js';
@@ -154,6 +154,8 @@ export class SandboxEditor {
 			{ icons, body: { initSize: { width: 340, height: 300 }, overflow: 'auto' } });
 		this.diceWin.renderIn();
 
+		this.tileWindows();
+
 		await this.loadScene();
 		this.bindMapEvents();
 		this.bindSceneEvents();
@@ -161,6 +163,53 @@ export class SandboxEditor {
 		this.renderGroupBar();
 		this.renderTokenList();
 		await this.refreshRollResults();
+	}
+
+	/**
+	 * 平铺五个窗口的初始位置
+	 *
+	 * 在五个窗口都 `renderIn()` 完成、各自尺寸确定之后调用。窗口是
+	 * `position:absolute` 相对桌面定位，`renderWindowTplt` 只做了自动叠放，
+	 * 这里按需求重排：地图在左上角，场景+检定在下方贴底左右并排，
+	 * 元素列表+属性在右方贴边上下并排，间距统一 20px。
+	 */
+	private tileWindows(): void {
+		const M = 20;
+		const desktop = this.mapWin.desktop.desktopDiv;
+		const W = desktop.clientWidth;
+		const H = desktop.clientHeight;
+
+		// 只有定位相关的尺寸才需要读：场景宽（算检定横坐标）、场景/检定高
+		// （贴底对齐）、元素列表宽高（算属性位置）、属性宽（贴右边对齐）。
+		const sceneW = this.sceneWin.ui.win.offsetWidth;
+		const sceneH = this.sceneWin.ui.win.offsetHeight;
+		const diceH = this.diceWin.ui.win.offsetHeight;
+		const listW = this.listWin.ui.win.offsetWidth;
+		const listH = this.listWin.ui.win.offsetHeight;
+		const propsW = this.propsWin.ui.win.offsetWidth;
+
+		// 地图：桌面左上角
+		this.placeWindow(this.mapWin, M, M);
+		// 场景 + 检定：地图下方，都贴桌面底部，左右并排
+		this.placeWindow(this.sceneWin, M, H - M - sceneH);
+		this.placeWindow(this.diceWin, M + sceneW + M, H - M - diceH);
+		// 元素列表 + 属性：地图右方，都贴桌面右边，上下并排
+		this.placeWindow(this.listWin, W - M - listW, M);
+		this.placeWindow(this.propsWin, W - M - propsW, M + listH + M);
+	}
+
+	/**
+	 * 把窗口放到指定位置，并同步 lastPos
+	 *
+	 * `lastPos` 是窗口系统记的「上次位置」，拖动 / 最大化 / 还原都拿它做基准 ——
+	 * 只改 `style` 不改它的话，窗口一旦还原就会跳回 `renderWindowTplt` 自动叠放
+	 * 的位置，平铺就白做了。
+	 */
+	private placeWindow(win: UIWindowAdapter, left: number, top: number): void {
+		win.status.lastPos.x = left;
+		win.status.lastPos.y = top;
+		win.ui.win.style.left = `${left}px`;
+		win.ui.win.style.top = `${top}px`;
 	}
 
 	/**
@@ -250,14 +299,27 @@ export class SandboxEditor {
 
 	/**
 	 * 给选中的 Token 画一个高亮框
+	 *
+	 * 两层同心圆：先画 7px 的紫色实线做深色衬底，再画绿色虚线 ——
+	 * 单层虚线在浅色地图上对比不明显，加一层深色底圈才看得清。
+	 * 直径（半径 34）两处一致。
+	 *
 	 * @param ctx - Canvas 2D 上下文
 	 */
 	private highlightSelected(ctx: CanvasRenderingContext2D): void {
 		if (!this.selected) { return; }
 		const c = this.selected.token.getCenter();
 		ctx.save();
-		ctx.strokeStyle = 'rgba(255,255,0,0.95)';
-		ctx.lineWidth = 2;
+		// 第一层：7px 紫色实线
+		ctx.strokeStyle = '#9400d3';
+		ctx.lineWidth = 7;
+		ctx.setLineDash([]);
+		ctx.beginPath();
+		ctx.arc(c.x, c.y, 34, 0, Math.PI * 2);
+		ctx.stroke();
+		// 第二层：绿色虚线
+		ctx.strokeStyle = '#7cfc00';
+		ctx.lineWidth = 3;
 		ctx.setLineDash([6, 4]);
 		ctx.beginPath();
 		ctx.arc(c.x, c.y, 34, 0, Math.PI * 2);

@@ -22,6 +22,21 @@
 
 ## 历史记录
 
+- **editor 五窗口初始位置平铺**（2026-11-06）
+  - `sandboxEditor.ts` 加 `tileWindows()`：五个窗口 `renderIn()` 之后统一重排，
+    不再用 `renderWindowTplt` 的自动叠放。地图贴桌面左上（距上/左 20px）；
+    场景 + 检定贴桌面底部（距底 20px）左右并排；元素列表 + 属性贴桌面右边
+    （距右 20px）上下并排，间距统一 20px
+  - 位置同时写 `style.left/top` 和 `status.lastPos` —— 只改 style 的话，
+    窗口最大化/还原后会跳回 `renderWindowTplt` 自动叠放的位置
+  - 尺寸读 `ui.win.offsetWidth/offsetHeight`（窗口实际大小，含标题栏），
+    桌面尺寸读 `desktop.desktopDiv.clientWidth/clientHeight`
+  - **未做浏览器手工验证** —— 平铺效果、dock 是否遮挡底部窗口要在浏览器里看
+- **editor 选中高亮：两层同心圆**（2026-11-06）
+  - `sandboxEditor.ts` 的 `highlightSelected()`：原来单层黄色虚线在浅色地图上
+    对比不明显，改成两层同心圆——先画 7px 实线做深色衬底，再画虚线；
+    直径（半径 34）不变。颜色最终定为：实线 `#9400d3`（紫）、虚线 `#7cfc00`（绿）
+  - **未做浏览器手工验证** —— 两层圆圈的实际视觉效果要在浏览器里看
 - **editor 场景窗口：加「定时刷新」开关**（2026-11-06）
   - `sandboxWindows.ts` 的 `SandboxSceneWindow` 加 `autoRefresh` checkbox
     （文本「定时刷新」，默认非选中）。98.css 的 checkbox 靠 `input + label`
