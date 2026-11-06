@@ -22,6 +22,19 @@
 
 ## 历史记录
 
+- **修遮挡阴影的绘制顺序：阴影与 Token 从远到近交错**（2026-11-06）
+  - 上一版给 view 页加遮挡阴影时，明亮层「先画完所有遮挡物阴影、再画所有可见
+    Token」，被遮挡的 Token 又画在了自己的阴影**上面**，墙后仍是亮的
+  - `trpg/sandtable.ts`：`filterOccluders` 拆成 `isOccluder()`（判断是否投射阴影：
+    `blockView` 且非自己/spectator）+ `filterTokensInView()`（视野内**所有** Token
+    从远到近排序，**含不挡视线的**）；`drawSceneWithUserView()` 改成单个交错循环——
+    逐个 Token「遮挡物先投阴影 → 可见再画自己」，对齐老系统 `renderTokensOnSandbox`。
+    远处 Token（阴影+自身）先画成背景，被更近的阴影遮挡
+  - 重写 `site-page/src/test/ts/sandtable.occlusion.test.ts`（9 → 11 条），
+    新增「`filterTokensInView` 保留不挡视线 Token」的用例 —— 这是本次语义变化的核心
+  - 站点侧 185 → 187，总数 435 → 437
+  - **未做浏览器手工验证** —— 像素效果只能在浏览器看，
+    `docs/sandbox-refactor.md` 7.4 节验收清单第 2 条「墙后面是暗的」还没走
 - **给 view 页沙盘加遮挡阴影（战争迷雾的墙后阴影）**（2026-11-06）
   - 原来 `SandTableUtils.drawSceneWithUserView()` 只做「暗图 + 亮图（直接画可见
     Token）+ 圆形视野裁剪」，墙后面的东西在视野圆内仍是亮的，不挡视线

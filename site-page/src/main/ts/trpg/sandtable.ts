@@ -1252,41 +1252,53 @@ export namespace SandTableUtils {
 	}
 
 	/**
-	 * 挑出「会挡视线、且在视野范围内」的 Token，按距离从远到近排好
+	 * 一个 Token 是否投射阴影：挡视线，且不是观察者自己 / 旁观者棋子
 	 *
-	 * 对齐老系统 `Observer.filterTokensInView` + `renderTokensOnSandbox`：
+	 * 对齐老系统 `Observer.renderTokensOnSandbox` 里的
+	 * `blockView && id != this.id && id != 'spectator'`。
+	 * 观察者没设 `id` 时 `token.id !== undefined` 恒真，不会误排除。
 	 *
-	 * - `blockView` 为 false 的不挡视线，跳过
-	 * - 观察者自己和 `spectator`（旁观者棋子）跳过 —— 不排除自己会从自己的
-	 *   位置给自己投射阴影，把整个视野都遮暗
-	 * - 距离用 `getMostCloseVertex`（点到图形的最短距离），超出 `range` 跳过
-	 * - 按距离**降序**排序：远的先画、近的后画压在上面
+	 * @param token - 要判断的 Token
+	 * @param observer - 观察者（视线中心）
+	 * @returns {boolean} 是否投射阴影
+	 */
+	export function isOccluder(token: IToken2D, observer: IObserver): boolean {
+		return token.blockView && token.id !== observer.id && token.id !== 'spectator';
+	}
+
+	/**
+	 * 视野内（距离 < range）的所有 Token，从远到近排好（不区分遮挡物）
+	 *
+	 * 对齐老系统 `Observer.filterTokensInView`：距离用 `getMostCloseVertex`
+	 * （点到图形的最短距离），`minDistance < rayRange` 才保留；
+	 * 按距离**降序**排序 —— 远的先画、近的后画压在上面。
+	 *
+	 * 注意返回的是**所有** Token（含不挡视线的），不是只有遮挡物 ——
+	 * 交错绘制需要逐个 Token 判断「画阴影 + 画自己」。
 	 *
 	 * @param tokens - 场景里的全部 Token
 	 * @param observer - 观察者（视线中心）
 	 * @param range - 视野范围
-	 * @returns {Array<IToken2D>} 需要投射阴影的 Token，从远到近
+	 * @returns {Array<IToken2D>} 视野内的 Token，从远到近
 	 */
-	export function filterOccluders(tokens: Array<IToken2D>, //
+	export function filterTokensInView(tokens: Array<IToken2D>, //
 		observer: IObserver, range: number): Array<IToken2D> //
 	{
-		const occluders: Array<{ token: IToken2D, distance: number }> = [];
+		const inView: Array<{ token: IToken2D, distance: number }> = [];
 		for (const t of tokens) {
-			if (!t.blockView) { continue; }
-			if (t.id === observer.id || t.id === 'spectator') { continue; }
 			const d = t.getMostCloseVertex(observer.c.x, observer.c.y).distance;
 			if (d >= range) { continue; }
-			occluders.push({ token: t, distance: d });
+			inView.push({ token: t, distance: d });
 		}
-		occluders.sort((a, b) => b.distance - a.distance);
-		return occluders.map(o => o.token);
+		inView.sort((a, b) => b.distance - a.distance);
+		return inView.map(o => o.token);
 	}
 
 	/**
 	 * 根据玩家视野渲染完整场景（黑暗层 + 明亮层 + 视野裁剪）
 	 *
-	 * 明亮层里先给每个遮挡物从观察者位置投射阴影（从远到近），
-	 * 再画可见 Token —— 这样墙后面的东西会落在阴影里（暗），
+	 * 明亮层里从远到近逐个 Token：遮挡物先投阴影、可见的再画自己 ——
+	 * 这样墙后面的东西会落在阴影里（暗），
 	 * 而不是像原来的圆形视野那样在视野圆内全部透亮。
 	 *
 	 * @param scene - 场景
@@ -1316,13 +1328,13 @@ export namespace SandTableUtils {
 			imageElem: darkMapImage,
 		};
 		let brightMapImage = await drawBrightScene(scene.frame.buff, oriMap, async (frame) => {
-			// 先画遮挡阴影（从远到近），再画可见 Token ——
-			// 阴影画在 Token 下面，近处的阴影压在远处的阴影上
-			for (let token of filterOccluders(tokens, observer, range)) {
-				CanvasUtils.drawVertexShadowFrom(frame.ctx, observer.c.x, observer.c.y, //
-					token, range, { imgClip: shadowClip });
-			}
-			for (let token of tokens) {
+			// 从远到近逐个 Token：遮挡物先投阴影，可见的再画自己。
+			// 远处的 Token（阴影 + 自身）先画成背景，更近的遮挡物阴影后画压在它上面
+			for (const token of filterTokensInView(tokens, observer, range)) {
+				if (isOccluder(token, observer)) {
+					CanvasUtils.drawVertexShadowFrom(frame.ctx, observer.c.x, observer.c.y, //
+						token, range, { imgClip: shadowClip });
+				}
 				if (token.visible) {
 					token.draw(frame.ctx);
 				}
