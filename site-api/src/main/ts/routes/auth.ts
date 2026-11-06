@@ -1,5 +1,5 @@
 import { ICustomHandler, IRequestContext, IRequestData, HTTP_POST } from '@/types';
-import { loginByPassword, loginByToken, registUser } from '@/service/authService';
+import { loginBypass, loginByPassword, loginByToken, registUser } from '@/service/authService';
 import { corsHeadersFor, sendOnce } from '@/middleware/simpleHTTPServer';
 
 /**
@@ -59,7 +59,14 @@ export const handler: ICustomHandler[] = [
 			try {
 				// 与旧后端一致的优先级：先试密码登录，没有密码再试 token 续期
 				let result;
-				if (username && password && username.length > 0 && password.length > 0) {
+				// ⚠️ 免验证分支（临时，见 config.ts 的 AUTH_BYPASS）。
+				// 只要给了用户名就直接签发 token，密码为空也算通过。
+				// 用户名仍然必填 —— token 格式是 `username|uuid|expire`，
+				// 空用户名签出来的 token 过不了 parseLoginToken 的校验，
+				// 等于「登录成功但立刻又是未登录」，比直接报错更难查。
+				if (context.globalCfg.auth?.bypass && username && username.length > 0) {
+					result = await loginBypass(username);
+				} else if (username && password && username.length > 0 && password.length > 0) {
 					result = await loginByPassword(username, password);
 				} else if (token) {
 					result = await loginByToken(token);

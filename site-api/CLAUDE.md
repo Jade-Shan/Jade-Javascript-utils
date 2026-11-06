@@ -345,6 +345,41 @@ export const handler: ICustomHandler[] = [
 - `blog/save` / `gallery/save` **完全不校验身份**，任何人能以任意身份发文
 - `parseImage` 的 SSRF 防护挡不住 DNS rebinding，且响应体无大小上限
 
+## ⚠️ 临时：登录免验证开关 `AUTH_BYPASS`
+
+**本地 `config.properties` 里当前是开着的**（2026-11-05 加，sandtable 联调用）。
+开着的时候 `/api/auth/login` **对任意用户名 + 任意密码都返回成功**，
+并按该用户名签发一个真 token。看到「怎么随便输都能登进去」不是 bug。
+
+| | |
+|---|---|
+| 怎么关 | 删掉 `config.properties` 里的 `AUTH_BYPASS=true`（或改成 false）重启 |
+| 怎么确认开着 | 启动日志有 `⚠️ 登录免验证已开启`；每次登录也打一条 ⚠️ |
+| 生产会不会被带上 | 不会 —— `NODE_ENV=production` 时 `config.ts` 强制关掉，只打一条 🔒 |
+
+三件事值得记住：
+
+- **只影响 `/api/auth/login`。** 注册、token 续期、`verifyToken()` 都没改，
+  所以 sandtable 的 `save-map` / `authorizeSceneWrite()` 照常按 token 里的
+  用户名判 owner —— 伪造的 token 仍然被拒（实测返回 `not login`）
+- **会在 `auth_user` 建占位行，`hash_algo='bypass'`。** 这是被迫的：
+  `auth_token.username` 有外键指向 `auth_user`，而
+  **better-sqlite3 默认 `foreign_keys = ON`**（和 sqlite3 命令行相反，那边默认 OFF），
+  不建行签不出 token，会抛 `FOREIGN KEY constraint failed`。
+  占位行的 `password_hash` 是随机字节，且 `loginByPassword()` 对
+  `hash_algo='bypass'` **显式拒绝**，所以关掉开关后这些账号登不进来
+- **已存在的真实用户不会被动。** `ensureBypassUser()` 先查再插，
+  免验证登录一个真用户只会给他签 token，不改他的密码哈希（实测确认）
+
+联调结束后除了关开关，建议顺手清掉占位行：
+
+```bash
+sqlite3 data/jade-dungeon.db "
+  DELETE FROM auth_token WHERE username IN
+    (SELECT username FROM auth_user WHERE hash_algo='bypass');
+  DELETE FROM auth_user WHERE hash_algo='bypass';"
+```
+
 ## ⚠️ 写响应必须用 `sendOnce`（重要）
 
 **凡是手工写 HTTP 响应，一律用 `sendOnce()`，不要裸调 `writeHead` / `end`。**

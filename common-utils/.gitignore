@@ -1,14 +1,8 @@
-webroot/
-dist/
-.test-build/
-# 架构约束测试（test/arch.split.test.ts）的编译产物，见 npm run test:arch
-.arch-build/
-node_modules/
-node_modules_20260513/
 package-lock.json
-deploy-test.sh
-upload.sh
+node_modules/
+
+dist/
+webroot/
+.test-build/
+
 build.sh
-jade-dungeon-jade-utils-*.tgz
-node_modules.backup.20260916.tar.gz 
-node_modules.backup.20260921.tar.gz 

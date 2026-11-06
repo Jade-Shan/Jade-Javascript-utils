@@ -26,6 +26,18 @@ export interface IGlobalCfg {
 	/** SQLite 配置。auth 模块的数据存这里；其他模块仍在 Redis。 */
 	readonly sqlite?: { readonly path: string; readonly readPoolSize: number };
 	/**
+	 * 认证开关。
+	 *
+	 * `bypass` 为 true 时**登录接口不校验任何凭据**：任意用户名 + 任意密码
+	 * 都登录成功，并按该用户名签发一个真 token（落 `auth_token` 表，
+	 * 所以 sandtable 那套 `verifyToken` / `authorizeSceneWrite` 照常工作）。
+	 *
+	 * 这是给 sandtable 在**没法用真验证机的环境**里联调用的临时开关，
+	 * 由 `AUTH_BYPASS` 环境变量开启，且 `NODE_ENV=production` 时强制关闭。
+	 * 详见 config.ts 里的注释。
+	 */
+	readonly auth?: { readonly bypass: boolean };
+	/**
 	 * 允许跨域的 origin 白名单（来自 `CROS_SITE`，逗号分隔）。
 	 * 空数组表示放开所有来源。元素是完整 origin，如 `http://example.com:8082`。
 	 */
