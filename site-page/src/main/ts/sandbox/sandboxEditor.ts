@@ -2,8 +2,9 @@ import {
 	JadeUIResource, DefaultIconGroup, registerDefaultUIResource,
 } from '@jade-dungeon/jade-utils/resource';
 import { UIDesktop, UIWindowAdapter } from '@jade-dungeon/jade-utils/ui-window';
+import { WebUtil } from '@jade-dungeon/jade-utils/web';
 import {
-	CircleToken, IToken2D, LineToken, RectangleToken, SandTable,
+	CircleToken, ImageResource, IToken2D, LineToken, RectangleToken, SandTable,
 } from '../trpg/sandtable.js';
 import { renderRollResults, SandboxApi, SceneId } from './sandboxApi.js';
 import { SandboxScene, TokenGroup, TOKEN_GROUPS } from './sandboxScene.js';
@@ -49,14 +50,27 @@ export interface SandboxEditorConfig {
 	loginToken: string;
 }
 
-/** 分组的显示名与 emoji 图标，沿用老界面 */
-const GROUP_LABEL: Record<TokenGroup, string> = {
+/**
+ * 元素列表窗口的标签页：五个 Token 分组 + 资源文件
+ *
+ * 「资源文件」不是 Token 分组 —— 数据层单独存在 `SandboxScene.images`
+ *（对应数据源的 `imgResources`），不参与 Token 的渲染层次 / 命中测试。
+ * 只是编辑器的元素列表里让它和五个分组并排展示，沿用老界面的六个标签。
+ */
+type ListTab = TokenGroup | 'images';
+
+/** 标签页的显示名与 emoji 图标，沿用老界面 */
+const GROUP_LABEL: Record<ListTab, string> = {
 	teams: '👤 玩家',
 	creaters: '👾 生物',
 	furnishings: '🗄 陈设',
 	doors: '🚪 门',
 	walls: '🏗 墙壁',
+	images: '🌠 资源文件',
 };
+
+/** 标签页的顺序：五个 Token 分组在前，资源文件垫底 */
+const ALL_TABS: readonly ListTab[] = [...TOKEN_GROUPS, 'images'];
 
 /** 各分组允许创建的形状 */
 const GROUP_SHAPES: Record<TokenGroup, Array<'Line' | 'Rectangle' | 'Circle'>> = {
@@ -93,10 +107,12 @@ export class SandboxEditor {
 	private sceneWin!: SandboxSceneWindow;
 	private diceWin!: SandboxDiceWindow;
 
-	/** 当前查看的分组 */
-	private currGroup: TokenGroup = 'teams';
+	/** 当前查看的标签页 */
+	private currTab: ListTab = 'teams';
 	/** 当前选中的 Token */
 	private selected: { group: TokenGroup, token: IToken2D } | undefined;
+	/** 当前选中的图片资源（「资源文件」标签页里选中） */
+	private selectedImage: ImageResource | undefined;
 	/** 按住 Ctrl = 移动模式 */
 	private ctrlDown = false;
 	/** 按住 Alt = 缩放模式 */
@@ -407,10 +423,10 @@ export class SandboxEditor {
 	 */
 	private renderGroupBar(): void {
 		this.listWin.groupBar.innerHTML = '';
-		for (const g of TOKEN_GROUPS) {
+		for (const g of ALL_TABS) {
 			const li = document.createElement('li');
 			li.setAttribute('role', 'tab');
-			if (g === this.currGroup) { li.setAttribute('aria-selected', 'true'); }
+			if (g === this.currTab) { li.setAttribute('aria-selected', 'true'); }
 			const a = document.createElement('a');
 			a.href = '#';
 			a.textContent = GROUP_LABEL[g];
@@ -418,7 +434,7 @@ export class SandboxEditor {
 			// 绑在 li 上，整个标签都可点；preventDefault 拦掉 <a href="#"> 的跳转
 			li.addEventListener('click', (e) => {
 				e.preventDefault();
-				this.currGroup = g;
+				this.currTab = g;
 				this.renderGroupBar();
 				this.renderTokenList();
 			});
@@ -427,19 +443,29 @@ export class SandboxEditor {
 	}
 
 	/**
-	 * 渲染当前分组的 Token 列表与创建按钮
+	 * 渲染当前标签页的列表与创建按钮
+	 *
+	 * 「资源文件」标签页走 {@link SandboxEditor.renderImageList}，这里只处理
+	 * Token 分组。开头把 `currTab` 收窄后的值存成局部变量 `group`，
+	 * 点选/删除的回调里用它 —— 闭包里直接读 `this.currTab` 的话，
+	 * TS 对可变类字段的窄化会失效，得回退成 `ListTab` 再 cast 一遍。
 	 */
 	private renderTokenList(): void {
+		if (this.currTab === 'images') {
+			this.renderImageList();
+			return;
+		}
+		const group = this.currTab;
 		const body = this.listWin.listBody;
 		body.innerHTML = '';
-		for (const tk of this.scene.list(this.currGroup)) {
+		for (const tk of this.scene.list(group)) {
 			const tr = document.createElement('tr');
 			if (this.selected?.token.id === tk.id) { tr.classList.add('highlighted'); }
 
 			const tdName = document.createElement('td');
 			tdName.textContent = tk.id;
 			tdName.style.cursor = 'pointer';
-			tdName.addEventListener('click', () => { this.select(this.currGroup, tk.id); });
+			tdName.addEventListener('click', () => { this.select(group, tk.id); });
 			tr.appendChild(tdName);
 
 			const tdVis = document.createElement('td');
@@ -450,7 +476,7 @@ export class SandboxEditor {
 			const tdDel = document.createElement('td');
 			const del = document.createElement('button');
 			del.textContent = '✕';
-			del.addEventListener('click', () => { void this.deleteToken(this.currGroup, tk.id); });
+			del.addEventListener('click', () => { void this.deleteToken(group, tk.id); });
 			tdDel.appendChild(del);
 			tr.appendChild(tdDel);
 
@@ -463,16 +489,69 @@ export class SandboxEditor {
 		const label = document.createElement('span');
 		label.textContent = '新建：';
 		bar.appendChild(label);
-		for (const shape of GROUP_SHAPES[this.currGroup]) {
+		for (const shape of GROUP_SHAPES[group]) {
 			const btn = document.createElement('button');
 			btn.textContent = SHAPE_ICON[shape];
 			btn.title = `新建${shape}，然后点地图落位`;
 			btn.addEventListener('click', () => {
-				this.pendingShape = { group: this.currGroup, shape };
+				this.pendingShape = { group, shape };
 				this.mapWin.setStatus(`点地图放下这个${SHAPE_ICON[shape]}`);
 			});
 			bar.appendChild(btn);
 		}
+	}
+
+	/**
+	 * 渲染「资源文件」标签页的图片资源列表与「新建资源」按钮
+	 *
+	 * 列表项显示 id 和 url（跨源图片在编辑期也可能很长，截短显示）。
+	 * 图片资源没有「可见/隐形」这一列 —— 它是数据，不是地图元素。
+	 */
+	private renderImageList(): void {
+		const body = this.listWin.listBody;
+		body.innerHTML = '';
+		for (const img of this.scene.imageList()) {
+			const tr = document.createElement('tr');
+			if (this.selectedImage?.id === img.id) { tr.classList.add('highlighted'); }
+
+			const tdName = document.createElement('td');
+			tdName.textContent = img.id;
+			tr.appendChild(tdName);
+
+			const tdUrl = document.createElement('td');
+			// 只给个短预览，完整地址在属性窗口里看
+			tdUrl.textContent = img.url.length > 32 ? `${img.url.slice(0, 32)}…` : img.url;
+			tr.appendChild(tdUrl);
+
+			const tdDel = document.createElement('td');
+			const del = document.createElement('button');
+			del.textContent = '✕';
+			// 删除按钮 stopPropagation，避免点了删除又触发整行的选中
+			del.addEventListener('click', (e) => {
+				e.stopPropagation();
+				void this.deleteImage(img.id);
+			});
+			tdDel.appendChild(del);
+			tr.appendChild(tdDel);
+
+			// 整行都可点选中（不只 id 列）—— url 那列很长，用户容易点到它
+			tr.style.cursor = 'pointer';
+			tr.addEventListener('click', () => { this.selectImage(img.id); });
+
+			body.appendChild(tr);
+		}
+
+		// 新建资源：图片资源不是地图元素，点了直接建、不用去地图落位
+		const bar = this.listWin.createBar;
+		bar.innerHTML = '';
+		const label = document.createElement('span');
+		label.textContent = '新建：';
+		bar.appendChild(label);
+		const btn = document.createElement('button');
+		btn.textContent = '🌠';
+		btn.title = '新建图片资源（id 为 map 的那张是场景背景图）';
+		btn.addEventListener('click', () => { this.createImage(); });
+		bar.appendChild(btn);
 	}
 
 	/**
@@ -484,7 +563,14 @@ export class SandboxEditor {
 	private select(group: TokenGroup, id: string): void {
 		const token = this.scene.get(group, id);
 		if (!token) { return; }
+		// 点地图选中 Token 时，标签页要跟着切过去并更新选中态 ——
+		// 否则可能「资源文件」标签还亮着、列表却显示的是 Token 分组
+		if (this.currTab !== group) {
+			this.currTab = group;
+			this.renderGroupBar();
+		}
 		this.selected = { group, token };
+		this.selectedImage = undefined;
 		this.renderProps();
 		this.renderTokenList();
 		// 视野预览只在选中玩家/生物时有效；选中别的对象就自动退出视野模式，
@@ -497,12 +583,35 @@ export class SandboxEditor {
 	}
 
 	/**
+	 * 选中「资源文件」标签页里的一个图片资源
+	 *
+	 * 选中资源会清掉 Token 选中（两者互斥，属性窗口同一时刻只显示一种表单）。
+	 * 图片资源没有视野，选中它时退出视野模式。
+	 *
+	 * @param id - 图片资源 ID
+	 */
+	private selectImage(id: string): void {
+		const img = this.scene.images.get(id);
+		if (!img) { return; }
+		this.selectedImage = img;
+		this.selected = undefined;
+		if (this.viewMode) {
+			this.viewMode = false;
+			this.sceneWin.autoView.checked = false;
+		}
+		this.renderImageProps();
+		this.renderImageList();
+		void this.redraw();
+	}
+
+	/**
 	 * 把选中 Token 的属性渲染成表单
 	 *
 	 * 字段按形状不同：线段有两端坐标、矩形有宽高、圆形有半径。
 	 * 老代码是四段写死的 HTML 字符串，这里按字段描述生成。
 	 */
 	private renderProps(): void {
+		if (this.selectedImage) { this.renderImageProps(); return; }
 		if (!this.selected) { this.propsWin.clear(); return; }
 		const tk = this.selected.token;
 		const rec = tk.toRecord() as unknown as Record<string, unknown>;
@@ -606,6 +715,121 @@ export class SandboxEditor {
 		this.drawClipPreview();
 		this.renderTokenList();
 		await this.redraw();
+	}
+
+	/**
+	 * 渲染选中图片资源的属性表单
+	 *
+	 * 只有 id 和 url 两个字段（`type` 固定 `"Image"`，编辑时不让改）。
+	 * 改完即生效，走 {@link SandboxEditor.applyImageProps}。
+	 */
+	private renderImageProps(): void {
+		if (!this.selectedImage) { this.propsWin.clear(); return; }
+		// 图片资源没有裁剪预览，先清掉上一个 Token 留下的预览图
+		this.propsWin.clear();
+		this.propsWin.renderFields([
+			{ key: 'id', label: 'ID', value: this.selectedImage.id },
+			{ key: 'url', label: '地址', value: this.selectedImage.url },
+		]);
+		this.propsWin.bindChange(() => { void this.applyImageProps(); });
+		this.drawImagePreview();
+	}
+
+	/**
+	 * 把选中资源的图片画到属性窗口下方的预览画布
+	 *
+	 * 和 Token 的 {@link SandboxEditor.drawClipPreview} 同一块画布，但资源没有
+	 * 裁剪参数，所以只画整张图、不叠裁剪红框。`imgElem` 是加载期备好的
+	 * （`loadFrom` 里 `loadImageResources` 填的），新建的资源 url 还没填时
+	 * `imgElem` 为空，画 10×10 的空白占位。
+	 */
+	private drawImagePreview(): void {
+		const cvs = this.propsWin.clipCanvas;
+		const ctx = cvs.getContext('2d');
+		if (!ctx) { return; }
+		const img = this.selectedImage?.imgElem;
+		if (!img || !img.width) {
+			cvs.width = 10; cvs.height = 10;
+			ctx.clearRect(0, 0, 10, 10);
+			return;
+		}
+		cvs.width = img.width;
+		cvs.height = img.height;
+		ctx.clearRect(0, 0, cvs.width, cvs.height);
+		ctx.drawImage(img, 0, 0);
+	}
+
+	/**
+	 * 把资源属性表单的值写回图片资源
+	 *
+	 * 两个要点：
+	 *
+	 * - **改了 ID 要删旧键** —— 和 Token 改 ID 一样，否则列表里会出现两条
+	 * - **复用旧 `imgElem` 重新加载** —— Token 的 `imgClip.imageElem` 是图片资源
+	 *   `imgElem` 的**同一个引用**（`clipFromRecord` 浅拷贝），所以只要往这个
+	 *   对象上重设 `src`，引用它的 Token 不用重建就能看到新图。新建一个
+	 *   `HTMLImageElement` 反而会让 Token 手里的引用停在一张旧图上。
+	 *
+	 * @returns {Promise<void>}
+	 */
+	private async applyImageProps(): Promise<void> {
+		if (!this.selectedImage) { return; }
+		const old = this.selectedImage;
+		const newId = this.propsWin.fieldValue('id').trim() || old.id;
+		const url = this.propsWin.fieldValue('url').trim();
+
+		if (newId !== old.id) { this.scene.removeImage(old.id); }
+		const next: ImageResource = { type: old.type, id: newId, url };
+		if (url) {
+			// 复用旧元素，保持 Token 侧的引用不断
+			next.imgElem = old.imgElem ?? new Image();
+			await WebUtil.loadImageByProxy(next.imgElem, url,
+				{ proxyUrl: this.api.imageProxyUrl });
+		}
+		this.scene.putImage(next);
+		this.selectedImage = next;
+		this.renderImageList();
+		this.drawImagePreview();
+		await this.redraw();
+		this.mapWin.setStatus(newId === old.id
+			? `已更新资源 ${newId}`
+			: `资源已从 ${old.id} 改名为 ${newId}（引用它的棋子保存重载后才生效）`);
+	}
+
+	/**
+	 * 新建一个空的图片资源
+	 *
+	 * 图片资源不是地图元素，点了「新建」就直接建出来、进入属性编辑 ——
+	 * 不像 Token 那样还要去地图上落位。url 留空，等 GM 在属性窗口填。
+	 */
+	private createImage(): void {
+		const id = `image-${Date.now()}`;
+		this.scene.putImage({ type: 'Image', id, url: '' });
+		this.selectedImage = this.scene.images.get(id)!;
+		this.selected = undefined;
+		this.renderImageProps();
+		this.renderImageList();
+		this.mapWin.setStatus(`已创建资源 ${id}，在属性窗口填地址`);
+	}
+
+	/**
+	 * 删掉一个图片资源
+	 *
+	 * 不检查有没有 Token 还在引用 —— 引用它的 Token 持有 `imgElem` 快照，
+	 * 内存里照常显示，但保存重载后找不到图（见 `SandboxScene.removeImage`）。
+	 * 用状态栏提示这一点。
+	 *
+	 * @param id - 图片资源 ID
+	 */
+	private async deleteImage(id: string): Promise<void> {
+		this.scene.removeImage(id);
+		if (this.selectedImage?.id === id) {
+			this.selectedImage = undefined;
+			this.propsWin.clear();
+		}
+		this.renderImageList();
+		await this.redraw();
+		this.mapWin.setStatus(`已删除资源 ${id}（引用它的棋子保存重载后才生效）`);
 	}
 
 	/**
@@ -713,7 +937,6 @@ export class SandboxEditor {
 				0, '#0000FF', '#0000FF', visible, blockView, '#0000FF', clip);
 		}
 		this.scene.replace(group, tk);
-		this.currGroup = group;
 		this.select(group, id);
 		this.mapWin.setStatus(`已创建 ${id}` +
 			(group === 'teams' ? ' —— 玩家棋子的 ID 要改成玩家的用户名' : ''));
@@ -741,11 +964,11 @@ export class SandboxEditor {
 			if (this.pendingShape) { void this.createToken(p); return; }
 			const hit = this.scene.hitTest(p.x, p.y);
 			if (hit) {
-				this.currGroup = hit.group;
 				this.select(hit.group, hit.token.id);
 				this.dragFrom = p;
 			} else {
 				this.selected = undefined;
+				this.selectedImage = undefined;
 				this.propsWin.clear();
 				void this.redraw();
 			}

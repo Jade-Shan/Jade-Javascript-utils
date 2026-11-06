@@ -179,6 +179,36 @@ describe('replace / remove', () => {
 
 });
 
+describe('putImage / removeImage', () => {
+
+	test('putImage 新增图片资源，imageList 能读到', async () => {
+		const s = new SandboxScene();
+		await s.loadFrom(legacyResp(), ROOT);
+		s.putImage({ type: 'Image', id: 'new-img', url: 'http://x/new.jpg' });
+		assert.equal(s.images.get('new-img')!.url, 'http://x/new.jpg');
+		assert.equal(s.imageList().length, 3, 'map + icons + new-img');
+	});
+
+	test('putImage 同 id 是替换（改 url 用），不是追加', async () => {
+		const s = new SandboxScene();
+		await s.loadFrom(legacyResp(), ROOT);
+		s.putImage({ type: 'Image', id: 'icons', url: 'http://x/other.jpg' });
+		assert.equal(s.images.get('icons')!.url, 'http://x/other.jpg');
+		assert.equal(s.imageList().length, 2, '不该追加成 3 个');
+	});
+
+	test('removeImage 删得掉，且不影响 Token 分组', async () => {
+		const s = new SandboxScene();
+		await s.loadFrom(legacyResp(), ROOT);
+		s.removeImage('icons');
+		// SimpleMap.get 缺项返回 null（不是 undefined），见 dataStructure.ts
+		assert.equal(s.images.get('icons'), null);
+		assert.equal(s.imageList().length, 1);
+		assert.equal(s.list('teams').length, 1, 'Token 分组不受影响');
+	});
+
+});
+
 describe('requireMapImage', () => {
 
 	test('有 map 项时返回它', async () => {

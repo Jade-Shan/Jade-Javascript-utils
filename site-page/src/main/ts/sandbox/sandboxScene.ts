@@ -26,7 +26,7 @@ import { normalizeImageUrl } from './sandboxApi.js';
  * 强行 `as any` 改则会让缓存的顶点停在旧位置、阴影算错且不报错。
  */
 
-/** 六个 Token 分组的名字。顺序决定渲染层次（先画的在下层） */
+/** 五个 Token 分组的名字。顺序决定渲染层次（先画的在下层） */
 export const TOKEN_GROUPS = ['walls', 'doors', 'furnishings', 'creaters', 'teams'] as const;
 
 /** Token 分组名 */
@@ -193,6 +193,31 @@ export class SandboxScene {
 		for (const rec of md.teams ?? []) {
 			this.replace('teams', CircleToken.fromRecord(rec as ICircleTokenRec, imgList));
 		}
+	}
+
+	/**
+	 * 放入或替换一个图片资源
+	 *
+	 * 编辑器「资源文件」标签页里新增/改 url 后走这里。改的是 `images` 这张
+	 * `SimpleMap` 里的值，`imageList()` 和 `requireMapImage()` 会立刻看到。
+	 *
+	 * @param img - 图片资源（按 `img.id` 定位）
+	 */
+	putImage(img: ImageResource): void {
+		this.images.put(img.id, img);
+	}
+
+	/**
+	 * 删掉一个图片资源
+	 *
+	 * 不检查有没有 Token 还在引用它 —— 引用它的 Token 持有的是 `imgElem`
+	 * 的**快照**（见 `loadFrom` 的注释），删资源本身不影响已建 Token 的内存显示，
+	 * 但保存重载后那些 Token 就找不到图了。编辑器删除时用状态栏提示这一点。
+	 *
+	 * @param id - 图片资源 ID
+	 */
+	removeImage(id: string): void {
+		this.images.remove(id);
 	}
 
 	/**

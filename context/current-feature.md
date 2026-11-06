@@ -22,6 +22,22 @@
 
 ## 历史记录
 
+- **editor 元素列表：补回「资源文件」分类**（2026-11-06）
+  - 老系统的元素列表有 6 个标签（team / creater / furnishing / door / wall /
+    image），迁移时漏了 `image`（对应数据源 `imgResources`）。`sandboxScene.ts`
+    加 `putImage()` / `removeImage()` 两个方法
+  - `sandboxEditor.ts`：`currGroup: TokenGroup` 改成 `currTab: ListTab`
+    （`TokenGroup | 'images'`），加 `selectedImage` 状态；`renderGroupBar()`
+    遍历 `ALL_TABS`（五个 Token 分组 + 资源文件）；`renderTokenList()` 分叉
+    到新的 `renderImageList()`（id + url 列表 + 「新建资源」按钮）
+  - 属性窗口分叉：`renderImageProps()`（id + url 两字段）+ `applyImageProps()`
+    （改 id 删旧键、复用旧 `imgElem` 重设 src，引用它的 Token 不用重建）
+    + `selectImage()` / `createImage()` / `deleteImage()`
+  - 点地图选中 Token 时标签页跟着切过去（`select()` 里同步 `currTab` 并
+    `renderGroupBar()`），否则可能「资源文件」标签亮着、列表却显示 Token
+  - 新增 3 条测试（`sandbox.scene.test.ts` 的 `putImage / removeImage`），
+    站点侧 187 → 190
+  - **未做浏览器手工验证** —— 标签页、资源列表、新建/删除/改 url 都要在浏览器里看
 - **editor 属性窗口：裁剪区域支持鼠标交互**（2026-11-06）
   - `sandboxWindows.ts` 的 `SandboxPropsWindow` 加 `setFieldValue()`（直接改
     `input.value`，不触发 change）

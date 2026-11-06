@@ -370,7 +370,17 @@ export class SandboxPropsWindow extends UIWindowAdapter {
 			return body;
 		};
 
-		JadeWindowUI.renderWindowTplt(this, undefined, renderBody, undefined);
+		const renderStatusBar = (): HTMLDivElement => {
+			const bar = document.createElement('div');
+			bar.classList.add('status-bar');
+			const p = document.createElement('p');
+			p.classList.add('status-bar-field');
+			p.textContent = '点选元素：Shift+拖动=框选裁剪；Ctrl+拖动=移动；Alt+拖动=缩放';
+			bar.appendChild(p);
+			return bar;
+		};
+
+		JadeWindowUI.renderWindowTplt(this, undefined, renderBody, renderStatusBar);
 	}
 
 	/**
