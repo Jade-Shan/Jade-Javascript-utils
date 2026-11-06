@@ -1,5 +1,5 @@
 import { ColorRGB } from '@jade-dungeon/jade-utils/basic';
-import { CanvasCircle2D, CanvasLine2D, CanvasRectangle2D, CanvasShape2D, ICanvas2D, ICanvasCircle2D, ICanvasLine2D, ICanvasRectangle2D, ImageClip } from '@jade-dungeon/jade-utils/canvas';
+import { CanvasCircle2D, CanvasLine2D, CanvasRectangle2D, CanvasShape2D, CanvasUtils, ICanvas2D, ICanvasCircle2D, ICanvasLine2D, ICanvasRectangle2D, ImageClip } from '@jade-dungeon/jade-utils/canvas';
 import { Geo2DUtils, IPoint2D} from '@jade-dungeon/jade-utils/geo2d';
 import { ImageProxyConfig, WebUtil } from '@jade-dungeon/jade-utils/web';
 
@@ -25,7 +25,14 @@ export interface IObserver {
 	/** 观察者位置 */
 	c: IPoint2D,
 	/** 根据可见性类型返回视野范围 */
-	viewRange: (type: VisibilityType) => number
+	viewRange: (type: VisibilityType) => number,
+	/**
+	 * 观察者自己的 Token id（可选）
+	 *
+	 * 用来在 `filterOccluders` 里跳过自己 —— 不排除的话会从自己的位置给自己
+	 * 投射阴影，把整个视野都遮暗。可选，不设时等于「不排除任何 Token」。
+	 */
+	id?: string
 };
 
 /**
@@ -1245,7 +1252,42 @@ export namespace SandTableUtils {
 	}
 
 	/**
+	 * 挑出「会挡视线、且在视野范围内」的 Token，按距离从远到近排好
+	 *
+	 * 对齐老系统 `Observer.filterTokensInView` + `renderTokensOnSandbox`：
+	 *
+	 * - `blockView` 为 false 的不挡视线，跳过
+	 * - 观察者自己和 `spectator`（旁观者棋子）跳过 —— 不排除自己会从自己的
+	 *   位置给自己投射阴影，把整个视野都遮暗
+	 * - 距离用 `getMostCloseVertex`（点到图形的最短距离），超出 `range` 跳过
+	 * - 按距离**降序**排序：远的先画、近的后画压在上面
+	 *
+	 * @param tokens - 场景里的全部 Token
+	 * @param observer - 观察者（视线中心）
+	 * @param range - 视野范围
+	 * @returns {Array<IToken2D>} 需要投射阴影的 Token，从远到近
+	 */
+	export function filterOccluders(tokens: Array<IToken2D>, //
+		observer: IObserver, range: number): Array<IToken2D> //
+	{
+		const occluders: Array<{ token: IToken2D, distance: number }> = [];
+		for (const t of tokens) {
+			if (!t.blockView) { continue; }
+			if (t.id === observer.id || t.id === 'spectator') { continue; }
+			const d = t.getMostCloseVertex(observer.c.x, observer.c.y).distance;
+			if (d >= range) { continue; }
+			occluders.push({ token: t, distance: d });
+		}
+		occluders.sort((a, b) => b.distance - a.distance);
+		return occluders.map(o => o.token);
+	}
+
+	/**
 	 * 根据玩家视野渲染完整场景（黑暗层 + 明亮层 + 视野裁剪）
+	 *
+	 * 明亮层里先给每个遮挡物从观察者位置投射阴影（从远到近），
+	 * 再画可见 Token —— 这样墙后面的东西会落在阴影里（暗），
+	 * 而不是像原来的圆形视野那样在视野圆内全部透亮。
 	 *
 	 * @param scene - 场景
 	 * @param oriMap - 原始地图图片
@@ -1263,9 +1305,23 @@ export namespace SandTableUtils {
 		scene.frame.show.cvs.height = scene.map.height;
 		scene.frame.show.cvs.style.width  = `${scene.map.width }px`;
 		scene.frame.show.cvs.style.height = `${scene.map.height}px`;
-		// 
+		//
+		let range = observer.viewRange(scene.visibility);
 		let darkMapImage = await drawDarkScene(scene.frame.buff, oriMap, scene.map.shadowStyle);
+		// 阴影填充纹理：整张暗图（原图 + 迷雾），坐标对齐场景原点。
+		// 老系统 drawObstatleShadows 用 shadowImage（darkMap）填充阴影，这里对齐它
+		let shadowClip: ImageClip = {
+			imgKey: 'dark-map', sx: 0, sy: 0,
+			width: scene.map.width, height: scene.map.height,
+			imageElem: darkMapImage,
+		};
 		let brightMapImage = await drawBrightScene(scene.frame.buff, oriMap, async (frame) => {
+			// 先画遮挡阴影（从远到近），再画可见 Token ——
+			// 阴影画在 Token 下面，近处的阴影压在远处的阴影上
+			for (let token of filterOccluders(tokens, observer, range)) {
+				CanvasUtils.drawVertexShadowFrom(frame.ctx, observer.c.x, observer.c.y, //
+					token, range, { imgClip: shadowClip });
+			}
 			for (let token of tokens) {
 				if (token.visible) {
 					token.draw(frame.ctx);
@@ -1273,7 +1329,7 @@ export namespace SandTableUtils {
 			}
 		});
 		let viewMapImage = await drawScopeOfVisionOnDarkMap(scene.frame.buff, darkMapImage, brightMapImage,
-			observer.c, observer.viewRange(scene.visibility));
+			observer.c, range);
 		// 显示到展示的画布上
 		scene.frame.show.ctx.clearRect(0, 0, scene.map.width, scene.map.height);
 		scene.frame.show.ctx.drawImage(viewMapImage, 0, 0, scene.map.width, scene.map.height, 0, 0, scene.map.width, scene.map.height);

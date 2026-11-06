@@ -22,6 +22,22 @@
 
 ## 历史记录
 
+- **给 view 页沙盘加遮挡阴影（战争迷雾的墙后阴影）**（2026-11-06）
+  - 原来 `SandTableUtils.drawSceneWithUserView()` 只做「暗图 + 亮图（直接画可见
+    Token）+ 圆形视野裁剪」，墙后面的东西在视野圆内仍是亮的，不挡视线
+  - `trpg/sandtable.ts`：`SandTableUtils` 新增纯函数 `filterOccluders()`——
+    过滤「不挡视线（`blockView=false`）」「距离超出视野范围」「自己」「spectator」，
+    再按距离**从远到近**排序；`IObserver` 加可选 `id`；`drawSceneWithUserView()`
+    在明亮层先给每个遮挡物用 `CanvasUtils.drawVertexShadowFrom` 投射阴影
+    （填充用暗图纹理，对齐老系统 `shadowImage`），再画可见 Token
+  - 过滤/排序/距离对齐老系统 `Observer.filterTokensInView` +
+    `renderTokensOnSandbox`；距离用 `getMostCloseVertex`（点到图形最短距离）；
+    阴影绘制复用 common-utils 现有 `CanvasUtils.drawVertexShadowFrom`（库侧未改）
+  - `sandbox/sandboxView.ts`：构造 observer 时带上 `id: myToken.id`
+  - 新增 `site-page/src/test/ts/sandtable.occlusion.test.ts`（9 条，只测纯函数），
+    站点侧 176 → 185，总数 435
+  - **未做浏览器手工验证** —— 像素效果只能在浏览器看，
+    `docs/sandbox-refactor.md` 7.4 节验收清单第 2 条「墙后面是暗的」还没走
 - **补回老版本的拖动预览：Ctrl 移动、Alt 缩放**（2026-11-06，
   详见 `site-page/docs/sandbox-refactor.md` 11.1.2 节）
   - 老应用 `sandtable.html` / `sandtable-editor.html` 在**拖动过程中**就画效果，

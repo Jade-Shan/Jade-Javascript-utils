@@ -157,6 +157,8 @@ export class SandboxView {
 			this.sandTable.observer = {
 				c: { x: c.x, y: c.y },
 				viewRange: () => VIEW_RANGE,
+				// 带上自己的 id，遮挡阴影会跳过自己（不给自己投阴影）
+				id: this.myToken.id,
 			};
 		}
 		await this.redraw();
