@@ -176,6 +176,53 @@ export interface IToken2D extends CanvasShape2D {
 	drawDesign(cvsCtx: CanvasRenderingContext2D): void;
 
 	/**
+	 * 画一个「幽灵」：本 Token 当前的形状，蓝填充 + 绿描边、半透明
+	 *
+	 * 拖动预览的零件，自己一般不单独调 —— 由 {@link IToken2D.drawMovePreview}
+	 * 和 {@link IToken2D.drawScalePreview} 在变换出来的新实例上调。
+	 *
+	 * **不画图片裁剪、不认 `visible`**：预览要的是「位置和尺寸变成什么样」，
+	 * 贴上棋子图标反而看不清边界；而隐形的墙在编辑器里也得能预览。
+	 */
+	drawPreviewGhost(cvsCtx: CanvasRenderingContext2D): void;
+
+	/**
+	 * 画移动预览：红线连「原中心 → 目标中心」+ 目标位置的幽灵
+	 *
+	 * 对应老代码三个 Token 类各一份的 `onWantMoveing()` / `onMoveing()`。
+	 * 编辑器按住 Ctrl 拖动时每帧调一次。
+	 *
+	 * ⚠️ **参数是位移量，不是光标坐标。** 传 `(dx, dy)` 而不是 `(x, y)`
+	 * 是为了保住「抓取偏移」—— 从棋子边缘抓住拖动时，棋子跟着手走、
+	 * 不会把中心瞬移到光标底下。老代码就是这个语义
+	 *（`dx = x1 - x` 之后 `this.x + dx`）。
+	 *
+	 * 预览的落点由 {@link IToken2D.moveTo} 算，和松手时真正提交的是**同一个方法**，
+	 * 所以「看到的」必然等于「得到的」。老代码是预览与提交各算一遍，
+	 * 两边的公式要靠人盯着保持一致。
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - X 方向位移
+	 * @param dy - Y 方向位移
+	 */
+	drawMovePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void;
+
+	/**
+	 * 画缩放预览：原地画一个缩放后尺寸的幽灵
+	 *
+	 * 对应老代码的 `onScaleing()`。编辑器按住 Alt 拖动时每帧调一次。
+	 * 尺寸由 {@link IToken2D.scaleTo} 算 —— 同上，与提交同源。
+	 *
+	 * 各形状的语义见 `scaleTo`：圆形只认 `dx`（半径增量）、矩形改宽高、
+	 * 线段**只移动终点**。
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - 水平方向的尺寸增量
+	 * @param dy - 垂直方向的尺寸增量
+	 */
+	drawScalePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void;
+
+	/**
 	 * 点 `(x, y)` 是否命中本 Token
 	 *
 	 * 编辑器靠它做「点一下选中棋子」，玩家视图靠它判断「点的是不是自己的棋子」。
@@ -205,6 +252,72 @@ export interface IToken2D extends CanvasShape2D {
 
 	/** 复制一个独立的 Token（图片裁剪也复制，不共享引用） */
 	clone(): IToken2D;
+}
+
+/**
+ * 拖动预览的三个颜色，三种 Token 共用
+ *
+ * 取自老代码 `canvas2dutils.js` 的 `onWantMoveing` / `onScaleing`。
+ * **老代码里这三个值在六处各写一遍、而且不一致** —— 线段的移动预览用蓝色描边、
+ * 圆和矩形用绿色，缩放预览又换成另一组。收成常量之后三种形状一致。
+ */
+const PREVIEW_STYLE = {
+	/** 原位置到目标位置的连线 */
+	link: 'rgba(255, 0, 0, 0.7)',
+	/** 幽灵的填充 */
+	fill: 'rgba(0, 0, 255, 0.7)',
+	/** 幽灵的描边 */
+	stroke: 'rgba(0, 255, 0, 0.7)',
+} as const;
+
+/** 幽灵描边的宽度（像素）。老代码三处都是 5 */
+const PREVIEW_GHOST_WIDTH = 5;
+
+/** 原位置→目标位置连线的宽度（像素）。老代码三处都是 3 */
+const PREVIEW_LINK_WIDTH = 3;
+
+/**
+ * 画移动预览的公共实现，三种 Token 的 `drawMovePreview()` 都委托到这里
+ *
+ * **先连线再画幽灵**：幽灵是半透明的，连线压在它上面会从圆里穿出来一截。
+ *
+ * @param token - 要预览的 Token
+ * @param cvsCtx - Canvas 2D 上下文
+ * @param dx - X 方向位移
+ * @param dy - Y 方向位移
+ */
+function drawMovePreviewOf(token: IToken2D, cvsCtx: CanvasRenderingContext2D, //
+	dx: number, dy: number): void //
+{
+	// 落点用 moveTo 算，和松手时提交的是同一个方法 —— 预览不会和结果不一致
+	const dst = token.moveTo(dx, dy);
+	const from = token.getCenter();
+	const to = dst.getCenter();
+	cvsCtx.save();
+	cvsCtx.strokeStyle = PREVIEW_STYLE.link;
+	cvsCtx.lineWidth = PREVIEW_LINK_WIDTH;
+	cvsCtx.beginPath();
+	cvsCtx.moveTo(from.x, from.y);
+	cvsCtx.lineTo(to.x, to.y);
+	cvsCtx.stroke();
+	cvsCtx.restore();
+	dst.drawPreviewGhost(cvsCtx);
+}
+
+/**
+ * 画缩放预览的公共实现，三种 Token 的 `drawScalePreview()` 都委托到这里
+ *
+ * 不画连线 —— 缩放不改位置，画出来是一条零长度的线。
+ *
+ * @param token - 要预览的 Token
+ * @param cvsCtx - Canvas 2D 上下文
+ * @param dx - 水平方向的尺寸增量
+ * @param dy - 垂直方向的尺寸增量
+ */
+function drawScalePreviewOf(token: IToken2D, cvsCtx: CanvasRenderingContext2D, //
+	dx: number, dy: number): void //
+{
+	token.scaleTo(dx, dy).drawPreviewGhost(cvsCtx);
 }
 
 /**
@@ -385,6 +498,44 @@ export class CircleToken extends CanvasCircle2D implements IToken2D, ICircleToke
 		cvsCtx.arc(this.c.x, this.c.y, this.radius + 1, 0, Geo2DUtils.PI_DOUBLE, true);
 		cvsCtx.stroke();
 		cvsCtx.restore();
+	}
+
+	/**
+	 * 幽灵：当前半径的圆，蓝填充 + 绿描边
+	 * @param cvsCtx - Canvas 2D 上下文
+	 */
+	drawPreviewGhost(cvsCtx: CanvasRenderingContext2D): void {
+		cvsCtx.save();
+		cvsCtx.lineWidth = PREVIEW_GHOST_WIDTH;
+		cvsCtx.beginPath();
+		cvsCtx.arc(this.c.x, this.c.y, this.radius, 0, Geo2DUtils.PI_DOUBLE, true);
+		cvsCtx.fillStyle = PREVIEW_STYLE.fill;
+		cvsCtx.fill();
+		cvsCtx.strokeStyle = PREVIEW_STYLE.stroke;
+		cvsCtx.stroke();
+		cvsCtx.restore();
+	}
+
+	/**
+	 * 移动预览，见 {@link IToken2D.drawMovePreview}
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - X 方向位移
+	 * @param dy - Y 方向位移
+	 */
+	drawMovePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void {
+		drawMovePreviewOf(this, cvsCtx, dx, dy);
+	}
+
+	/**
+	 * 缩放预览，见 {@link IToken2D.drawScalePreview}。圆形只认 `dx`
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - 半径增量
+	 * @param dy - 未使用（圆形只有一个尺寸维度）
+	 */
+	drawScalePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void {
+		drawScalePreviewOf(this, cvsCtx, dx, dy);
 	}
 
 	/**
@@ -571,6 +722,42 @@ export class RectangleToken extends CanvasRectangle2D implements IToken2D, IRect
 	}
 
 	/**
+	 * 幽灵：当前宽高的矩形，蓝填充 + 绿描边
+	 * @param cvsCtx - Canvas 2D 上下文
+	 */
+	drawPreviewGhost(cvsCtx: CanvasRenderingContext2D): void {
+		cvsCtx.save();
+		cvsCtx.lineWidth = PREVIEW_GHOST_WIDTH;
+		cvsCtx.fillStyle = PREVIEW_STYLE.fill;
+		cvsCtx.fillRect(this.x, this.y, this.width, this.height);
+		cvsCtx.strokeStyle = PREVIEW_STYLE.stroke;
+		cvsCtx.strokeRect(this.x, this.y, this.width, this.height);
+		cvsCtx.restore();
+	}
+
+	/**
+	 * 移动预览，见 {@link IToken2D.drawMovePreview}
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - X 方向位移
+	 * @param dy - Y 方向位移
+	 */
+	drawMovePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void {
+		drawMovePreviewOf(this, cvsCtx, dx, dy);
+	}
+
+	/**
+	 * 缩放预览，见 {@link IToken2D.drawScalePreview}
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - 宽度增量
+	 * @param dy - 高度增量
+	 */
+	drawScalePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void {
+		drawScalePreviewOf(this, cvsCtx, dx, dy);
+	}
+
+	/**
 	 * 点是否落在矩形内（含边界）
 	 *
 	 * @param x - 点的 X 坐标
@@ -737,6 +924,56 @@ export class LineToken extends CanvasLine2D implements IToken2D, ILineToken {
 				LINE_HANDLE_SIZE * 2, LINE_HANDLE_SIZE * 2);
 		}
 		cvsCtx.restore();
+	}
+
+	/**
+	 * 幽灵：当前两端之间的线段，粗蓝底 + 细绿面
+	 *
+	 * 线段没有面积，所以「填充 + 描边」落到它身上就是**描两遍** ——
+	 * 先用填充色描粗的、再用描边色描细的，看起来和另两种形状是一套。
+	 * 老代码也是描两遍（宽 8 再宽 3），只是两遍同色。
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 */
+	drawPreviewGhost(cvsCtx: CanvasRenderingContext2D): void {
+		cvsCtx.save();
+		for (const pass of [
+			{ width: PREVIEW_GHOST_WIDTH + 3, color: PREVIEW_STYLE.fill },
+			{ width: PREVIEW_LINK_WIDTH, color: PREVIEW_STYLE.stroke },
+		]) {
+			cvsCtx.lineWidth = pass.width;
+			cvsCtx.strokeStyle = pass.color;
+			cvsCtx.beginPath();
+			cvsCtx.moveTo(this.a.x, this.a.y);
+			cvsCtx.lineTo(this.b.x, this.b.y);
+			cvsCtx.stroke();
+		}
+		cvsCtx.restore();
+	}
+
+	/**
+	 * 移动预览，见 {@link IToken2D.drawMovePreview}（两端一起移）
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - X 方向位移
+	 * @param dy - Y 方向位移
+	 */
+	drawMovePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void {
+		drawMovePreviewOf(this, cvsCtx, dx, dy);
+	}
+
+	/**
+	 * 缩放预览，见 {@link IToken2D.drawScalePreview}
+	 *
+	 * 线段的「缩放」是**只移动终点**（`scaleTo` 的语义），所以这个预览画出来
+	 * 是起点不动、终点跟着手走的一条线。
+	 *
+	 * @param cvsCtx - Canvas 2D 上下文
+	 * @param dx - 终点的 X 增量
+	 * @param dy - 终点的 Y 增量
+	 */
+	drawScalePreview(cvsCtx: CanvasRenderingContext2D, dx: number, dy: number): void {
+		drawScalePreviewOf(this, cvsCtx, dx, dy);
 	}
 
 	/**

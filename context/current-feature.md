@@ -22,6 +22,32 @@
 
 ## 历史记录
 
+- **补回老版本的拖动预览：Ctrl 移动、Alt 缩放**（2026-11-06，
+  详见 `site-page/docs/sandbox-refactor.md` 11.1.2 节）
+  - 老应用 `sandtable.html` / `sandtable-editor.html` 在**拖动过程中**就画效果，
+    迁移时漏了。`trpg/sandtable.ts` 给三种 Token 各补三个方法：
+    `drawPreviewGhost()` / `drawMovePreview()` / `drawScalePreview()`
+    （对应老代码的 `onWantMoveing` / `onMoveing` / `onScaleing`）
+  - **editor 原来完全没有 `mousemove`** —— Ctrl/Alt 只在松手那一刻生效，
+    拖的过程里什么都看不到。补了 `mousemove`，每帧重画底再压预览
+  - **view 侧修了一个坐标 bug**：原来按**光标绝对位置**画预览，
+    老代码是**位移量**语义。从棋子边缘抓住拖动时中心会瞬移到光标底下
+    （半径 25 最多偏 25px），**而且提交给后端的坐标也跟着偏**
+  - **预览的落点走 `moveTo()` / `scaleTo()`，和松手时提交的是同一个方法** ——
+    老代码预览与提交各算一遍公式，改一边忘另一边就「看到的 ≠ 得到的」且不报错。
+    有一条用例拿两者对比钉着
+  - `redraw()` 拆出同步的 `paintScene()` —— `mousemove` 是同步回调，
+    里面 `void this.redraw()` 会让预览画在重画之前、然后被盖掉（一闪就没）
+  - 顺带：`resizeCanvas()` 加「尺寸没变就不赋值」判断（它会清位图，赋同值也清，
+    拖动时每帧都走）；加 `previewing` 标记擦掉中途松开修饰键留下的幽灵
+  - 预览颜色收成 `PREVIEW_STYLE` 常量 —— **老代码这组值在六处各写一遍且不一致**
+  - 新增 `site-page/src/test/ts/sandtable.preview.test.ts`（19 条，用记录调用的
+    假 2D 上下文，jsdom 没有 `getContext('2d')`），站点侧 157 → 176，总数 426
+  - **改了一条原有用例的锚点**：`sandbox.canvasorder.test.ts` 按
+    `private async redraw()` 定位查「`resizeCanvas` 在 `drawImage` 之前」，
+    拆出 `paintScene()` 之后在那里找不到了，已改成按 `paintScene` 定位
+  - **未做浏览器手工验证** —— 像素效果只能在浏览器里看，
+    `docs/sandbox-refactor.md` 11.1 节那张验收表的第 3、6 项还没走
 - **`ablum` → `album`，并清掉「为旧后端保留」的过时说法**（2026-11-05，旧后端已停用）
   - 后端：`blogService.ts` 的 `IAlbumDetail.album` 及三处赋值、`gallery.ts` 注释、
     `backupBlogData.ts` 的 `IAlbum.album`

@@ -222,17 +222,19 @@ export class SandboxView {
 		cvs.addEventListener('mousemove', e => {
 			if (!this.dragFrom || !this.ctrlDown || !this.myToken) { return; }
 			const p = this.mapWin.toCanvasPoint(e);
-			this.dragTo = p;
+			// ⚠️ **按位移量算，不是光标坐标。** 从棋子边缘抓住拖动时，
+			// 直接用光标坐标会把棋子中心瞬移到光标底下（半径 25 的棋子最多偏 25px），
+			// 而且**提交的坐标也跟着偏** —— 老代码是位移量语义，这里对齐它。
+			const dx = p.x - this.dragFrom.x;
+			const dy = p.y - this.dragFrom.y;
+			// 落点用 moveTo 算，和 submitMove 提交的是同一个值
+			this.dragTo = this.myToken.moveTo(dx, dy).getCenter();
 			// 贴快照擦掉上一帧的预览，再画新预览
 			if (this.viewSnapshot) {
 				ctx.clearRect(0, 0, cvs.width, cvs.height);
 				ctx.drawImage(this.viewSnapshot, 0, 0);
 			}
-			// drawNextLocation 只有圆形 Token 有（玩家棋子都是圆形）
-			const tk = this.myToken as unknown as {
-				drawNextLocation?: (c: CanvasRenderingContext2D, x: number, y: number) => void
-			};
-			tk.drawNextLocation?.(ctx, p.x, p.y);
+			this.myToken.drawMovePreview(ctx, dx, dy);
 		});
 
 		cvs.addEventListener('mouseup', () => {

@@ -97,6 +97,14 @@ export class SandboxEditor {
 	private altDown = false;
 	/** 拖动起点 */
 	private dragFrom: { x: number, y: number } | undefined;
+	/**
+	 * 画面上有没有预览的幽灵
+	 *
+	 * 用来判断「要不要重画一次把它擦掉」—— 拖动中途松开 Ctrl / Alt 时，
+	 * 幽灵不会自己消失。没有这个标记就得每次 `mousemove` 都重画，
+	 * 不按修饰键的纯拖动也跟着整场重画一遍。
+	 */
+	private previewing = false;
 	/** 待创建的形状，点地图时落下 */
 	private pendingShape: { group: TokenGroup, shape: 'Line' | 'Rectangle' | 'Circle' } | undefined;
 
@@ -194,18 +202,38 @@ export class SandboxEditor {
 	 * @returns {Promise<void>}
 	 */
 	private async redraw(): Promise<void> {
+		this.paintScene();
+	}
+
+	/**
+	 * 同步画一帧：地图 + 全部 Token + 选中高亮
+	 *
+	 * 从 `redraw()` 里拆出来的，因为**拖动预览每帧都要先重画一次底** ——
+	 * `mousemove` 是同步回调，里面 `void this.redraw()` 的话这一帧的预览
+	 * 会画在重画**之前**的画面上，然后被重画盖掉，表现是预览一闪就没。
+	 *
+	 * 没有异步的事可做（图片在 `loadFrom()` 里就加载完了），所以这里是同步的。
+	 *
+	 * @returns {boolean} 画成了没有。缺背景地图时返回 false 并把原因写进状态栏
+	 */
+	private paintScene(): boolean {
 		const cvs = this.mapWin.finalCanvas;
 		const ctx = cvs.getContext('2d');
-		if (!ctx) { return; }
+		if (!ctx) { return false; }
 		let mapImg;
 		try {
 			mapImg = this.scene.requireMapImage();
 		} catch (e) {
 			this.mapWin.setStatus((e as Error).message);
-			return;
+			return false;
 		}
 		const img = mapImg.imgElem;
-		if (img && img.width > 0) {
+		// ⚠️ 尺寸没变就别赋值 —— `resizeCanvas()` 会清空位图，赋同值也清
+		//（见 sandboxWindows.ts 的说明）。拖动时每帧都走这里，
+		// 无条件赋值等于每帧重建一次位图。
+		if (img && img.width > 0 //
+			&& (cvs.width !== img.width || cvs.height !== img.height)) //
+		{
 			this.mapWin.resizeCanvas(img.width, img.height);
 		}
 		ctx.clearRect(0, 0, cvs.width, cvs.height);
@@ -213,6 +241,7 @@ export class SandboxEditor {
 		// 按渲染层次画，墙在下、玩家在上
 		for (const tk of this.scene.allTokens()) { tk.drawDesign(ctx); }
 		this.highlightSelected(ctx);
+		return true;
 	}
 
 	/**
@@ -565,7 +594,35 @@ export class SandboxEditor {
 			}
 		});
 
+		cvs.addEventListener('mousemove', e => {
+			if (!this.dragFrom || !this.selected) { return; }
+			// 没按修饰键就没有预览可画。**已经画了的要擦掉** ——
+			// 拖动中途松开 Ctrl 的话，上一帧的幽灵会留在画面上
+			if (!this.ctrlDown && !this.altDown) {
+				if (this.previewing) {
+					this.previewing = false;
+					this.paintScene();
+				}
+				return;
+			}
+			const p = this.mapWin.toCanvasPoint(e);
+			const dx = p.x - this.dragFrom.x;
+			const dy = p.y - this.dragFrom.y;
+			// 先重画底，再把预览压在上面 —— 不重画的话上一帧的幽灵会留着，
+			// 拖一段距离就糊成一串
+			if (!this.paintScene()) { return; }
+			const ctx = cvs.getContext('2d');
+			if (!ctx) { return; }
+			this.previewing = true;
+			if (this.ctrlDown) {
+				this.selected.token.drawMovePreview(ctx, dx, dy);
+			} else {
+				this.selected.token.drawScalePreview(ctx, dx, dy);
+			}
+		});
+
 		cvs.addEventListener('mouseup', e => {
+			this.previewing = false;
 			if (!this.dragFrom || !this.selected) { this.dragFrom = undefined; return; }
 			const p = this.mapWin.toCanvasPoint(e);
 			const dx = p.x - this.dragFrom.x;

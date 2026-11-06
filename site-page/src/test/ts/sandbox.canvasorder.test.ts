@@ -76,18 +76,22 @@ describe('sandboxView.redraw 的调用顺序', () => {
 			'已经设好两张画布的尺寸，再设一次只会把刚画好的画面清掉（白屏且不报错）');
 	});
 
-	test('editor 的 redraw 里 resizeCanvas 在 drawImage 之前', () => {
+	test('editor 的 paintScene 里 resizeCanvas 在 drawImage 之前', () => {
 		// 对照组：editor 自己画、不走 SandTable，所以它**需要**调 resizeCanvas，
 		// 但必须在 drawImage 之前。顺序反了同样是白屏
+		//
+		// 锚点是 `paintScene()` 而不是 `redraw()` —— 2026-11-06 加拖动预览时，
+		// 画一帧的逻辑从 `redraw()` 拆进了同步的 `paintScene()`
+		//（`mousemove` 要同步画，详见那个方法的注释）。`redraw()` 现在只是转发。
 		const src = readFileSync(join(SRC, 'sandboxEditor.ts'), 'utf8');
-		const start = src.indexOf('private async redraw()');
-		assert.ok(start > 0, '没找到 editor 的 redraw');
-		const body = src.slice(start, start + 900);
+		const start = src.indexOf('private paintScene()');
+		assert.ok(start > 0, '没找到 editor 的 paintScene');
+		const body = src.slice(start, start + 1400);
 
 		const resize = body.indexOf('resizeCanvas');
 		const drawImg = body.indexOf('ctx.drawImage');
-		assert.ok(resize > 0, 'editor 的 redraw 应该调 resizeCanvas');
-		assert.ok(drawImg > 0, 'editor 的 redraw 应该调 drawImage');
+		assert.ok(resize > 0, 'editor 的 paintScene 应该调 resizeCanvas');
+		assert.ok(drawImg > 0, 'editor 的 paintScene 应该调 drawImage');
 		assert.ok(resize < drawImg,
 			`resizeCanvas 必须在 drawImage 之前（现在 ${resize} vs ${drawImg}）—— ` +
 			'反了会把画好的地图清掉');
